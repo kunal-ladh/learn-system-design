@@ -1,0 +1,546 @@
+I think all of this falls in event driven arch and also I heard about Domain driven design, basically I want to start learning these things more deeply - architechture, kafka, mq, HLD, system desgin, good software arch, microservices, monoliths, etc. What books would you reccommend ? Give detailed and comprehensive list keeping my experience and work I have done in mind. Go!
+
+A practical “go deep” book list (ordered for fastest impact)
+You’re already working in Java/Spring microservices + Kafka + Mongo, so I’m prioritizing books that directly map to what you’ll see in prod: reliability, event-driven flows, DDD boundaries, and system design tradeoffs.
+
+Core architecture fundamentals (start here)
+“Fundamentals of Software Architecture” (Richards & Ford)
+Great modern overview: architectural styles, tradeoffs, fitness functions, how to reason about “good architecture”.
+“Software Architecture: The Hard Parts” (Richards & Ford)
+Practical decision-making: distributed data, decomposition, migrations, integration styles (very relevant to microservices/event-driven).
+“Clean Architecture” (Robert C. Martin)
+Not perfect, but very useful to internalize boundaries, dependency direction, and keeping business logic independent of frameworks.
+“Building Evolutionary Architectures” (Ford, Parsons, Kua)
+How to change architecture safely over time (key in real companies where systems evolve continuously).
+Domain-Driven Design (DDD) (for boundaries, not just patterns)
+“Domain-Driven Design” (Eric Evans)
+The original. Read for concepts (ubiquitous language, bounded contexts, aggregates), not for code.
+“Implementing Domain-Driven Design” (Vernon)
+More actionable than Evans for building software; good “how to apply”.
+“Domain-Driven Design Distilled” (Vernon)
+Fast entry + refresher. If you’re new to DDD, start here before the big books.
+“Learning Domain-Driven Design” (Vlad Khononov)
+Excellent modern DDD with real-world constraints; very relevant for microservices and event-driven boundaries.
+Why this matters for your work: most “Kafka mismatch” problems are actually unclear boundaries + weak invariants + missing end-to-end ownership more than “Kafka is unreliable”.
+
+Event-driven architecture + messaging (where your current system lives)
+“Designing Event-Driven Systems” (Ben Stopford)
+Conceptual model of event streams, log-based thinking, and how to design event flows.
+“Enterprise Integration Patterns” (Hohpe & Woolf)
+Classic. Patterns like idempotency, retry, dead-letter, sagas, message channels—still the best “pattern vocabulary”.
+“Microservices Patterns” (Chris Richardson)
+Directly hits your world: sagas, outbox pattern, CQRS, integration patterns, and how to keep data consistent without distributed transactions.
+Kafka specifically (deep, practical)
+“Kafka: The Definitive Guide” (Narkhede, Shapira, Palino)
+Best single Kafka book for producers/consumers/partitions/offsets/guarantees.
+“Kafka in Action” (Duvall) (optional but very hands-on)
+Good for building intuition by implementing.
+Kafka topics you should aim to truly understand from these:
+
+producer acks/idempotence, retries, in-flight requests
+consumer offset commit strategies, rebalance behavior
+at-least-once vs exactly-once semantics (EOS), and what EOS really guarantees
+DLQ/DLT, backoff, poison-pill messages
+schema evolution and compatibility
+Distributed systems + reliability (the “why did we lose events?” toolbox)
+“Designing Data-Intensive Applications (DDIA)” (Martin Kleppmann)
+Mandatory. It explains logs, streams, consistency, replication, transactions, and why distributed systems behave the way they do.
+“Release It!” (Michael Nygard)
+Production failure patterns + stability tactics (timeouts, bulkheads, circuit breakers, backpressure).
+“Site Reliability Engineering” (Google SRE book)
+Even if you’re not “SRE”, this teaches error budgets, SLIs/SLOs, and reliability-driven engineering.
+“The Practice of Cloud System Administration” (Limoncelli et al.) (optional)
+Great ops thinking; helps you debug real distributed incidents.
+Microservices vs monoliths (tradeoffs, not ideology)
+“Monolith to Microservices” (Sam Newman)
+Very pragmatic; migration patterns, boundaries, and how to avoid distributed spaghetti.
+“Building Microservices (2nd ed.)” (Sam Newman)
+Solid overview of microservices done responsibly (org + tech + operations).
+Data modeling (especially useful with Mongo + events)
+“MongoDB Applied Design Patterns” (Kovacs) (optional)
+Helps you think about document modeling tradeoffs.
+“NoSQL Distilled” (Sadalage & Fowler) (short, optional)
+Quick mental models for NoSQL tradeoffs.
+Practical system design (HLD thinking)
+“System Design Interview – An Insider’s Guide (Vol 1 & 2)” (Alex Xu)
+Good structured way to think about HLD components and tradeoffs.
+“The Software Architect Elevator” (Gregor Hohpe)
+Helps you communicate architecture across layers: dev ⇄ business ⇄ platform ⇄ ops (very real in companies).
+If you want a “reading path” (minimal but powerful)
+DDD Distilled → Learning DDD (get boundaries right)
+DDIA (get distributed reality right)
+Kafka Definitive Guide (get messaging mechanics right)
+Microservices Patterns + Enterprise Integration Patterns (build reliable flows)
+Release It! + SRE book (operate reliably)
+Quick question (so I can tailor the next list even better)
+Your experience level: ~how many years and are you mostly backend Java?
+What do you want next 6 months: promotion at work, system design interviews, or becoming the “reliability/architecture” person on the team?
+5 YOE - Java, Spring, Spring Boot, Hibernate, JPA, MySQL, MongoDB, Kafka, RabbitMQ, Sonar, Maven, Github, Bitbucket, Jira, K8s, Docker, Grafana, NodeJS, NestJS, ExpressJS, AWS - S3, EventBridge, Lambda, CloudFormation, SQS,  CloudWatch for lambda logs, IAM, VPC etc.
+
+
+
+JavaScript, Typescript, Basic MERN, Basic Golang, some Struts2.
+
+
+
+3 months 
+
+goal - clear with strong hire the system design interviews at FAANG etc. companies.
+
+long term - 1/2 year goal - becoming the “reliability/architecture” person on the team.
+
+3 months: “strong hire” system design (FAANG-level) — book-first list
+These are the highest ROI given your 5 YOE + backend + Kafka/AWS/K8s exposure.
+
+Must-read (top tier)
+Designing Data-Intensive Applications (Martin Kleppmann)
+The single best foundation for system design: replication, partitioning, consistency, logs/streams, transactions, batch vs stream.
+Software Architecture: The Hard Parts (Richards & Ford)
+Tradeoff-driven decisions: decomposition, distributed data, integration styles, migrations—very interview-aligned.
+Fundamentals of Software Architecture (Richards & Ford)
+Faster breadth + terminology; helps you structure answers and reason clearly.
+System Design Interview – An Insider’s Guide (Alex Xu) Vol 1 + Vol 2
+The most practical “how to answer interviews” + canonical problems.
+Strongly recommended (FAANG signal boosters)
+Site Reliability Engineering (Google SRE book)
+Teaches SLIs/SLOs, error budgets, capacity, incident response—turns you into the “reliability person”.
+Release It! (Michael Nygard)
+Concrete failure modes + stability patterns (timeouts, circuit breakers, bulkheads, backpressure).
+Microservices Patterns (Chris Richardson)
+Especially for interviews: saga, outbox, idempotency, CQRS, integration patterns.
+Enterprise Integration Patterns (Hohpe & Woolf)
+Pattern vocabulary for messaging/event-driven designs—useful for crisp interview articulation.
+Kafka/MQ deepening (pick 1 primary)
+Kafka: The Definitive Guide (Narkhede, Shapira, Palino) (best if Kafka-heavy interviews/projects)
+Designing Event-Driven Systems (Ben Stopford) (best for event-stream mental models)
+1/2 year: becoming the “reliability/architecture” person — add these
+DDD & boundaries (avoid “microservices spaghetti”)
+Learning Domain-Driven Design (Vlad Khononov)
+Domain-Driven Design Distilled (Vernon)
+(Then optionally: Implementing DDD (Vernon))
+Cloud-native & ops architecture
+Building Secure & Reliable Systems (Google) (excellent if you want to be the reliability+security person)
+The Architecture of Open Source Applications (AOSA) Vol 1/2 (free; great architectural taste-building)
+How to use these (fast path)
+Interview (3 months): DDIA + Alex Xu (V1/V2) + Hard Parts + (Release It or SRE)
+Reliability persona (next 6–12 months): SRE + Release It + Microservices Patterns + EIP + Learning DDD + Kafka book
+Optional but high-value (depending on gaps)
+Clean Architecture (Uncle Bob): good boundaries; skip if short on time.
+Building Microservices / Monolith to Microservices (Sam Newman): great tradeoff framing; useful if you discuss org constraints/migrations.
+If you tell me which system design areas feel weakest right now—caching/CDN, databases, distributed consistency, queues/streams, or observability/reliability—I’ll tailor a 12-week reading + practice plan (with which chapters to prioritize).
+
+Ok but for the first 1 year I worked on struts which was basically no work. didnt evenput it on my resume. for last 3 years I am working with spring boot and dont remeber the nitty gritty depths of mongo kafka k8s etc. but i understand basics with mang gaps in knowledge. also i am a EE grad from BITS do didnt do OS NETWORKS DBMS and did DSA on my own. si basically my sys design knowledge is lacking depth a lot. Pls now tell what books to read so I can grow fast and bridge this gap and go beyod my peers eventually. Pls help.
+
+The fastest way to bridge OS/Networks/DB/Distributed gaps (book stack)
+You don’t need many books—you need the right sequence so fundamentals unlock system design depth.
+
+Tier 0 (2–4 weeks): rebuild core CS foundations (pick 1 per area)
+Networking (must): Computer Networking: A Top-Down Approach (Kurose & Ross)
+Best for practical understanding (HTTP/TLS/DNS/CDN, latency, congestion) → shows up in interviews constantly.
+OS (pick one)
+Operating Systems: Three Easy Pieces (OSTEP) (free) — best ROI
+or Computer Systems: A Programmer’s Perspective (CS:APP) — deeper systems programming view
+DBMS (pick one)
+Database System Concepts (Silberschatz/Korth/Sudarshan) — classic
+or Readings in Database Systems (“Red Book”) — more advanced, researchy
+If you only choose one here: Kurose+Ross + OSTEP (huge impact quickly).
+
+Tier 1 (4–8 weeks): the “system design truth” layer (non-negotiable)
+Designing Data-Intensive Applications (DDIA) (Kleppmann)
+This bridges DB + distributed systems + streaming/logs. It’s the single best “depth per hour” book for your gap.
+Tier 2 (4–6 weeks): system design interview execution
+System Design Interview Vol 1 & 2 (Alex Xu)
+Turns fundamentals into structured interview answers and common architectures.
+Software Architecture: The Hard Parts (Richards & Ford)
+Makes your tradeoffs sound senior (consistency vs availability, sync vs async, data ownership, migrations).
+Tier 3 (ongoing): reliability + event-driven (to outgrow peers)
+Site Reliability Engineering (Google SRE book)
+The mindset and measurement system (SLOs/error budgets) that separates “developer” from “reliability leader”.
+Release It! (Nygard)
+Concrete production failure patterns—very applicable to Kafka pipelines, retries, timeouts.
+Microservices Patterns (Chris Richardson)
+Especially: saga, outbox, idempotency, DLQ, event-driven consistency.
+Refresh “nitty gritty” for your stack (choose based on job targets)
+Kafka: Kafka: The Definitive Guide
+Kubernetes: Kubernetes Up & Running (Hightower et al.) (fast practical)
+If you want deeper: Kubernetes in Action
+MongoDB: MongoDB: The Definitive Guide (optional; DDIA covers many concepts already)
+If you want the minimal “bridge the gap fast” reading set
+Kurose & Ross (Networking)
+OSTEP (OS)
+DDIA
+Alex Xu Vol 1/2
+SRE + Release It!
+Microservices Patterns
+(+ Kafka Definitive Guide if Kafka-heavy interviews)
+This set will give you both depth and interview performance, and it’s the most direct route to “beyond peers”.
+
+If you answer these 2 questions, I’ll tailor a tight 12-week plan (chapters + weekly milestones):
+
+Are you targeting L4 or L5 system design loops?
+Do you prefer learning by reading or by building small projects alongside reading?
+I am targetting SDE2 level roles (3/4/5 yoe roles) for now.
+
+For SDE2: the tight “books that move the needle” list
+You want depth + interview structure, without drifting into SDE3/L6 architecture territory.
+
+1) Core foundation (your biggest leverage)
+DDIA (Kleppmann) — primary
+Computer Networking: A Top‑Down Approach (Kurose/Ross) — primary
+OSTEP (Operating Systems: Three Easy Pieces) — primary (free)
+2) System design interview execution
+System Design Interview Vol 1 + Vol 2 (Alex Xu) — primary (practice-oriented)
+Fundamentals of Software Architecture (Richards/Ford) — secondary (tradeoff vocabulary)
+3) Reliability & distributed “production reality” (SDE2 strong signal)
+Release It! (Nygard) — primary
+Google SRE book — secondary but high value (SLOs, incident thinking)
+4) Event-driven/messaging (since your work is Kafka-heavy)
+Kafka: The Definitive Guide — primary if Kafka is a major part of your interviews/projects
+Microservices Patterns (Chris Richardson) — primary if interviews focus on workflows/consistency (sagas/outbox)
+If you only buy 5 books total
+DDIA
+Kurose/Ross
+Alex Xu Vol 1
+Alex Xu Vol 2
+Release It!
+(Add OSTEP as free reading, and Kafka Definitive Guide if Kafka is central.)
+
+If you tell me how many hours/week you can reliably give (e.g., 6 vs 12 vs 20), I’ll map this into a week-by-week 8–10 week plan with what to read + what to practice each week for SDE2 system design rounds.
+
+I am free - just that I am doing DSA + LLD now and will do some HLD so taking 3/4 months for prep. and will start giving interviews now - first will be OA obviously so will prep on side. I have 4 hrs in morning + 1/2 hrs in evening as I am focusing on health too - walks for now at night. But my weekends are fully free. so I can go heavy there !
+
+Morning - 5-9:30 AM window
+
+Evening - 8-10 PM window 
+
+Weekend - free fully
+
+
+
+I can dedicate these hours I feel. Need to get to work ASAP now. enough time wasted!
+
+Go ahead help me with my schedule.
+
+Your weekly time budget (realistic)
+Mon–Fri: ~4.5h morning + ~1.5–2h evening ≈ 30–32h/week
+Weekend: if you go heavy but sustainable ≈ 10–14h/week
+Total: ~40–45h/week (very strong). We’ll keep it structured to avoid burnout.
+The 14–16 week plan (SDE2: OA + LLD + System Design + depth)
+You’ll interview throughout; plan assumes you start applying now and ramp difficulty.
+
+Daily template (Mon–Fri)
+Morning (5:00–9:30)
+
+5:00–6:45 (105m): DSA (timed)
+6:45–7:00 (15m): review mistakes + write “patterns learned”
+7:00–8:15 (75m): System Design foundations (DDIA / Networking / OS rotation)
+8:15–9:15 (60m): LLD practice (1 problem) or HLD practice (alternate days)
+9:15–9:30 (15m): notes: 5 bullets you can recall later
+Evening (8:00–10:00)
+
+8:00–9:00 (60m): mock / active recall
+Mon/Wed/Fri: system design (1 prompt, 45m design + 15m critique)
+Tue/Thu: LLD (1 design prompt)
+9:00–10:00 (60m): apply + interview pipeline + review
+apply to roles, referrals, schedule mocks, or review one topic you messed up that day
+This keeps you progressing on all 3: OA + LLD + HLD every week.
+
+Week-by-week roadmap (what to study)
+Weeks 1–2: “Stop bleeding basics” + start interviews
+DSA
+
+Arrays/strings, hashing, two pointers, sliding window
+Binary search patterns
+2 timed problems/day weekdays, 4–6/day weekend
+LLD
+
+OOD basics + 3 canonical designs: Parking Lot, Rate Limiter, Elevator
+Focus: classes, interfaces, concurrency boundaries, testability
+System Design (depth)
+
+Networking (Kurose/Ross): HTTP, DNS, TCP basics, latency, throughput
+DDIA: intro + reliability, data models (don’t over-read—aim for usable concepts)
+HLD practice
+
+Use Alex Xu Vol 1: 2 designs/week (e.g., URL shortener, rate limiter)
+Weeks 3–6: “Become interview-usable”
+DSA
+
+Trees, BFS/DFS, heaps, intervals, backtracking
+Start doing 2 medium timed + 1 review/day
+Weekend: 1 full mock OA (70–90 mins) + deep review
+LLD
+
+2 designs/week: Splitwise, BookMyShow, Design Logger, Cache
+Add: SOLID + patterns only as needed (factory/strategy/observer)
+System Design
+
+DDIA heavy (core chapters): partitioning, replication, transactions, streams/logs
+Add Release It!: timeouts/retries/circuit breakers/backpressure
+HLD practice
+
+3 prompts/week (Alex Xu Vol 1/2): chat, feed, search, notification, metrics
+Weeks 7–10: “Close gaps + polish”
+DSA
+
+Graphs + DP basics (just enough for OA)
+Start mixed sets: 60–90 min sessions like real interviews
+LLD
+
+Concurrency + scaling within a service: thread safety, async workflow, queues
+1 full LLD mock/week
+System Design
+
+Finish DDIA essentials + start SRE concepts: SLIs/SLOs, error budgets, incident response
+If Kafka is central to your jobs: add Kafka Definitive Guide selected chapters (producer/consumer semantics)
+HLD
+
+2 full mocks/week with strict 45-min structure: requirements → API → data model → components → scaling → reliability → tradeoffs
+Weeks 11–16: “Interview mode”
+DSA: mostly mocks + weak-area drilling
+LLD: 1 mock/week + review templates
+HLD: 3 mocks/week + 1 “deep dive” topic/week (caching, consistency, queues, storage)
+Weekends (the accelerator)
+Saturday
+
+1 OA mock (90m) + review (2h)
+1 system design mock (1h) + critique (1h)
+Light DDIA/Kafka reading (1–2h)
+Sunday
+
+LLD mock (1.5h) + review (1h)
+2 HLD prompts (2–3h total)
+Applications/referrals/admin (1h)
+What to read (minimal, aligned to this plan)
+DDIA (primary, ongoing)
+Kurose/Ross (Weeks 1–4 focus)
+Alex Xu Vol 1/2 (practice prompts throughout)
+Release It! (Weeks 3–8)
+OSTEP (select chapters only; 1–2/week)
+One question to tailor this perfectly
+For OA: are you targeting Java solutions, or Python (some people switch for speed)?
+
+No I will later learn Python; after this switch (XD realised it last month). For now it is Java :/
+
+Java is totally fine for SDE2—here’s how to make it “interview-fast”
+You’ll win by standardizing a Java template stack so you don’t burn time on syntax and collections.
+
+Your DSA “Java kit” (must internalize)
+Collections: HashMap, HashSet, ArrayDeque, PriorityQueue, Arrays.sort, Collections.sort
+Patterns: sliding window, two pointers, prefix sums, BFS/DFS templates, topK heap, union-find template
+Time savers:
+Always use ArrayDeque<int[]> / ArrayDeque<TreeNode> (avoid Stack)
+For heaps: PriorityQueue<int[]>((a,b)->a[0]-b[0]) style comparators ready
+Keep 1–2 reusable graph + DP templates in muscle memory
+Adjusted schedule (Java-focused)
+Morning (5–9:30)
+
+DSA (2 problems timed): 90–105m
+DSA review + rewrite clean solution: 30m (this is what makes you fast in Java)
+System design reading/practice: 75m
+LLD/HLD rotation: 60m
+Evening (8–10)
+
+1 mock (alternate LLD/HLD) + 15m debrief notes
+30–45m “Java speed drill” (implement one template from scratch: BFS/DFS, heap, LRU cache, union-find)
+What to read alongside (unchanged, still best)
+DDIA (primary)
+Alex Xu V1/V2 (practice)
+Kurose/Ross (first month)
+Release It! (from week 3)
+Kafka Definitive Guide (only if Kafka-heavy roles; pick targeted chapters)
+Concrete next step (start tomorrow)
+Pick one LeetCode/NeetCode list and stick to it for 8–10 weeks (consistency beats variety).
+Create a single doc: “Java templates + mistakes” and update it daily.
+If you tell me what you’re using for DSA right now (LeetCode list / NeetCode 150 / Blind 75 / Striver / etc.), I’ll map Weeks 1–6 to an exact problem set (so you don’t waste time choosing).
+
+Using mix of all actually - Neetcode 150 - did about 100ish qns and 150ish in LC, 30 ish in striver sheet. But its all over the place for now.
+
+Fix the “all over the place” problem (without losing your progress)
+You’ve already done enough volume. Now you need structure + repetition.
+
+DSA: one-track plan (8 weeks) using NeetCode 150 as the spine
+Rule: stop mixing lists. Use NeetCode 150 as the canonical tracker. Anything else only if it fills a specific gap.
+
+Daily DSA (Mon–Fri)
+1 timed problem (medium) from NeetCode section of the week (45–60m)
+1 targeted problem (same pattern) (45–60m)
+15–30m review: write the pattern + edge cases + complexity
+Weekend DSA
+1 mock OA (70–90m, 2–3 problems)
+Deep review (2h): re-solve wrong ones without looking
+8-week DSA sequence (fastest interview coverage)
+Week 1: Arrays/Hashing + Two Pointers + Sliding Window
+Week 2: Stack + Binary Search
+Week 3: Linked List + Trees (DFS)
+Week 4: Trees (BFS) + Heaps/PQ
+Week 5: Backtracking + Intervals
+Week 6: Graphs (BFS/DFS, topo, union-find basics)
+Week 7: 1D DP basics (only common patterns)
+Week 8: Mixed mocks + weak-area drilling
+This is enough for SDE2 OAs/interviews if executed seriously.
+
+LLD + HLD alongside (so you don’t delay interviews)
+LLD (3 sessions/week)
+Rotate: Parking Lot → Rate Limiter → Splitwise → Cache/LRU → BookMyShow (partial)
+Goal: clean classes, interfaces, extensibility, concurrency boundaries.
+
+HLD (3 sessions/week)
+Use Alex Xu prompts. Always follow the same template: requirements → API → data model → components → scaling → reliability → tradeoffs.
+
+Your next action (today)
+Create a tracker with columns: Problem | Pattern | Date | Timed? | Mistake | Re-do date
+Pick a start point: Week 1 (arrays/hash/two pointers/sliding window) even if you “know it”—you’ll tighten speed and reduce silly misses.
+If you want, paste (or summarize) your weakest areas from recent attempts (e.g., “graphs + DP + heaps”), and I’ll adjust the 8-week order to front-load your gaps.
+
+My weak areas -
+
+
+
+Sorting [ I know insertion, bucket, selection, merge sort very well - can code, but Quick sort I cannot code :( ]
+
+Searching (apart from basic Binary search)
+
+Hard problems in all topics :(
+
+
+
+Havent touched - 
+
+
+
+Heap
+
+Trie
+
+Union Find
+
+Disjoint Union
+
+Graph
+
+DP
+
+Fenwick Tree
+
+Segment Tree
+
+
+
+I intend to do - heap, trie, graph now (this month from youtube vids and GFG) and will skip rest as they only rarely ask those - (IDK you tell I can be wrong :/) 
+
+What you should actually learn for SDE2 (and what you can skip)
+Your intuition is mostly right, but tweak it:
+
+Must-have (high frequency in OA + interviews)
+Heap / PriorityQueue: must (topK, k-way merge, scheduling, intervals)
+Graphs: must (BFS/DFS, shortest path basics, topo sort)
+DP basics: must (at least 1D DP patterns; many OAs include DP-ish mediums)
+Trie: medium priority (shows up, but less than heap/graphs/DP)
+Union-Find / DSU: medium priority (common for “connected components”, “accounts merge”, “number of islands II” type)
+Can skip for now (rare for SDE2 interviews)
+Fenwick Tree / Segment Tree: usually unnecessary unless you’re targeting very algorithm-heavy teams or competitive programming style OAs.
+Sorting/searching note
+QuickSort coding is not required for SDE2 interviews. Know the idea + average/worst + partition concept. In interviews you’ll use Arrays.sort() anyway.
+“Searching” beyond binary search = mostly binary search on answer (a very common pattern). That’s worth learning.
+Your 4-week “close the gaps” algorithm plan (fits your schedule)
+Week 1: Heap + Binary Search on Answer
+Heap: min/max heap patterns, topK, k-way merge, “two heaps” median
+Binary search on answer: capacity/speed/time feasibility checks
+Do 8–12 heap problems + 6–8 BS-on-answer problems.
+Week 2: Graphs I (BFS/DFS)
+BFS/DFS templates, visited, components, grid problems
+Do 12–15 graph problems (mix grid + adjacency list).
+Week 3: Graphs II (Topo + shortest path basics) + DSU
+Topological sort (Kahn + DFS)
+Shortest path: BFS (unweighted), Dijkstra idea (you can implement with PQ)
+DSU template + 6–8 DSU problems
+Week 4: DP essentials (just enough to not choke)
+1D DP: house robber, coin change, LIS (binary search optional), knapsack-style
+2D DP basics: unique paths / min path sum / LCS-style (just 2–4 problems)
+Do 12–15 DP problems.
+Where videos fit (so you don’t get stuck consuming content)
+Use YouTube/GFG only for 1–2 hours per topic, then immediately solve problems.
+If you can’t solve in 20–25 min, peek hints, finish, then re-solve next day.
+One correction to your plan
+If you do only heap + trie + graph and skip DP/DSU, you’ll still have gaps that show up in OAs. The minimum safe set is: Heap + Graph + DP + (some DSU).
+
+If you want, tell me which companies you’re prioritizing first (e.g., Amazon/Google/Meta), and I’ll give you a focused “problem subset” for these exact weak areas (using NeetCode 150 as the tracker).
+
+No company in focus as such - but Uber Salesforce SAP Adobe Amazon Meta Google (because why not :D) Cred Flipkart etc Basically high paying roles. company doent matter that much. also if you can give list of comps I can apply it'd be great help.
+
+High-paying SDE2 targets (broad + realistic)
+Below is a big-but-curated list you can apply to without overthinking. Split it into Tier A (reach/elite), Tier B (high comp, strong brand), Tier C (great comp, strong hit rate).
+
+Tier A (elite / hardest loops)
+Google, Meta, Uber, Airbnb, Netflix (rare openings), ByteDance/TikTok
+Stripe, Databricks, Snowflake, OpenAI/Anthropic (very selective)
+Atlassian (strong interviews, good comp)
+Tier B (very strong pay + good brand)
+Amazon (lots of roles; system design matters)
+Microsoft (some teams pay very well; strong brand)
+Salesforce, Adobe, SAP (good stability + brand)
+LinkedIn, Intuit, PayPal
+Walmart Global Tech, Target, Expedia, Booking.com
+Twilio (varies), Okta (varies), Cloudflare
+Tier C (India high-pay / strong growth / good opportunities)
+Flipkart, PhonePe, Cred, Razorpay, Meesho
+Swiggy, Zomato, Myntra
+Ola (team-dependent), Dream11
+Groww, Zerodha, Upstox
+Navi, Paytm (team-dependent), MPL (team-dependent)
+Hotstar/Disney+, Jio Platforms (team-dependent)
+Product + infra companies worth adding (often strong comp)
+Confluent (Kafka-heavy), Elastic, HashiCorp, MongoDB, VMware/Broadcom (mixed), Red Hat
+NVIDIA (some software roles), Qualcomm (team-dependent)
+How to apply efficiently (so it doesn’t eat prep time)
+Weekly cadence (light but consistent)
+Mon–Thu evenings: apply to 5–8 roles/day (30–45 mins total)
+Friday: follow-ups + referrals (45–60 mins)
+Weekend: 15–25 applications total + message 10 people for referrals
+Best channels
+Referrals > direct apply (2–3x response rate typically)
+For each company, target 2 roles max per week (avoid spam applying)
+Referral message template (short, works)
+“Hey <name>, I’m a 5 YOE backend engineer (Java/Spring/Kafka/AWS/K8s). I’m interviewing for SDE2 and noticed <role link/title> at <company>. Would you be open to referring me? Happy to share a 2–3 line summary of impact / resume.”
+One important note for your company list
+If “company doesn’t matter” but you want high pay, your best ROI is:
+
+1/3 Tier A, 1/3 Tier B, 1/3 Tier C, continuously This keeps pipeline strong while you prep.
+If you tell me your location preference (India only vs open to relocate) and whether you want remote, I’ll narrow this into a “Top 40” list + which ones to prioritize first for SDE2.
+
+Im open for india, abroad, remote - anything.
+
+Target list (open to India + abroad + remote): “Top picks” for SDE2
+This is a prioritized list designed to maximize: comp + brand + probability.
+
+Tier A (highest upside, harder loops) — apply steadily
+Google, Meta, Uber, Airbnb, Atlassian
+Stripe, Databricks, Snowflake, Cloudflare
+TikTok/ByteDance
+Confluent (great fit with your Kafka background)
+Tier B (great comp, strong hiring volume)
+Amazon (India + abroad), Microsoft
+Salesforce, Adobe
+LinkedIn, Intuit, PayPal
+Expedia, Booking.com
+Tier C (India high-pay, faster pipelines often)
+Flipkart, PhonePe, Razorpay, Cred
+Swiggy, Meesho, Groww, Zerodha/Upstox
+Dream11, Myntra
+Remote-first / remote-friendly companies to add (varies by openings)
+GitLab, Automattic, HashiCorp (some roles), Elastic (some roles)
+Shopify (varies), Zapier (varies), Canonical (often remote)
+How to run applications like a pipeline (so you don’t waste weeks)
+Weekly targets (aggressive but doable with your schedule)
+20–30 applications/week (high-quality, not spam)
+10–15 referral pings/week
+Keep a simple sheet: Company | Role link | Date | Referral? | Status | Next action
+Best order to apply (to ramp interview performance)
+Week 1–2: Tier C + some Tier B (warm-up loops)
+Week 3–6: heavy Tier B + start Tier A
+Week 6+: heavy Tier A once you’re consistently clearing mocks
+Two practical notes given your background
+With Java/Spring/Kafka/AWS/K8s, you’re a strong match for platform / backend / event-driven / infra-adjacent teams. Tailor resume bullets around reliability + scale + ownership.
+If you want abroad/remote, referrals matter even more; optimize LinkedIn outreach.
+If you want, paste your current resume bullets (anonymized) or just your top 2 projects, and I’ll tell you exactly how to rewrite them for SDE2 + system design loops (impact, scale, reliability, ownership).

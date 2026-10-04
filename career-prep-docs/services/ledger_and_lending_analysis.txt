@@ -1,0 +1,502 @@
+================================================================================
+COMBINED DETAILED ANALYSIS: LEDGER-SERVICE & OA-LENDING-OFFERS-SERVICE
+================================================================================
+Author: Kunal Ladhani
+Purpose: Interview Preparation — Complete Contribution Analysis
+================================================================================
+
+
+================================================================================
+1. TIMELINE
+================================================================================
+
+LEDGER-SERVICE (niyo-bharat/ybl/ledger-service)
+  First Commit:  2024-09-16 (NMB-408: update delay queue to v2)
+  Last Commit:   2026-04-01 (BHAR-700: otel annotation added and fixed trivy issues)
+  Active Period: ~18 months (Sep 2024 — Apr 2026)
+  Total Commits: ~130+ commits by Kunal Ladhani
+
+OA-LENDING-OFFERS-SERVICE
+  First Commit:  2024-11-26 (GO-28314: added initial setup)
+  Last Commit:   2025-06-13 (GO-37835: set replica zero for all pods)
+  Active Period: ~7 months (Nov 2024 — Jun 2025)
+  Total Commits: ~100+ commits by Kunal Ladhani
+
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+LEDGER-SERVICE
+  Language:        Java 17
+  Framework:       Spring Boot 3.5.13 (upgraded from older version during tenure)
+  Architecture:    Multi-module Maven project (API + Worker + Base modules)
+  Database:        MongoDB (spring-boot-starter-data-mongodb)
+  Caching:         Redis (spring-boot-starter-data-redis, Redisson 3.22.0)
+  Messaging:       Apache Kafka (spring-kafka 3.1.4, kafka-clients 3.9.1)
+  Cloud:           AWS (S3, STS, Secrets Manager, SQS)
+  API Client:      Retrofit 3.0.0 + OkHttp 4.12.0
+  Resilience:      Resilience4j 2.3.0 (circuit breaker, retry patterns)
+  Reactive:        Project Reactor, RxJava 3
+  Mapping:         MapStruct 1.6.3
+  Serialization:   Jackson 2.21.1
+  Security:        Spring Security + JWT (jjwt)
+  Logging:         Logback + Logstash encoder (structured JSON logging)
+  Monitoring:      Datadog (dd-java-agent.jar), Spring Actuator
+  Observability:   OpenTelemetry annotations (added in final commit)
+  API Docs:        SpringDoc OpenAPI (Swagger UI) 2.5.0
+  Testing:         JUnit 5, Spring Security Test, Flapdoodle Embedded MongoDB
+  Code Quality:    SonarQube (Jacoco for coverage), Lombok
+  Containerization: Google JIB (Docker image building)
+  CSV Processing:  OpenCSV 5.11.2
+  CI/CD:           Bitbucket Pipelines
+  Deployment:      Kubernetes (multi-env: UAT, Beta, Prod)
+  Internal Libs:   cs-client, ucs-client, bharat-cardhost-client,
+                   transactions-client, authorization-client, jwt-visionary-plugin
+
+OA-LENDING-OFFERS-SERVICE
+  Language:        Java 17
+  Framework:       Spring Boot 3.5.0
+  Database:        MongoDB (spring-boot-starter-data-mongodb)
+  Cloud:           AWS SDK v2 (S3, STS, Secrets Manager)
+  API Client:      Retrofit 2.11.0 + OkHttp 4.12.0
+  Serialization:   Jackson 2.17.2 (including CSV format support)
+  Mapping:         ModelMapper 3.2.0
+  Security:        Spring Security
+  Logging:         Logback + Logstash encoder (structured JSON logging)
+  Monitoring:      Datadog (dd-trace-api, opentracing-util)
+  API Docs:        SpringDoc OpenAPI (Swagger UI) 2.6.0
+  Testing:         JUnit (Surefire + Failsafe), Jacoco for coverage, AssertJ
+  Containerization: Google JIB + Spotify Docker Maven Plugin
+  CI/CD:           Bitbucket Pipelines
+  Deployment:      Kubernetes (multi-env: UAT, Beta, Prod)
+  Utilities:       Guava, Commons Lang3, Commons IO, SnakeYAML
+
+
+================================================================================
+3. MAJOR FEATURES BUILT (Grouped by Feature/Ticket)
+================================================================================
+
+─────────────────────────────────────────────────────────────────────────────────
+LEDGER-SERVICE
+─────────────────────────────────────────────────────────────────────────────────
+
+[FEATURE] BHAR-432: Spring Boot Major Version Upgrade (Java 8→17, Spring Boot 2→3)
+  Timeline: May 2025 — Jul 2025 (~60+ commits — LARGEST feature)
+  Scope: Complete modernization of the ledger-service
+  Key Work:
+    - Upgraded Java version from 8 to 17
+    - Upgraded Spring Boot from 2.x to 3.x (eventually 3.5.13)
+    - Migrated from Jetty to Tomcat embedded server
+    - Replaced slf4j-simple with Logback for proper logging
+    - Refactored all dependency versions in pom.xml
+    - Refactored folder structure and deleted unnecessary files
+    - Updated all config files (application properties for all environments)
+    - Migrated authentication: replaced auth-utils dependency with jwt-visionary-plugin
+    - Created new SecurityUtils class for JWT claim extraction
+    - Added WebSecurityCustomizer for Spring Security 6 compatibility
+    - Refactored auth whitelist for new security model
+    - Decoded x-downstream-context for internal API calls
+    - Fixed bean instantiation errors during migration
+    - Allowed bean definition override for backward compatibility
+    - Added /internal path to authenticated endpoints
+    - Created separate beta deployment file
+    - Sent Datadog metrics only in PROD environment
+    - Added beta app config file and base URLs for all services
+    - Configured Spring Actuator health checks for worker module
+    - Added readiness/liveness probes for worker on /lds-worker path
+    - Fixed critical vulnerabilities during upgrade
+    - Added maven caching to build pipeline for faster builds
+    - Ignored dd-java-agent.jar from Jacoco report generation
+    - Updated Kubernetes deployment files
+    - Removed test step from master pipeline
+  Interview Talking Points:
+    - Led a major framework migration with zero downtime
+    - Handled breaking changes in Spring Security 5→6 (WebSecurityConfigurerAdapter removal)
+    - Managed Jakarta namespace migration (javax → jakarta)
+    - Ensured backward compatibility while modernizing
+
+[FEATURE] BHAR-400: Transaction Sync & Kafka Optimization
+  Timeline: Jun 2025 — Aug 2025
+  Key Work:
+    - Exposed API for syncing transactions via Kafka topic publishing
+    - Implemented bulk_sync API with file processing
+    - Refactored file processing implementation (multiple iterations)
+    - Added logging before each publish event for traceability
+    - Reduced max allowed CRN entries from unlimited to 2000, then to 100 (rate limiting)
+    - Changed Kafka producer compression algorithm to ZSTD for better performance
+    - Added test API for Kafka publish testing, then removed after validation
+    - Reduced ledger-service pod count from multiple to 1 (cost optimization)
+    - Refactored pom.xml to remove Trivy OSV vulnerabilities
+    - Fixed Trivy security issues
+  Interview Talking Points:
+    - Designed bulk transaction sync mechanism via Kafka
+    - Implemented rate limiting (CRN entry caps) to prevent system overload
+    - Optimized Kafka producer with ZSTD compression (better compression ratio)
+    - Cost optimization by right-sizing pod count
+
+[FEATURE] BHAR-342: Kafka Cluster Migration
+  Timeline: Feb 2025 — May 2025
+  Key Work:
+    - Updated Kafka configuration files for new cluster
+    - Added Kafka constants and configs
+    - Refactored pom.xml for Java 11→8 compatibility (local dev)
+    - Set replica count: 3 for prod/beta, 1 for UAT
+    - Added testing APIs for Kafka validation, removed after testing
+    - Added beta deploy step in pipeline for testing
+    - Reverted Lombok version for compatibility
+  Interview Talking Points:
+    - Managed Kafka cluster migration with zero message loss
+    - Implemented environment-specific replica strategies
+
+[FEATURE] BHAR-592: Facets Deployment Migration & Pipeline Modernization
+  Timeline: Dec 2025
+  Key Work:
+    - Updated Bitbucket pipeline for Facets deployment platform
+    - Removed secrets from config files (externalized to Facets/vault)
+    - Removed SQS implementation (no longer needed)
+    - Redis configured to standalone mode in UAT
+    - Updated Spring Boot version to 3.5.8
+    - Refactored pipeline configuration
+  Interview Talking Points:
+    - Migrated deployment from direct K8s to Facets platform
+    - Improved security by externalizing secrets
+
+[FEATURE] BHAR-610: Kafka Topic Cleanup
+  Timeline: Dec 2025
+  Key Work:
+    - Removed createOrModifyTopics bean (topic auto-creation)
+    - Removed new topic creation bean
+    - Fixed Trivy security issues
+  Interview Talking Points:
+    - Cleaned up Kafka topic management for production safety
+
+[FEATURE] BHAR-537: Kafka Topic Removal
+  Timeline: Aug 2025
+  Key Work:
+    - Removed unused Kafka topic: icici.visa.transaction.event
+  Interview Talking Points:
+    - Infrastructure cleanup and dead code removal
+
+[FEATURE] NMB-408: Delay Queue Update
+  Timeline: Sep 2024 (First contribution to ledger-service)
+  Key Work:
+    - Updated delay queue implementation to v2
+    - Tested delay topic publishing
+  Interview Talking Points:
+    - Implemented delayed message processing pattern using Kafka
+
+[FEATURE] BHAR-411: Notification Base URL Update
+  Timeline: May 2025
+  Key Work:
+    - Updated notification service base URL
+    - Added beta deploy step
+    - Removed notification URL after migration
+  Interview Talking Points:
+    - Service discovery/configuration management across environments
+
+[FEATURE] BHAR-700: OpenTelemetry Integration
+  Timeline: Apr 2026 (Latest commit)
+  Key Work:
+    - Added OpenTelemetry annotations for distributed tracing
+    - Fixed Trivy security issues
+  Interview Talking Points:
+    - Implemented distributed tracing for observability
+    - Transition from Datadog-only to OpenTelemetry standard
+
+[FEATURE] BHAR-684: Domain Change
+  Timeline: Mar 2026
+  Key Work:
+    - Merged domain change PR (#129)
+  Interview Talking Points:
+    - Handled domain migration
+
+[FEATURE] BHAR-572: Security & Compliance Hardening
+  Timeline: Oct-Nov 2025
+  Key Work:
+    - Updated pom.xml files for security compliance
+    - Fixed git secret scanner issues
+    - Fixed Trivy and secret scanner issues
+    - Updated Bitbucket pipeline for Facets deployment
+    - Resolved SonarQube hotspots, vulnerabilities, and bugs
+  Interview Talking Points:
+    - Led security hardening initiative
+    - Resolved all SonarQube security hotspots and vulnerabilities
+
+[FEATURE] BHAR-11: Refactoring
+  Timeline: Mar 2025
+  Key Work:
+    - General codebase refactoring
+  Interview Talking Points:
+    - Code quality improvement initiative
+
+
+─────────────────────────────────────────────────────────────────────────────────
+OA-LENDING-OFFERS-SERVICE
+─────────────────────────────────────────────────────────────────────────────────
+
+[FEATURE] GO-28314: Service Creation & Initial Setup (GREENFIELD PROJECT)
+  Timeline: Nov 2024
+  Key Work:
+    - Created the entire service from scratch (greenfield)
+    - Set up Spring Boot 3.x project structure
+    - Added Swagger/OpenAPI documentation
+    - Configured structured JSON logging (Logback + Logstash)
+    - Set up Spring Security configuration
+    - Configured Docker setup
+    - Added Amazon S3 configuration
+    - Set up database (MongoDB) configuration
+    - Created exception handler framework
+    - Implemented Retrofit HTTP client as singleton (per PR feedback)
+    - Built basic CSV reader utility class
+    - Removed unused methods and constants per PR review
+  Interview Talking Points:
+    - Architected and built a greenfield microservice end-to-end
+    - Made key architectural decisions: Spring Boot 3, MongoDB, S3, Retrofit
+    - Followed clean code practices from day one
+
+[FEATURE] GO-28430: Personal Loan Offer System (CORE BUSINESS FEATURE)
+  Timeline: Nov 2024 — Jan 2025 (~70+ commits — LARGEST feature)
+  Key Work:
+    Phase 1 — Core API Development (Nov-Dec 2024):
+      - Built "Get Personal Loan Details" API
+      - Added customer domain models (loan availed, loan offered fields)
+      - Implemented CSV file processing for ABFL (Aditya Birla Finance) loan offers
+      - Built S3 integration for reading offer files
+      - Implemented offer expiry date processing rules
+      - Created loan status tracking (saving raw status, defaulting to PENDING)
+      - Mapped offered customer details to response DTOs
+      - Used LocalDateTime instead of Instant for date handling
+      - Separated CSV field names from domain field names (clean architecture)
+      - Built comprehensive error handler
+
+    Phase 2 — Deployment & Infrastructure (Dec 2024):
+      - Created Kubernetes deployment files for UAT, Beta, and Prod
+      - Built complete Bitbucket Pipeline (UAT → Beta → Prod)
+      - Configured AWS S3 keys per environment
+      - Set up liveness and readiness probes (/public/v1/health)
+      - Configured OIDC role for AWS authentication
+      - Added prod deploy step to spin up initial PROD pod
+
+    Phase 3 — Refinement & Bug Fixes (Dec 2024 — Jan 2025):
+      - Added workbench API response DTO
+      - Fixed auth filter issues
+      - Refactored MongoDB URL configuration
+      - Fixed code smells (SonarQube compliance)
+      - Commented out Sonar dependencies temporarily
+      - Added not-empty validation checks
+      - Changed file parse exception status code
+      - Defaulted incorrect loan status to ACTIVE
+      - Implemented EMI date calculation logic
+      - Completed and tested EMI date calculation implementation
+
+  Interview Talking Points:
+    - Designed and built complete personal loan offer processing system
+    - Implemented CSV-based bulk offer ingestion from partner bank (ABFL)
+    - Built EMI date calculation engine
+    - Handled edge cases: invalid statuses, empty data, file parse errors
+    - Multi-environment deployment from scratch
+
+[FEATURE] BHAR-258: Pipeline Refactoring
+  Timeline: Jan 2025
+  Key Work:
+    - Refactored Bitbucket pipeline
+    - Removed code smells
+  Interview Talking Points:
+    - CI/CD optimization
+
+[FEATURE] BHAR-148: Logging & Debugging Improvements
+  Timeline: Dec 2024
+  Key Work:
+    - Added logging for application response DTOs
+    - Refactored code for better observability
+  Interview Talking Points:
+    - Production debugging and observability improvements
+
+[FEATURE] GO-34312: Consent Capture & Kafka Integration
+  Timeline: Mar 2025
+  Key Work:
+    - Created consent capture API
+    - Added Server-Sent Events (SSE) for real-time updates
+    - Implemented basic Kafka producer methods
+    - Added Kafka constants to config file
+    - Created Kafka configuration file
+    - Fixed OSV vulnerabilities (multiple iterations)
+    - Fixed date format issues
+    - Updated Maven version
+  Interview Talking Points:
+    - Built real-time consent capture flow using SSE
+    - Integrated Kafka for event-driven architecture
+    - Handled regulatory compliance (consent management)
+
+[FEATURE] GO-37835: Service Decommissioning
+  Timeline: Jun 2025
+  Key Work:
+    - Set replica to zero for all pods (graceful shutdown)
+    - Updated to Spring Boot 3.5.0 to fix Trivy issues before shutdown
+  Interview Talking Points:
+    - Managed graceful service decommissioning
+    - Ensured security compliance even during shutdown
+
+
+================================================================================
+4. KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+LEDGER-SERVICE:
+  1. Multi-Module Architecture: API + Worker + Base separation for clean concerns
+     - API module handles REST endpoints
+     - Worker module handles async Kafka consumers
+     - Base module contains shared domain, configs, and utilities
+  2. Kafka as Event Backbone: Used Kafka for transaction sync, delay queues,
+     and inter-service communication
+  3. ZSTD Compression: Chose ZSTD over default compression for Kafka producers
+     (better compression ratio for transaction data)
+  4. Redis for Caching: Redisson client for distributed caching/locking
+  5. Resilience4j: Circuit breaker pattern for external service calls
+  6. JWT Security: Custom security filter chain with JWT validation
+  7. Retrofit for Service-to-Service: Type-safe HTTP clients for internal APIs
+  8. Google JIB: Containerization without Docker daemon (faster CI builds)
+  9. Facets Migration: Moved from direct K8s deployment to Facets platform
+  10. OpenTelemetry: Adopted OTel standard for distributed tracing
+  11. Standalone Redis in UAT: Cost optimization for non-prod environments
+  12. Secrets Externalization: Moved from config-file secrets to external vault
+
+OA-LENDING-OFFERS-SERVICE:
+  1. Greenfield Spring Boot 3: Started fresh with latest framework (no legacy)
+  2. MongoDB for Loan Data: Document store for flexible loan offer schemas
+  3. S3 for File Storage: CSV offer files stored in S3, processed on-demand
+  4. Retrofit Singleton: HTTP client as singleton for connection pooling
+  5. CSV Domain Separation: Separated CSV field names from domain models
+  6. SSE for Real-Time: Server-Sent Events for consent capture flow
+  7. Kafka for Events: Event-driven consent and offer processing
+  8. ModelMapper: Chose ModelMapper over MapStruct for simpler DTO mapping
+  9. Spotify Docker Plugin + JIB: Dual containerization support
+  10. Environment-Specific S3 Keys: Separate AWS configs per environment
+
+
+================================================================================
+5. BUG FIXES & PRODUCTION ISSUES HANDLED
+================================================================================
+
+LEDGER-SERVICE:
+  - Fixed bean instantiation errors during Spring Boot 3 migration
+  - Resolved Spring Security 6 breaking changes (WebSecurityCustomizer)
+  - Fixed build issues in ledger module during upgrade
+  - Reverted 50 commits for stability (BHAR-400 rollback — production incident)
+  - Changed Kafka group ID for reprocessing topic (data reprocessing fix)
+  - Fixed critical vulnerabilities (multiple Trivy/OSV fixes)
+  - Resolved SonarQube hotspots, vulnerabilities, and bugs
+  - Fixed git secret scanner issues
+  - Fixed Trivy and secret scanner issues
+
+OA-LENDING-OFFERS-SERVICE:
+  - Fixed auth filter issue (blocking legitimate requests)
+  - Fixed file parse exception returning wrong status code
+  - Added not-empty validation (null pointer prevention)
+  - Defaulted incorrect loan status to ACTIVE (graceful degradation)
+  - Fixed date format issues in consent capture
+  - Fixed OSV vulnerabilities (4 separate fix commits)
+  - Removed Secret Manager client (unnecessary dependency)
+  - Fixed offer expiry date processing rule
+
+
+================================================================================
+6. CI/CD AND DEVOPS WORK
+================================================================================
+
+LEDGER-SERVICE:
+  - Built/maintained Bitbucket Pipelines for multi-env deployment
+  - Added maven caching to pipeline (build speed optimization)
+  - Removed test step from master pipeline (deployment speed)
+  - Created separate beta deployment files
+  - Configured Kubernetes liveness/readiness probes for worker module
+  - Migrated pipeline to Facets deployment platform
+  - Externalized secrets from config files
+  - Updated base Docker images in pipeline
+  - Managed pod scaling (3 replicas prod, 1 UAT)
+  - Reduced pod count for cost optimization
+  - Added Datadog agent (dd-java-agent.jar) to container builds
+  - Configured Google JIB for containerization
+  - Added OpenTelemetry annotations for observability
+
+OA-LENDING-OFFERS-SERVICE:
+  - Created entire CI/CD pipeline from scratch (greenfield)
+  - Built Bitbucket Pipeline with UAT → Beta → Prod stages
+  - Created Kubernetes deployment files for all environments
+  - Configured OIDC role for AWS authentication in pipeline
+  - Set up liveness/readiness probes (/public/v1/health)
+  - Configured environment-specific S3 and MongoDB settings
+  - Added prod deploy step for initial pod spin-up
+  - Refactored pipeline multiple times for optimization
+  - Managed service decommissioning (replica zero)
+  - Updated Spring Boot version for Trivy compliance before shutdown
+
+
+================================================================================
+7. TESTING CONTRIBUTIONS
+================================================================================
+
+LEDGER-SERVICE:
+  - JUnit 5 test framework configured (Jupiter engine + API)
+  - Flapdoodle Embedded MongoDB for integration tests
+  - Spring Security Test for auth testing
+  - SonarQube integration with Jacoco for code coverage
+  - Sonar exclusions configured for non-business code (config, DTOs, utils)
+  - Jacoco configured to ignore dd-java-agent.jar
+  - Added test APIs for Kafka publish validation (removed after testing)
+  - Test result directories configured for CI reporting
+
+OA-LENDING-OFFERS-SERVICE:
+  - Maven Surefire plugin configured for unit tests
+  - Maven Failsafe plugin configured for integration tests
+  - Jacoco plugin for code coverage reporting
+  - AssertJ for fluent test assertions
+  - Test naming conventions enforced (*Tests.java, *Test.java)
+  - Alphabetical test run order configured
+  - SonarQube code smell fixes (multiple iterations)
+
+
+================================================================================
+8. SUMMARY — KEY INTERVIEW NARRATIVES
+================================================================================
+
+NARRATIVE 1: "I built a greenfield microservice end-to-end"
+  → oa-lending-offers-service: From initial setup to production deployment
+  → Chose tech stack, designed APIs, built CI/CD, deployed to K8s
+  → Personal loan offer processing with CSV ingestion from partner bank
+  → EMI calculation engine, consent capture with SSE, Kafka integration
+
+NARRATIVE 2: "I led a major Spring Boot 2→3 migration"
+  → ledger-service BHAR-432: 60+ commits over 2 months
+  → Java 8→17, Spring Security 5→6, javax→jakarta namespace
+  → Zero-downtime migration with backward compatibility
+  → Handled breaking changes in security, logging, and dependency injection
+
+NARRATIVE 3: "I optimized Kafka infrastructure for scale"
+  → ZSTD compression for producers (better throughput)
+  → Bulk transaction sync via Kafka with rate limiting
+  → Kafka cluster migration with zero message loss
+  → Topic lifecycle management (creation, cleanup, removal)
+
+NARRATIVE 4: "I handled production incidents and rollbacks"
+  → Reverted 50 commits for stability (BHAR-400)
+  → Changed Kafka group IDs for data reprocessing
+  → Multiple security vulnerability fixes (Trivy, OSV, SonarQube)
+
+NARRATIVE 5: "I modernized deployment infrastructure"
+  → Migrated from direct K8s to Facets platform
+  → Externalized secrets from config files
+  → Added OpenTelemetry for distributed tracing
+  → Cost optimization through pod right-sizing
+  → Managed graceful service decommissioning
+
+NARRATIVE 6: "I maintained security and compliance"
+  → Resolved all SonarQube hotspots and vulnerabilities
+  → Fixed Trivy/OSV security issues across both services
+  → Git secret scanner compliance
+  → Consent capture API for regulatory compliance
+
+================================================================================
+END OF ANALYSIS
+================================================================================

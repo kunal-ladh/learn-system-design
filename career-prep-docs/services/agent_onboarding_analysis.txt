@@ -1,0 +1,497 @@
+================================================================================
+  BHARAT AGENT ONBOARDING SERVICE — DETAILED CONTRIBUTION ANALYSIS
+  Author: Kunal Ladhani
+  Repository: niyo-bharat/nsdl/bharat-agent-onboarding
+  Total Commits: 544
+================================================================================
+
+================================================================================
+1. TIMELINE
+================================================================================
+
+First Commit:  2024-10-29  (NSDL-98: added basic login module)
+Latest Commit: 2026-03-10  (BHAR-200: updated spring boot version)
+
+Active Duration: ~17 months (Oct 2024 — Mar 2026)
+
+Phase Breakdown:
+  - Foundation Phase (Oct–Nov 2024): Login module, OTP, agent invite, risk
+    engine, IAM integration, search APIs — built the service from scratch.
+  - Core Feature Phase (Dec 2024–Mar 2025): BGV (Background Verification),
+    business approval flow, activity grace period, sonar fixes, Kafka migration.
+  - Scaling & Hardening Phase (Apr–Aug 2025): API refactoring (v2 endpoints),
+    Kafka compression optimization, kube file updates, NPE fixes.
+  - Platform Migration Phase (Sep 2025–Mar 2026): Facets deployment migration,
+    Datadog integration, AWS Secrets Manager, Spring Boot LTS upgrades, Trivy
+    security remediation.
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+Language & Framework:
+  - Java 17
+  - Spring Boot 3.x (upgraded from 3.3.x → 3.5.11 LTS over time)
+  - Spring Security (JWT-based auth with custom AuthenticationFilter)
+  - Spring Kafka (event-driven architecture)
+  - Spring Data MongoDB
+  - Spring Retry
+  - Spring Cache
+  - Spring Integration
+
+Database:
+  - MongoDB (primary data store)
+  - Collections: Agent, ActivityLog, AgentSequence, Distributor, KycResponse,
+    DigioEsignResponse, SimBindingInfo
+
+Messaging & Event Streaming:
+  - Apache Kafka (internal + external topics, batch processing, zstd compression)
+  - AWS SQS (cron-based worker processing)
+
+Cloud & Infrastructure:
+  - AWS S3 (document storage)
+  - AWS Secrets Manager (secrets management)
+  - AWS STS (OIDC-based authentication)
+  - AWS ECR (container registry)
+  - Kubernetes (deployment target, readiness/liveness probes)
+  - Facets Cloud (deployment orchestration — migrated from raw K8s)
+  - Datadog (APM, dd-java-agent integration)
+  - Bitbucket Pipelines (CI/CD)
+
+API & Integration Libraries:
+  - Retrofit 2.11 + OkHttp 4.12 (HTTP client for external service calls)
+  - Jackson (JSON serialization/deserialization)
+  - ModelMapper + MapStruct (object mapping)
+  - Apache PDFBox (PDF generation for BGV reports)
+  - JJWT 0.12.3 (JWT token generation and validation)
+  - SpringDoc OpenAPI (Swagger UI documentation)
+  - Logstash Logback Encoder (structured logging)
+  - Guava, Apache Commons (Lang3, Collections4, Text, IO)
+  - SonarQube Scanner (code quality)
+
+External Service Integrations (via Retrofit clients):
+  - IAM Service (user creation, employee ID generation, permissions)
+  - Digio API (eSign, face match verification)
+  - Risk Engine API (agent risk assessment)
+  - Notification Service (OTP via SMS/email)
+  - PII Vault API (sensitive data storage)
+  - PDF Converter API (document conversion)
+  - Long Codes API (agent code management)
+  - Civic Data Hub API (civic data verification)
+  - NSDL PB Customer Service (banking operations, penny drop)
+
+Architecture Pattern:
+  - Multi-channel controller layer: /ag (agent-facing), /app (mobile app),
+    /wb (web backoffice) — clean separation of concerns
+  - Service-DAO-Repository layered architecture
+  - Worker pattern for async processing (Kafka + SQS workers)
+  - Async helpers for non-blocking notification dispatch
+
+================================================================================
+3. MAJOR FEATURES BUILT (Grouped by Ticket/Feature)
+================================================================================
+
+--- 3.1 LOGIN MODULE & OTP SYSTEM (NSDL-98, NSDL-109) — Oct–Nov 2024 ---
+  First feature built in the service. End-to-end agent authentication.
+  - Built generate OTP, verify OTP, and resend OTP APIs
+  - Integrated with external Notification Service for SMS-based OTP delivery
+  - Implemented OTP mocking for dev/uat environments to unblock testing
+  - JWT token creation post-verification (NSDL-109)
+  - Added tenant-id and consumer-id headers for multi-tenant support
+  - Comprehensive error handling for notification service failures
+  - Auth whitelisting for public OTP endpoints
+  Commits: ~50+ (511116e → f347c19)
+
+--- 3.2 AGENT INVITE FLOW (NSDL-99) — Nov 2024 ---
+  Core business flow for onboarding new agents via distributor invitation.
+  - Built complete agent invite API with multipart file upload support
+  - Agent code generation logic (auto-incrementing sequence)
+  - S3 document upload for agent documents
+  - Notification integration for invite SMS/email
+  - Saving full agent details on invite (distributor, reporting manager, etc.)
+  - Auth whitelisting for invite endpoints
+  Commits: ~20 (ec03446 → bbf0942)
+
+--- 3.3 AGENT SEARCH & STATUS MANAGEMENT (NSDL-113) — Nov 2024 ---
+  Admin/backoffice functionality for managing agents.
+  - Agent search API with multiple filter criteria
+  - Agent status change API (activate, block, deactivate)
+  - Storing reporting manager name and employee ID
+  - Permission-based access control for search and status APIs
+  Commits: ~8 (97aca33 → 1253af0)
+
+--- 3.4 RISK ENGINE INTEGRATION (NSDL-102, NSDL-112) — Nov 2024 ---
+  Compliance feature — risk assessment before agent activation.
+  - Integrated with external Risk Engine API for agent risk scoring
+  - Risk engine status check API with response mapping
+  - OTP field validation before risk check
+  - JWT token expiry set to 15 minutes for security
+  - Risk details persisted in agent document
+  - Custom RiskEngineException handling
+  Commits: ~15 (5f7c7d3 → 173135f)
+
+--- 3.5 IAM MODULE INTEGRATION (NSDL-115) — Nov 2024 ---
+  Identity and Access Management integration for agent user provisioning.
+  - Built IAM API service client (Retrofit-based)
+  - Create user API integration with IAM service
+  - Check user existence API (mobile + email uniqueness)
+  - IAM employee ID generation logic with agent_sequence collection
+  - Auto-incrementing agent code counter
+  - Error handling for IAM API failures
+  Commits: ~25 (7b8af55 → 5f5deae)
+
+--- 3.6 AGENT BGV (Background Verification) SYSTEM (BHAR-148, BHAR-175) ---
+      Dec 2024 — Feb 2025
+  Major compliance feature — full background verification workflow.
+  - Built end-to-end BGV flow: document collection → face match → report gen
+  - Digio face match API integration for identity verification
+  - Dynamic BGV report generation using HTML templates + PDFBox
+  - BGV report HTML with dynamic fields: agent photos, verification status,
+    face match scores, Verified/Unverified labels
+  - S3 document validation (check if document exists before processing)
+  - PAN masking in BGV reports for PII compliance
+  - RBAC permissions: BHARAT_BGV_OFFICER role for search-by-mobile
+  - isBackgroundVerified and isCustomerOnboardingAllowed flags
+  - Activity logging throughout the BGV flow
+  - Separated BGV report generation logic into dedicated BgvService
+  - Officer selfie photo capture and inclusion in BGV PDF (BHAR-202)
+  - Shop photo capture APIs for field verification
+  Commits: ~50+ (01a63fd → d0a2f0e)
+
+--- 3.7 BUSINESS CATEGORY FIELD (BHAR-214) — Jan 2025 ---
+  - Added business category enum (CAT_A, CAT_B, etc.)
+  - Saving business category in agent invite API
+  - Refactored business category names for consistency
+  Commits: ~8 (b55df6d → c3c3e6b)
+
+--- 3.8 CUSTOMER ONBOARDING ALLOWED FLAG (BHAR-41, BHAR-175) — Jan 2025 ---
+  Feature toggle for controlling which agents can onboard customers.
+  - WB (web backoffice) and APP APIs for isCustomerOnboardingAllowed flag
+  - BGV flag initialization (set to false for new agents)
+  - Agent profile API updated with flag status
+  - Blocked status agent search support
+  Commits: ~15 (3243d5e → d8b9bf4)
+
+--- 3.9 AGENT ACTIVITY STATUS & KAFKA INTEGRATION (BHAR-258, BHAR-199) ---
+      Jan–Feb 2025
+  Event-driven architecture for tracking agent onboarding activity.
+  - Kafka producer/consumer setup with internal topics
+  - Kafka workers: NewAgentOnboardingWorker, OnboardingActivityWorker
+  - Batch processing for Kafka messages with parallelized publishing
+  - Agent onboarding activity status tracking (ACTIVE, DORMANT, BLOCKED)
+  - lastOnboardingDate field for activity tracking
+  - Activity log publishing for status changes
+  - SQS-based cron worker (AgentOnboardingActivityCronWorker)
+  - Swagger UI configuration (tabs collapsed by default)
+  - API grouping by folder and context
+  Commits: ~40+ (b74ef2f → 23987ef)
+
+--- 3.10 AGENT APP APIs (BHAR-197) — Jan–Feb 2025 ---
+  Mobile app-facing APIs for agent operations.
+  - Agent invite API for mobile app
+  - Get all distributors API
+  - Distributor and pincode APIs for app
+  - Agent app details search API with CAT_A validation
+  - Current logged-in user validation
+  Commits: ~12 (0464e22 → e193be9)
+
+--- 3.11 IFSC CODE VALIDATION (BHAR-70) — Feb 2025 ---
+  Bank verification improvement.
+  - Replaced external IFSC API calls with local IFSC dump database
+  - Removed ifsc-utils dependency
+  - Added utility API for IFSC verification
+  Commits: ~5 (ef14688 → c21793d)
+
+--- 3.12 AGENT INVITE EMAIL CHANGES (BHAR-307) — Feb–Mar 2025 ---
+  Email flow improvements for agent invitations.
+  - Made email optional in WB invite API
+  - Separated JWT token generation logic into dedicated module
+  - Using verified agent details for invite flow
+  - Cancel invite only if saving account present in NSDL
+  - S3 file existence check utility (checkFileExistsForS3Key)
+  - Separated BGV methods and agent utility methods for cleaner code
+  Commits: ~18 (59535b5 → d00335a)
+
+--- 3.13 AGENT ONBOARDING ACTIVITY GRACE PERIOD (BHAR-323) — Feb–Mar 2025 ---
+  Business logic for handling dormant agents with a grace period.
+  - Grace period logic for dormant agent reactivation
+  - Grace period start logging
+  - Code cleanup and test endpoint management
+  Commits: ~8 (df88a37 → 9dfaefe)
+
+--- 3.14 BUSINESS APPROVAL FLOW (BHAR-11, BHAR-337) — Feb–Mar 2025 ---
+  Multi-level approval workflow for agent business operations.
+  - Business approval APIs with permission-based access
+  - Approver email ID storage and IAM API integration for employee ID lookup
+  - Activity logging with current user and approver details
+  - Agent search by mobile number
+  - Compound index optimization for approval queries
+  - Separated authentication config to resolve circular dependency issues
+  - Lazy bean loading to avoid circular dependency
+  Commits: ~25 (215de65 → ceb958a)
+
+--- 3.15 KAFKA CLUSTER MIGRATION (BHAR-337) — Feb–Mar 2025 ---
+  Infrastructure migration for Kafka.
+  - Refactored Kafka config files for new cluster
+  - Updated UAT Kafka cluster configuration
+  Commits: ~4 (c42fad1 → 89851ce)
+
+--- 3.16 API ENDPOINT REFACTORING — V2 APIs (BHAR-392) — Apr–May 2025 ---
+  Major API versioning effort for backward compatibility.
+  - Removed mobileNo from API endpoint paths (security improvement)
+  - Retained old APIs for previous app versions, created v2 for new ones
+  - Spring Boot version upgrade from 3.3.9 to 3.3.11
+  - Notification base URL updates across environments
+  - Resolved serialization errors during migration
+  Commits: ~12 (477df11 → b692f87)
+
+--- 3.17 PENNY DROP API & KAFKA COMPRESSION (BHAR-498) — Jul 2025 ---
+  Banking verification and performance optimization.
+  - Added amount field in penny-drop API for bank account verification
+  - Changed Kafka compression algorithm to zstd (better compression ratio)
+  - Removed Digio UAT-specific changes
+  Commits: ~10 (fda9c25 → a15b164)
+
+--- 3.18 LONG CODES DOMAIN UPDATE (BHAR-580) — Oct 2025 ---
+  - Updated long-codes API domain
+  - Moved long-codes-api-key to AWS Secrets Manager
+  - Fixed git secret scan and Trivy OSV issues
+  Commits: ~7 (fb5e218 → c50ec97)
+
+--- 3.19 BANK RETRY MECHANISM (BHAR-298) — Feb 2025 ---
+  - Implemented retry logic for failed bank verification operations
+  Commits: ~2 (32ea2d5)
+
+--- 3.20 IAM CHECK API FOR APP (BHAR-636) — Jan 2026 ---
+  - Added IAM check API for mobile app
+  - Updated get all distributors API permissions
+  - Updated ACL config for S3 buckets
+  Commits: ~3 (1ebd986 → b1cc6c0)
+
+--- 3.21 ERROR HANDLING IMPROVEMENTS (BHAR-635) — Feb 2026 ---
+  - Updated pdf-converter domain
+  - Production error handling changes
+  Commits: ~3 (99b6c8f → 915fe88)
+
+================================================================================
+4. KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+4.1 Multi-Channel Controller Architecture
+  - Separated controllers into /ag (agent-facing), /app (mobile app), and
+    /wb (web backoffice) packages
+  - Each channel has its own set of controllers with appropriate permissions
+  - Enables independent API evolution per channel
+
+4.2 Event-Driven Architecture with Kafka
+  - Internal Kafka topics for intra-service async processing
+  - External Kafka topics for cross-service communication
+  - Worker pattern (NewAgentOnboardingWorker, OnboardingActivityWorker) for
+    consuming and processing messages
+  - Batch processing with parallelized publishing for throughput
+  - Migrated compression from default to zstd for better performance
+
+4.3 JWT-Based Authentication with Custom Security Filter
+  - Custom AuthenticationFilter, AuthenticationToken, NiyoAuthenticationProvider
+  - SkipPathRequestMatcher for whitelisting public endpoints
+  - AgentAuthenticationEntryPoint for custom error responses
+  - Separated authentication config to resolve circular dependency
+
+4.4 AWS Secrets Manager for Secrets Management
+  - Migrated from hardcoded/config-file secrets to AWS Secrets Manager
+  - AwsSecretManagerInfoRegistry for centralized secret loading
+  - Kafka credentials, API keys, and sensitive configs all from ASM
+
+4.5 Retrofit-Based API Client Pattern
+  - RetrofitConfig for centralized HTTP client configuration
+  - Dedicated ApiClientService classes for each external service
+  - Clean separation between API client layer and business logic
+
+4.6 MongoDB with DAO Pattern
+  - DAO layer (AgentDAOService, ActivityLogDAOService, etc.) between
+    service and repository layers
+  - Compound indexing optimization for frequently queried fields
+  - AgentSequence collection for auto-incrementing agent codes
+
+4.7 Facets Cloud Migration (from raw Kubernetes)
+  - Migrated from raw K8s YAML deployments to Facets Cloud orchestration
+  - Deleted legacy kube files, updated pipeline for Facets deployment
+  - Separate UAT and PROD deployment steps with manual triggers
+
+4.8 HTML Template-Based PDF Generation
+  - BGV reports generated from HTML templates with dynamic field injection
+  - Agent registration documents as HTML templates
+  - Terms & Conditions templates (CAT_A, CAT_B) as static HTML
+  - PDFBox for HTML-to-PDF conversion
+
+4.9 Structured Logging & Observability
+  - Logstash Logback Encoder for JSON-structured logs
+  - MDCFilter and MDCTaskDecorator for request context propagation
+  - Datadog Java agent integration for APM
+  - Separate metrics port (8081) for readiness/liveness probes
+
+================================================================================
+5. BUG FIXES & PRODUCTION ISSUES HANDLED
+================================================================================
+
+5.1 NPE (NullPointerException) Fixes
+  - BHAR-400: Fixed NPE by adding null checks in production code
+  - BHAR-200: Resolved NPE due to erroneous check in production
+  - BHAR-148: Resolved NPE in BGV flow (face match score handling)
+
+5.2 Web Security Config Issues
+  - BHAR-400: Fixed WebSecurityConfig issue causing auth failures
+  - BHAR-337: Separated authentication config to resolve circular dependency
+  - BHAR-337: Lazy loading beans to avoid circular dependency at startup
+
+5.3 Serialization Errors
+  - BHAR-392: Resolved serialization error during API endpoint refactoring
+
+5.4 Build & Deployment Fixes
+  - BHAR-200: Fixed build issues after sonar fixes
+  - BHAR-200: Fixed Tomcat dependency issue
+  - BHAR-200: SQS listener uncommenting after accidental disable
+  - BHAR-575: Fixed image tag issue in Facets deployment pipeline
+  - BHAR-575: Fixed Secret Manager ARN issue
+  - BHAR-566: Fixed readiness/liveness check by separating metrics port 8081
+
+5.5 Kafka Issues
+  - BHAR-199: Fixed publish batch method for Kafka
+  - BHAR-199: Fixed activity log current user context issue
+
+5.6 BGV Flow Fixes
+  - BHAR-200: Fixed BGV issue and added check before report generation
+  - BHAR-148: Fixed face match score sent as string instead of number
+  - BHAR-175: Reverted Digio bypass that was left in from UAT testing
+
+5.7 Security Fixes
+  - BHAR-569: Removed dev API keys from codebase
+  - BHAR-580: Fixed git secret scan issues (multiple rounds)
+  - BHAR-200: Resolved spring-security-crypto dependency issue
+  - NMB-441: Fixed spring-security-crypto dependency conflict
+
+================================================================================
+6. CI/CD AND DEVOPS WORK
+================================================================================
+
+6.1 Bitbucket Pipelines
+  - Built and maintained bitbucket-pipelines.yml with multi-stage pipeline
+  - Docker image build using Google Jib (multi-arch: amd64 + arm64)
+  - AWS ECR push with OIDC-based authentication (no static credentials)
+  - Separate UAT and PROD deployment steps with manual triggers
+  - Pipeline refactoring (BHAR-148, BHAR-575)
+
+6.2 Facets Cloud Migration (BHAR-575) — Major DevOps Initiative
+  - Migrated entire deployment from raw Kubernetes to Facets Cloud
+  - Updated bitbucket-pipelines.yml for Facets deployment using facetsctl CLI
+  - Deleted legacy K8s deployment YAML files
+  - Configured Facets project (niyo-bharat) and service (agent-onboarding)
+  - Facets release sync for UAT and PROD environments
+  - Moved all config values to Facets-managed configs
+  - Updated base URLs for all dependent services (JWT, PDF, NSDL Lambda, etc.)
+  - VPC endpoint configuration for internal service communication
+  Commits: 60+ across Sep 2025 — Jan 2026
+
+6.3 Kubernetes Work (Pre-Facets)
+  - BHAR-536: Updated kube files for beta and prod
+  - Managed readiness and liveness probes
+  - Replica configuration (2 replicas for prod)
+  - Eventually deleted all kube files post-Facets migration
+
+6.4 Datadog Integration (BHAR-575)
+  - Added dd-java-agent.jar for APM tracing
+  - Configured Datadog API client (dd-api-client)
+  - Datadog metrics service (service/ddmetrics/ package)
+  - Separated metrics port (8081) from application port
+
+6.5 AWS Secrets Manager Migration (BHAR-575, BHAR-96)
+  - Migrated secrets from config files to AWS Secrets Manager
+  - Kafka credentials from ASM instead of Facets
+  - Long codes API key to ASM
+  - AwsSecretManagerInfoRegistry for centralized secret loading
+  - Logging loaded secrets for debugging (later removed)
+
+6.6 Spring Boot Version Upgrades
+  - Multiple Spring Boot upgrades over the project lifecycle:
+    Initial → 3.3.9 → 3.3.11 → 3.5.11 (LTS)
+  - Handled breaking changes and dependency conflicts with each upgrade
+
+6.7 Security Scanning & Remediation
+  - Trivy vulnerability scanning and fixes (multiple rounds)
+  - OSV (Open Source Vulnerability) issue resolution
+  - Git secret scanning remediation
+  - SonarQube/SonarCloud integration for code quality
+  - SDLC git secret issue resolution
+
+================================================================================
+7. TESTING CONTRIBUTIONS
+================================================================================
+
+7.1 Unit Tests Written
+  - ActivityLogServiceImplTest.java — tests for activity logging service
+  - CronServiceImplTest.java — tests for cron/scheduled job service
+
+7.2 SonarQube Code Quality (BHAR-200, BHAR-202) — Extensive Effort
+  - Fixed ALL sonar code smells across the entire codebase
+  - Refactored collection names out of entity classes
+  - Removed @Data Lombok annotation (replaced with specific annotations)
+  - Used try-with-resources to resolve resource leak code smells
+  - Refactored constant fields and classes
+  - Fixed sonar CPD (copy-paste detection) exclusions for HTML templates
+  - Removed unrequired dependencies from pom.xml
+  - Removed unused @Inject annotations
+  - Comprehensive sonar coverage exclusion configuration
+  Commits: 30+ across Feb–Mar 2025
+
+7.3 Testing APIs for Validation
+  - Built temporary test APIs for validating Kafka publish, invite flow,
+    grace period processing, and other features in UAT
+  - Systematically removed test endpoints before production deployment
+  - OTP mocking for dev/uat environments
+
+7.4 Sonar Configuration
+  - Configured sonar.exclusions for generated code and resources
+  - Configured sonar.coverage.exclusions for config, constants, DTOs,
+    controllers, repositories, and infrastructure code
+  - Configured sonar.cpd.exclusions for HTML templates
+
+================================================================================
+8. SUMMARY — KEY TALKING POINTS FOR INTERVIEWS
+================================================================================
+
+8.1 Scale of Contribution
+  - 544 commits over 17 months — effectively the primary/sole developer
+  - Built the entire bharat-agent-onboarding microservice from scratch
+  - End-to-end ownership: architecture, features, DevOps, production support
+
+8.2 Domain Expertise
+  - Fintech agent onboarding (NSDL Payments Bank partnership)
+  - KYC/BGV compliance workflows
+  - Risk engine integration for regulatory compliance
+  - PII handling and data vault integration
+
+8.3 Technical Highlights
+  - Designed multi-channel API architecture (agent/app/web backoffice)
+  - Built event-driven system with Kafka (internal + external topics)
+  - Implemented complete BGV workflow with PDF report generation
+  - Led Facets Cloud migration from raw Kubernetes
+  - Integrated Datadog APM for observability
+  - Migrated secrets to AWS Secrets Manager
+  - Multiple Spring Boot major version upgrades with zero downtime
+
+8.4 Production Reliability
+  - Handled multiple production NPE fixes with proper null safety
+  - Resolved circular dependency issues in Spring Security config
+  - Fixed readiness/liveness probe issues by separating metrics port
+  - Managed Kafka batch processing and compression optimization
+
+8.5 Security Consciousness
+  - Removed PII (mobile numbers) from API endpoint paths
+  - PAN masking in BGV reports
+  - Git secret scanning remediation
+  - Trivy vulnerability fixes (multiple rounds)
+  - AWS Secrets Manager for all sensitive configuration
+
+================================================================================
+  END OF ANALYSIS
+================================================================================

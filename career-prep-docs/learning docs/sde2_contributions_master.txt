@@ -1,0 +1,315 @@
+SDE2 Interview Preparation Dossier - Kunal Ladhani
+Generated from git history across local repos (since Dec 2022)
+
+====================================================
+1) How this was prepared
+====================================================
+- Scanned all git repositories available under your workspace.
+- Filtered commits by your author signatures:
+  - Kunal Ladhani <kunal.ladhani@goniyo.com>
+  - kunal ladhani <kunal.ladhani@goniyo.com>
+- Included both direct commits and merge-driven integration work.
+- Built a timeline, repo footprint, major ticket clusters, and recurring technical themes.
+- Converted raw commit evidence into interview-ready contribution narratives.
+
+Notes:
+- Total commits identified: 4,932
+- Non-merge commits identified: 3,752
+- This indicates strong delivery throughput and sustained ownership over multi-year systems.
+
+====================================================
+2) Career progression narrative (Dec 2022 -> now)
+====================================================
+Your progression from commit history is clearly visible:
+
+Phase A - nc-risk-engine (early foundation)
+- Period: Jan 2023 -> Apr 2023
+- Repo: niyo-commons/nc-risk-engine
+- Contribution style: correctness, testing, quality hardening, service-layer maturity
+
+Phase B - Utkarsh stack (multi-service backend ownership)
+- Period: Jun 2023 -> Jul 2024
+- Repos:
+  - niyo-utkarsh/sa-utkarsh-customer-service
+  - niyo-utkarsh/sa-utkarsh-transaction-service
+  - niyo-utkarsh/sa-utkarsh-x2-bff
+  - niyo-utkarsh/sa-utkarsh-card-service
+  - niyo-utkarsh/nx-uk-utkarsh-bank-connector
+- Contribution style: API/product velocity, orchestration logic, integration reliability, CI/CD upkeep
+
+Phase C - NSDL track (platform + domain migration + reliability)
+- Period: Jun 2024 -> Mar 2026 (overlapping with Bharat timeline)
+- Repos:
+  - niyo-bharat/nsdl/bharat-agent-onboarding
+  - niyo-bharat/nsdl/niyo-nsdl-pb-customer-service
+  - niyo-bharat/nsdl/nsdl-pb-customer-service
+  - niyo-bharat/nsdl/nsdl-pb-cron-lambda
+  - niyo-bharat/nsdl/niyo-nsdl-pb-lambda
+- Contribution style: domain integration, error handling, app-version controls, Kafka and operational resilience
+
+Phase D - Bharat/YBL platform scale (broad ecosystem ownership)
+- Period: Oct 2023 -> Apr 2026 (strong peak in 2025-26)
+- Repos (high ownership):
+  - niyo-bharat/ybl/bharat-vas
+  - niyo-bharat/ybl/customer-service
+  - niyo-bharat/ybl/inventory-manager
+  - niyo-bharat/ybl/sme-service
+  - niyo-bharat/ybl/weir
+  - niyo-bharat/ybl/ledger-service
+  - niyo-bharat/ybl/transaction
+  - plus supporting repos: utils, unified-connectivity-services, recharge-and-billpay, lambda-java, support-service
+- Contribution style: platform modernization, config/facets migration, security remediation, observability, infra alignment
+
+====================================================
+3) Detailed contributions by project cluster
+====================================================
+
+3.1 nc-risk-engine (foundation phase)
+Repo: niyo-commons/nc-risk-engine
+Commit footprint: 215 total / 132 non-merge
+Active period: 2023-01-10 -> 2023-04-10
+High-signal ticket cluster: NIYOB-1194 (dominant theme)
+
+What you demonstrably did:
+- Improved risk engine service behavior in upload, preference, report and download paths.
+- Added and expanded test coverage (including parameterized tests) to improve reliability.
+- Addressed sonar/code-smell debt and quality gate issues.
+- Fixed subrule update ordering and API behavior issues.
+- Tightened auth and report behavior based on commit trail.
+
+How to position in interview:
+- "I started with quality-first backend ownership in risk systems."
+- "I used test depth + static analysis compliance to stabilize production-critical logic."
+- "I learned to move fast without compromising correctness in regulated workflows."
+
+3.2 Utkarsh (multi-service execution phase)
+Core repos:
+- sa-utkarsh-customer-service (638 total / 414 non-merge)
+- sa-utkarsh-transaction-service (478 / 342)
+- sa-utkarsh-x2-bff (450 / 272)
+- sa-utkarsh-card-service (130 / 71)
+
+What you demonstrably did:
+- Customer onboarding domain:
+  - Enhanced onboarding and pre-onboarding flow logic.
+  - Extended application form formatting and customer state persistence.
+  - Added handling around location/state headers (x-gps-state related work).
+  - Worked on S3 signed URL and SFTP-upload driven workflows.
+- Transaction/account statement domain:
+  - Implemented/updated fund transfer and statement generation flow.
+  - Improved statement HTML/PDF handling and converter integration.
+  - Fixed environment-specific runtime failures (Kafka broker config, staging defects).
+- BFF orchestration:
+  - Refined inter-service API contracts and constants.
+  - Strengthened beneficiary, customer details, notification interactions.
+  - Refactored readiness/liveness and deployment pipeline behavior.
+- Card domain:
+  - Added/updated channel lock rules (ATM/POS/contactless/international semantics).
+  - Refined card limits and validation behavior.
+  - Reduced domain-model inconsistencies and improved error semantics.
+- Delivery operations:
+  - Frequent pipeline and deployment adjustments across services.
+  - Cleanup of old/unused endpoints and secrets handling in deployment configs.
+
+How to position in interview:
+- "I owned end-to-end API behavior across customer, transaction, BFF, and card microservices."
+- "I balanced product feature rollout with reliability and env-specific hardening."
+- "I handled both domain logic and release mechanics (pipelines, deploy config, readiness health)."
+
+3.3 NSDL (integration + hardening phase)
+Core repos:
+- bharat-agent-onboarding (544 / 426)
+- niyo-nsdl-pb-customer-service (182 / 153)
+- nsdl-pb-customer-service (123 / 108)
+- nsdl-pb-cron-lambda (54 / 41)
+- niyo-nsdl-pb-lambda (12 / 12)
+
+What you demonstrably did:
+- Agent onboarding platform:
+  - Significant ownership in service implementation and app controller paths.
+  - OTP and onboarding flow updates.
+  - Environment config alignment (dev/uat/prod).
+  - ACL and IAM-focused changes for bucket access and internal APIs.
+- Domain/API migration:
+  - Multiple base-url/domain transitions across dependencies.
+  - App-version threshold updates and app behavior gating.
+  - Config migration to "facets" style deployment model.
+- Error handling and resilience:
+  - Refactoring of extractor/error logic.
+  - Kafka publish retry patterns and missed-message prevention themes.
+  - Operational callback path updates and reliability fixes.
+- Security and modernization:
+  - Spring Boot upgrades.
+  - Trivy/OSV/secret scanner fixes.
+  - Removal/cleanup of vulnerable or unnecessary components.
+
+How to position in interview:
+- "I led migration-heavy backend work where failure-handling and backward compatibility mattered."
+- "I repeatedly improved resilience around integration edges: callbacks, Kafka, and external NSDL APIs."
+- "I drove release readiness through secure-by-default configuration updates."
+
+3.4 Bharat/YBL (scale + platform evolution phase)
+Core repos and footprint:
+- bharat-vas (443 / 371)
+- customer-service (320 / 264)
+- inventory-manager (267 / 231)
+- sme-service (240 / 209)
+- weir (205 / 169)
+- ledger-service (153 / 128)
+- transaction (142 / 112)
+
+What you demonstrably did:
+- Cross-service platform modernization:
+  - AWS SDK v2 -> v3 migration themes (in relevant Node services).
+  - Spring Boot and dependency upgrades in Java services.
+  - Security patch waves: Trivy, OSV, secret scanner, sonar hotspot fixes.
+- Domain and integration consolidation:
+  - IAM/auth domain transitions and related key/config updates.
+  - Internal API key handling and downstream context propagation.
+  - IMS/internal call reliability fixes.
+- Facets/config migration:
+  - Repeated moves from static or old deployment config patterns to facets model.
+  - K8s template cleanup and secret movement into managed deployment layers.
+- Observability and production engineering:
+  - Datadog and OpenTelemetry annotation integration in multiple services.
+  - Logging enrichments (MDC, contextual IDs, request traceability themes).
+  - Runtime guardrails via health/deployment/pipeline changes.
+- Eventing and messaging:
+  - Kafka config refactors; consumer reliability and topic-handling cleanup.
+  - Removal of unnecessary auto topic-creation/new-topic beans in services where appropriate.
+- Product/API velocity:
+  - SME endpoints, paid data/email flows, create-user path updates.
+  - Inventory/kit workflows, user identity propagation, permissions/roles handling.
+  - Ledger/transaction service operational enhancements.
+
+How to position in interview:
+- "I transitioned from service-level delivery to ecosystem-level ownership across multiple critical services."
+- "I handled modernization, security, observability, and platform consistency in parallel with feature work."
+- "I became the person who can ship business changes while de-risking production posture."
+
+====================================================
+4) Technical leadership signals from your history
+====================================================
+- Breadth across >25 active repositories with meaningful ownership in at least 10 high-throughput services.
+- Strong backend depth in Java/Spring and Node/TypeScript ecosystems.
+- Repeated ownership of deployment, infra config, and CI/CD pipeline improvements.
+- Frequent security/compliance remediation work:
+  - Trivy
+  - OSV
+  - secret scanner
+  - sonar fixes
+- Evidence of production-minded design:
+  - retries
+  - error normalization
+  - health checks
+  - logging/observability
+  - app-version controls
+
+====================================================
+5) SDE2 interview themes to emphasize
+====================================================
+Theme A - Ownership beyond code
+- Not just feature commits; also release pipelines, deployment templates, security remediation, and reliability fixes.
+
+Theme B - Cross-team/system integration
+- External partners + internal domains (NSDL, IAM/auth, IMS, PDF services, Kafka/event systems).
+
+Theme C - Reliability and hardening at scale
+- Recurring commit patterns show you repeatedly stabilized production behavior.
+
+Theme D - Migration execution under constraints
+- Domain shifts, facets migration, framework/dependency upgrades without stopping product velocity.
+
+Theme E - Multi-service orchestration competency
+- Customer, transaction, card, onboarding, inventory, ledger, and BFF layers.
+
+====================================================
+6) STAR story bank (ready-to-practice)
+====================================================
+
+STAR-1 (Risk Engine Quality Stabilization)
+S: Early risk-engine code had quality-gate and behavioral inconsistencies.
+T: Improve reliability while preserving delivery velocity.
+A: Added parameterized tests, fixed sonar/code-smells, resolved ordering/auth/report issues.
+R: Improved confidence in core service behavior and reduced quality debt.
+
+STAR-2 (Utkarsh Onboarding State Integrity)
+S: Need to correctly propagate and persist onboarding state/location context.
+T: Ensure header-driven state handling is robust end-to-end.
+A: Updated customer service + BFF handling, model persistence, formatter and API behavior.
+R: More reliable onboarding state capture and fewer state drift defects.
+
+STAR-3 (Statement/PDF Flow Reliability)
+S: Statement generation and converter dependencies created environment drift and defects.
+T: Stabilize statement generation and downstream PDF integration.
+A: Refactored statement services, formatter logic, config handling, and staging fixes.
+R: More stable account statement flow and reduced issue recurrence in staging/prod.
+
+STAR-4 (NSDL Error Handling Hardening)
+S: Integration edge cases caused noisy failures and weak diagnostics.
+T: Strengthen error extraction, retries, and fallback behavior.
+A: Refactored error handling logic, tuned Kafka publishing/retry patterns.
+R: Better fault transparency and improved operational resilience.
+
+STAR-5 (Facets Migration Across Services)
+S: Legacy config/deployment approach created inconsistency and maintenance overhead.
+T: Move services to facets model with minimal delivery disruption.
+A: Updated config wiring, deployment templates, and environment-specific keys.
+R: Cleaner deploy strategy and lower config drift across environments.
+
+STAR-6 (Security Remediation Wave)
+S: Multiple repos had vulnerability and scanner findings.
+T: Reduce risk quickly without blocking releases.
+A: Applied dependency upgrades, scanner fixes, and secret-handling improvements.
+R: Improved security baseline and smoother release approvals.
+
+STAR-7 (AWS SDK v3 Migration)
+S: Older SDK usage became a maintenance/security burden.
+T: Migrate safely in active production services.
+A: Replaced affected clients, fixed build/runtime breakages, updated pipelines.
+R: Better compatibility, maintainability, and reduced legacy-risk surface.
+
+STAR-8 (Observability Uplift)
+S: Troubleshooting across services required better traces/context.
+T: Increase diagnosability in production.
+A: Introduced datadog/otel annotations and contextual logging updates.
+R: Faster issue triage and improved service observability.
+
+STAR-9 (IAM/Auth Domain Transition)
+S: Domain and credential flow changes impacted multiple services.
+T: Migrate safely while preserving inter-service compatibility.
+A: Updated domains, API key propagation, and request-context handling.
+R: Successful transition with reduced integration regressions.
+
+STAR-10 (Kafka Reliability Improvements)
+S: Message-processing issues risked missed events.
+T: Improve consumer/publisher reliability.
+A: Refined config, removed unsafe topic-creation patterns where needed, added retry-focused changes.
+R: More predictable event processing and fewer runtime message anomalies.
+
+====================================================
+7) Interview answer framing templates
+====================================================
+Use these structures consistently:
+
+Template 1 - "What did you own?"
+- "I owned [service/domain] end-to-end: API behavior, business logic, deployment config, and production fixes."
+
+Template 2 - "Biggest challenge"
+- "Main challenge was [integration/migration/reliability constraint]. I reduced risk by [specific technique], and validated through [tests/rollout/monitoring]."
+
+Template 3 - "Impact"
+- "Impact was [stability/speed/security] improvement across [N services or critical flow], and it reduced release friction for the team."
+
+====================================================
+8) Risks to avoid in interviews
+====================================================
+- Do not claim single-handed ownership of everything; phrase as "led/owned major implementation areas with cross-team collaboration."
+- Avoid vague impact language; tie each story to concrete technical action.
+- Avoid only feature talk; highlight operations/security/reliability depth (this is your SDE2 differentiator).
+
+====================================================
+9) Final SDE2 positioning statement
+====================================================
+"Since joining in Dec 2022, I progressed from quality-focused backend work in nc-risk-engine to owning multi-service product and platform reliability across Utkarsh, NSDL, and Bharat ecosystems. My commit history shows sustained delivery across customer/onboarding/transaction domains, plus consistent ownership of CI/CD, security hardening, observability, and migration programs. I now operate at SDE2 scope: system-level execution, production accountability, and cross-service decision-making."
+

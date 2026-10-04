@@ -1,0 +1,619 @@
+================================================================================
+INVENTORY MANAGER SERVICE — DETAILED CONTRIBUTION ANALYSIS
+Author: Kunal Ladhani
+Repository: niyo-bharat/ybl/inventory-manager (Bitbucket: ninjafactory/inventory-manager)
+Total Commits: 267
+================================================================================
+
+================================================================================
+1. TIMELINE
+================================================================================
+
+First Commit:  2024-07-15 (NSDL-49: added bank program filter to get card kits api)
+Latest Commit: 2026-03-05 (BHAR-573: removed credential provider bean)
+
+Active Duration: ~20 months (July 2024 — March 2026)
+
+Monthly Breakdown:
+  - Jul 2024:  Heavy feature work (NSDL-49, NSDL-55, NSDL-57, NSDL-58, NSDL-59)
+  - Aug 2024:  Bug fixes and query updates (NSDL-64, NSDL-69, NSDL-70, NSDL-71)
+  - Sep 2024:  Major module build — Partner Agent Kit Requests (NSDL-82, NSDL-87, NSDL-92)
+  - Oct 2024:  Partner agent details, reports, cancellation (NSDL-94, NMB-453, NMB-454)
+  - Nov 2024:  Sonar hotspot fixes (BHAR-574)
+  - Feb 2025:  Kafka config refactoring (BHAR-337)
+  - Mar 2025:  Kafka cluster migration (BHAR-11)
+  - Apr 2025:  Trivy/security fixes, Spring Boot upgrade, Kafka migration (BHAR-200, BHAR-346)
+  - May 2025:  Notification service update, assets transfer with payment, presigned URL (BHAR-399, BHAR-428)
+  - Jul 2025:  Kafka compression algo change (BHAR-495, BHAR-499)
+  - Jan 2026:  NSDL domain migration (BHAR-636), Facets deployment setup (BHAR-574)
+  - Feb 2026:  Full Facets deployment with auth, Kafka workers in prod (BHAR-574, BHAR-664, BHAR-665)
+  - Mar 2026:  AWS Secret Manager refactoring, IAM integration (BHAR-573, BHAR-574)
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+Language & Runtime:
+  - Java 17
+  - Spring Boot 3.5.10 (upgraded through 3.3.10 → 3.4.5 → 3.5.x over time)
+  - Maven build system
+
+Core Frameworks:
+  - Spring Boot Starter Web (REST APIs with embedded Tomcat)
+  - Spring Boot Starter Security (authentication & authorization)
+  - Spring Boot Starter Data MongoDB (primary database)
+  - Spring Boot Starter AOP (aspect-oriented programming)
+  - Spring Boot Starter Validation (bean validation with Jakarta)
+  - Spring Boot Starter Actuator (health checks, metrics)
+  - Spring Retry (resilience patterns)
+
+Messaging:
+  - Apache Kafka (spring-kafka 3.1.4, kafka-clients 3.9.1)
+  - SASL_PLAINTEXT security protocol for UAT, PLAINTEXT for dev
+  - Zstd compression algorithm (upgraded from default)
+
+Database:
+  - MongoDB (primary data store)
+  - Flapdoodle Embedded MongoDB (for testing)
+
+AWS Services:
+  - AWS S3 (file storage, presigned URLs, report uploads)
+  - AWS Secrets Manager (credential management)
+  - AWS STS (Security Token Service)
+  - AWS SDK v2 (2.30.10)
+
+API & Serialization:
+  - Retrofit 3.0.0 + OkHttp 5.3.0 (HTTP client for inter-service calls)
+  - Jackson 2.18.6 (JSON serialization)
+  - MapStruct 1.5.5 (object mapping)
+  - Lombok 1.18.42 (boilerplate reduction)
+  - SpringDoc OpenAPI 2.8.8 (Swagger UI documentation)
+
+Monitoring & Observability:
+  - Micrometer + Prometheus (metrics)
+  - Datadog APM (dd-trace-api 1.59.0, datadog-api-client 2.51.0)
+  - Logback + Logstash encoder (structured logging)
+  - Graylog (centralized logging via logback-gelf)
+
+Security:
+  - Jasypt (encryption for config properties)
+  - JWT (JSON Web Tokens for authentication)
+  - Spring Security (role-based access control)
+
+Reporting:
+  - Apache POI 5.4.0 (Excel report generation)
+  - Google ZXing 3.5.3 (QR/barcode generation)
+
+Audit:
+  - Javers 7.5.0 (object diff/audit tracking)
+
+CI/CD & Containerization:
+  - Bitbucket Pipelines (CI/CD)
+  - Google Jib 3.5.1 (containerization without Docker)
+  - Kubernetes (deployment manifests for dev, UAT, beta, prod)
+  - SonarQube (code quality with JaCoCo coverage)
+  - Trivy (container vulnerability scanning)
+
+Code Quality:
+  - SonarQube with JaCoCo code coverage
+  - Trivy vulnerability scanning
+  - Sonar Maven Plugin 3.6.0
+
+================================================================================
+3. MAJOR FEATURES BUILT (Grouped by Ticket/Feature)
+================================================================================
+
+----------------------------------------------------------------------
+3.1  NSDL-49: Bank Program Filter Enhancement
+     Timeline: Jul 15–18, 2024 | Commits: ~6
+----------------------------------------------------------------------
+  - Added bank program filter to get card kits API
+  - Added bank program filter to generate report API
+  - Made bank program filter mandatory in card kits API
+  - Refactored file headers for consistency
+
+----------------------------------------------------------------------
+3.2  NSDL-55: Asset Transfer Module (V2 APIs)
+     Timeline: Jul 22 – Aug 5, 2024 | Commits: ~25
+----------------------------------------------------------------------
+  - Built POST API for creating asset transfer requests
+  - Implemented verify transfer API
+  - Completed assets transfer summary API
+  - Built assets my-transfers pagination API
+  - Completed filter card kits API with bank program validation
+  - Added V2 API for card kit bulk report
+  - Implemented get-asset-transfers API
+  - Built update status of asset transfer request API
+  - Built get asset transfer by request ID and bank program API
+  - Added S3 upload logging for post-to-S3 method
+  - Refactored V2 APIs for consistency
+  - Made bankProgram a mandatory field with null check validation
+
+----------------------------------------------------------------------
+3.3  NSDL-57: Transfer Request Validation
+     Timeline: Jul 25, 2024 | Commits: 2
+----------------------------------------------------------------------
+  - Refactored create transfer request validator
+
+----------------------------------------------------------------------
+3.4  NSDL-58: Asset Transfer Summary Query
+     Timeline: Jul 26, 2024 | Commits: 1
+----------------------------------------------------------------------
+  - Refactored the asset transfer summary query for performance
+
+----------------------------------------------------------------------
+3.5  NSDL-59: Card Kit Lost Job Service
+     Timeline: Jul 26–29, 2024 | Commits: ~6
+----------------------------------------------------------------------
+  - Refactored card kit lost job service executor
+  - Optimized search query for lost card kit detection
+  - Fixed conditional logic — now uploads card kit lost report in all cases
+
+----------------------------------------------------------------------
+3.6  NSDL-64: Report Date Format Fix
+     Timeline: Aug 1, 2024 | Commits: 1
+----------------------------------------------------------------------
+  - Changed date format in card kit generate report API
+
+----------------------------------------------------------------------
+3.7  NSDL-69: Invalid Card Kit Query Enhancement
+     Timeline: Jul 31, 2024 | Commits: 3
+----------------------------------------------------------------------
+  - Updated get invalid card kit query
+  - Added bankProgram to get invalid card kit query criteria
+
+----------------------------------------------------------------------
+3.8  NSDL-70: File Naming Fix
+     Timeline: Aug 1, 2024 | Commits: 3
+----------------------------------------------------------------------
+  - Updated filename and resolved build issues
+
+----------------------------------------------------------------------
+3.9  NSDL-71: YBL Query Update
+     Timeline: Aug 1, 2024 | Commits: 1
+----------------------------------------------------------------------
+  - Updated YBL-specific query logic
+
+----------------------------------------------------------------------
+3.10 NSDL-82: Partner Agent Kit Request Module (MAJOR FEATURE)
+     Timeline: Sep 2 – Sep 23, 2024 | Commits: ~40+
+----------------------------------------------------------------------
+  This was a ground-up module build:
+
+  Data Layer:
+  - Designed PartnerAgentKitRequest MongoDB domain model
+  - Created embedded KitRequestPaymentDetail schema
+  - Created PartnerAgentKitRequestStatus enumeration
+  - Built PartnerAgentKitRequestRepository
+
+  API Layer:
+  - Built PartnerAgentResource REST controller
+  - Created PartnerAgentKitRequestDto (request)
+  - Created PartnerAgentKitRequestFilter (query filters)
+  - Created PartnerAgentKitResponseDto (response)
+
+  Service Layer:
+  - Implemented PartnerAgentKitRequestService interface
+  - Built PartnerAgentKitRequestServiceImpl
+  - Created PartnerAgentKitRequestRepositoryService
+  - Built PartnerAgentKitRequestMapper (MapStruct)
+
+  Email Notification Integration:
+  - Built NotificationApiClients (Retrofit interface)
+  - Created EmailNotificationRequestDto / ResponseDto
+  - Implemented EmailNotificationService
+  - Built EmailNotificationServiceImpl with Retrofit client
+  - Created EmailNotificationApiClientProperties config
+  - Added template IDs for beta and prod environments
+  - Added fields to email notification payload (requested date time, etc.)
+
+  Validation & Security:
+  - Added validation on subUserType and userType fields
+  - Added role-based access (transfer cardkits role)
+  - Accepting list of statuses in GET APIs
+  - Created ErrorDTO for standardized error responses
+
+----------------------------------------------------------------------
+3.11 NSDL-87: Transfer Kit to Category-B Users
+     Timeline: Sep 11–12, 2024 | Commits: ~5 (merged with NSDL-82 work)
+----------------------------------------------------------------------
+  - Kit transfer functionality for Category-B partner agents
+  - Integrated with notification system
+
+----------------------------------------------------------------------
+3.12 NSDL-92: Category-B User Validation
+     Timeline: Sep 12–19, 2024 | Commits: ~5
+----------------------------------------------------------------------
+  - Added validation for Category-B users
+  - Refactored error messages for Cat-B specific scenarios
+  - Resolved build failures from validation changes
+
+----------------------------------------------------------------------
+3.13 NSDL-94: Partner Agent Kit Request Details & Reports (MAJOR FEATURE)
+     Timeline: Sep 24 – Oct 24, 2024 | Commits: ~35+
+----------------------------------------------------------------------
+  APIs Built:
+  - Partner agent kit request details APIs
+  - Get all kit requests API with dynamic query builder
+  - Kit request cancellation API
+  - Excel report download API (/report endpoint)
+  - Kit issuance report generation
+
+  Reporting:
+  - Built SpreadSheetWriterService (Apache POI)
+  - Implemented get details in Excel report API
+  - Refactored report row data with null checks
+  - Removed unnecessary DB calls from report generation
+  - Refactored report generation query for performance
+
+  DTOs & Mapping:
+  - Created PartnerAgentKitDetailsResponseDto (separate DTO for WB API)
+  - Created CancelPartnerAgentKitRequestDto
+  - Added issuedKitCount and partnerAgentUserId fields
+  - Added Swagger API docs and employee ID field
+
+  Query & Filter Improvements:
+  - Refactored statuses filter (String instead of List<Status>)
+  - Refactored query builder for dynamic filtering
+  - Removed min 1 filter requirement
+  - Removed agent validation from get kit requests API
+
+  Bug Fixes:
+  - Added isLogging in config file (fixed pod issue)
+  - Resolved build failures
+  - Added null checks in response builder
+
+----------------------------------------------------------------------
+3.14 NMB-408: DateTime Format Fix
+     Timeline: Sep 19, 2024 | Commits: 1
+----------------------------------------------------------------------
+  - Fixed datetime format display in API responses
+
+----------------------------------------------------------------------
+3.15 NMB-453/454: Kit Damage Marking
+     Timeline: Nov 4, 2024 | Commits: 2
+----------------------------------------------------------------------
+  - Changed type of assetId from Long to String
+  - Added check for kit with status "created" (i.e., in hub)
+
+----------------------------------------------------------------------
+3.16 BHAR-337: Kafka Configuration Refactoring
+     Timeline: Feb 27, 2025 | Commits: 1
+----------------------------------------------------------------------
+  - Refactored Kafka configuration for better maintainability
+
+----------------------------------------------------------------------
+3.17 BHAR-11 / BHAR-200: Kafka Cluster Migration
+     Timeline: Mar 10 – Apr 16, 2025 | Commits: ~5
+----------------------------------------------------------------------
+  - Migrated UAT Kafka cluster
+  - Refactored Kafka config file structure
+  - Configured SASL_PLAINTEXT security protocol for UAT
+  - Maintained PLAINTEXT for dev environment
+
+----------------------------------------------------------------------
+3.18 BHAR-346: Security Vulnerability Fixes & Spring Boot Upgrade
+     Timeline: Apr 16, 2025 | Commits: ~12
+----------------------------------------------------------------------
+  - Changed Spring Boot version to 3.3.10 to resolve critical Tomcat vulnerability
+  - Removed unused logback and netty dependencies
+  - Added bean validation dependency
+  - Changed logback dependency versions
+  - Removed scan-results.txt from repo
+  - Fixed Trivy-reported vulnerabilities
+  - Cleaned up unused dependencies
+
+----------------------------------------------------------------------
+3.19 BHAR-399: Notification Service URL Update
+     Timeline: May 7–9, 2025 | Commits: ~4
+----------------------------------------------------------------------
+  - Updated notification service base URL for all environments
+  - Updated Spring Boot version to v3.4.5
+  - Cleaned up notification config files
+
+----------------------------------------------------------------------
+3.20 BHAR-428: Assets Transfer with Payment & Pre-Signed URL API (MAJOR FEATURE)
+     Timeline: May 19–26, 2025 | Commits: ~18
+----------------------------------------------------------------------
+  - Updated assets transfer with payment API
+  - Built pre-signed URL generator for S3 assets
+  - Created PreSignedUrlDto response model
+  - Created AwsPresignedUrlType enumeration
+  - Built UtilityResource REST controller
+  - Secured the new API endpoint
+  - Updated spring-boot-maven-plugin to 3.4.5
+  - Refactored pom.xml file
+  - Got Swagger UI working for new endpoints
+  - Refactored endpoint paths (/v1/utility/presignedURL)
+
+----------------------------------------------------------------------
+3.21 BHAR-495: Kafka Compression Algorithm Change
+     Timeline: Jul 8, 2025 | Commits: 1
+----------------------------------------------------------------------
+  - Updated Kafka compression algorithm to Zstd (from default)
+  - Performance optimization for message throughput
+
+----------------------------------------------------------------------
+3.22 BHAR-499: Trivy Security Fix
+     Timeline: Jul 9, 2025 | Commits: 1
+----------------------------------------------------------------------
+  - Fixed Trivy-reported security vulnerabilities
+
+----------------------------------------------------------------------
+3.23 BHAR-566: NSDL API Domain Change
+     Timeline: Jan 20, 2026 | Commits: 2
+----------------------------------------------------------------------
+  - Changed Niyo-NSDL API domain
+  - Fixed Trivy issues
+
+----------------------------------------------------------------------
+3.24 BHAR-636: Niyo-NSDL Changes & Multi-Environment Deployment (MAJOR FEATURE)
+     Timeline: Jan 20–22, 2026 | Commits: ~15
+----------------------------------------------------------------------
+  - Updated to BH2 (Bharat 2.0) domains
+  - Updated AWS Secret Manager configuration
+  - Updated K8s resources for beta and UAT
+  - Updated email notification configuration
+  - Added beta deploy to default pipeline
+  - Fixed Sonar issues (multiple rounds)
+  - Fixed Trivy issues
+  - Resolved K8s-related Sonar errors
+  - Fixed SDLC compliance issues
+  - Updated K8s UAT deployment file
+
+----------------------------------------------------------------------
+3.25 BHAR-574: Facets Deployment & Authentication System (LARGEST FEATURE)
+     Timeline: Jan 27 – Mar 5, 2026 | Commits: ~50+
+----------------------------------------------------------------------
+  This was a massive infrastructure and security overhaul:
+
+  Authentication System (19 new files, 1400+ lines):
+  - AuthenticationFilter — JWT token extraction and validation
+  - AuthenticationToken — custom Spring Security token
+  - DownstreamContextFilter — propagates user context downstream
+  - InventoryAuthenticationFailureHandler — custom error handling
+  - NiyoAuthenticationProvider — custom auth provider supporting JWT-Visionary and S2S
+  - SecurityUtils — utility methods for security operations
+  - WebSecurityConfig — Spring Security configuration
+  - AuthorityDTO, ContextKey, CurrentUser, UserContext — security DTOs
+  - JWT package: Claims, ClaimsMutator, JwtClaims, JwtMap — full JWT parsing library
+
+  API Client Layer:
+  - CustomerServiceApiClient (Retrofit interface)
+  - CustomerServiceApiClientProperties (config)
+  - CustomerService interface + CustomerServiceImpl
+  - RestTemplateHeaderModifierInterceptor
+  - HeaderInjectorInterceptor / CustomHeaderProvider
+
+  CI/CD Pipeline:
+  - Updated Bitbucket pipeline (multiple iterations)
+  - Refactored build step
+  - Updated BASE_IMAGE and Jib plugin version
+  - Created bitbucket-pipeline-backup.yml
+
+  Configuration:
+  - Updated base images (multiple times for OSV/security fixes)
+  - Configured web security
+  - Updated Swagger configuration
+  - Appended ROLE_ prefix to permissions
+  - Updated token decode logic
+  - Updated BIN mapping CS internal domain
+  - Set user email as user ID
+  - Set user login from JWT claim subject
+  - Set actor in context key if not present
+
+  Sonar & Security:
+  - Resolved Sonar hotspots, vulnerabilities, and bugs
+  - Removed K8s files to resolve Sonar hotspot issues
+
+----------------------------------------------------------------------
+3.26 BHAR-664: Base Image Update
+     Timeline: Feb 18, 2026 | Commits: 1
+----------------------------------------------------------------------
+  - Updated base image for security compliance
+
+----------------------------------------------------------------------
+3.27 BHAR-665: Kafka Workers in Production
+     Timeline: Feb 20 – Mar 5, 2026 | Commits: ~12
+----------------------------------------------------------------------
+  - Initially disabled Kafka worker in production (safety measure)
+  - Updated base image
+  - Removed redundant constants from configs
+  - Added new topic creation bean
+  - Refactored new topic creation bean (then removed as not needed)
+  - Set user authorities from JWT
+  - Enabled Kafka workers in production after validation
+
+----------------------------------------------------------------------
+3.28 BHAR-573: AWS Secret Manager Refactoring
+     Timeline: Mar 5, 2026 | Commits: 3
+----------------------------------------------------------------------
+  - Refactored AWS Secret Manager implementation
+  - Removed credential provider bean (simplified architecture)
+
+----------------------------------------------------------------------
+3.29 BHAR-574 (continued): IAM Integration
+     Timeline: Mar 2, 2026 | Commits: ~7
+----------------------------------------------------------------------
+  - Added call to IAM service to fetch user ID
+  - Resolved Jackson serialization issues
+  - Resolved Trivy issues
+  - Removed explicit Apache HTTP client dependency
+  - Added logging for userId debugging
+
+================================================================================
+4. KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+4.1 Authentication Architecture
+  - Built a custom Spring Security authentication system from scratch
+  - Supports dual authentication: JWT-Visionary tokens AND service-to-service (S2S) API calls
+  - Custom NiyoAuthenticationProvider with full JWT parsing (Claims, JwtClaims, JwtMap)
+  - DownstreamContextFilter for propagating user context across microservices
+  - Role-based access control with ROLE_ prefix convention
+
+4.2 Inter-Service Communication
+  - Chose Retrofit + OkHttp over RestTemplate/WebClient for external API calls
+  - Built RestTemplateHeaderModifierInterceptor for header propagation
+  - HeaderInjectorInterceptor for custom header injection
+  - CustomerServiceApiClient for customer service integration
+  - NotificationApiClients for email notification service
+
+4.3 Event-Driven Architecture
+  - Apache Kafka for asynchronous processing
+  - SASL_PLAINTEXT security for UAT, PLAINTEXT for dev
+  - Zstd compression for optimized message throughput
+  - Kafka workers with production enable/disable toggle
+  - Dynamic topic creation beans
+
+4.4 Data Architecture
+  - MongoDB as primary data store
+  - Dynamic query builders for flexible filtering
+  - MapStruct for type-safe object mapping between layers
+  - Javers for object audit/diff tracking
+
+4.5 File Storage & Reporting
+  - AWS S3 for file storage with pre-signed URL generation
+  - Apache POI for Excel report generation (SpreadSheetWriterService)
+  - Reports uploaded to S3 (card kit lost reports, issuance reports)
+
+4.6 Containerization Strategy
+  - Google Jib for Docker-less container builds
+  - Multi-architecture support (amd64 + arm64)
+  - Base image management with regular security updates
+
+4.7 Configuration Management
+  - AWS Secrets Manager for credential storage
+  - Jasypt for encrypted configuration properties
+  - Environment-specific configs (dev, UAT, beta, prod)
+
+4.8 Domain Migration
+  - Migrated from NSDL domains to BH2 (Bharat 2.0) domains
+  - Updated all environment configurations during migration
+
+================================================================================
+5. BUG FIXES & PRODUCTION ISSUES HANDLED
+================================================================================
+
+5.1 Critical Production Fixes:
+  - BHAR-346: Spring Boot downgraded to 3.3.10 to resolve critical Tomcat dependency vulnerability
+  - BHAR-574: Resolved Jackson serialization issues during IAM integration
+  - BHAR-574: Fixed token decode logic issues
+  - BHAR-665: Disabled Kafka workers in production initially, then re-enabled after validation
+  - NSDL-94: Fixed pod issue by adding isLogging in config file
+
+5.2 Build & Deployment Fixes:
+  - NSDL-82: Resolved Retrofit build error
+  - NSDL-92: Resolved build failure from Cat-B validation changes
+  - NSDL-94: Resolved build failure from DTO changes
+  - BHAR-574: Fixed test config related issues
+  - BHAR-574: Fixed tests issue and verbose logging issue
+  - NSDL-70: Refactored to resolve build issues
+
+5.3 Data & Query Fixes:
+  - NMB-453: Changed assetId type from Long to String (data type mismatch)
+  - NMB-454: Added check for kit with status "created" (hub validation)
+  - NSDL-59: Fixed conditional logic — card kit lost report now uploads in all cases
+  - NSDL-69: Added bankProgram to invalid card kit query criteria (missing filter)
+  - NSDL-94: Added null checks in response builder (NPE prevention)
+  - NSDL-94: Refactored report row field for null check
+
+5.4 API & Validation Fixes:
+  - NMB-408: Fixed datetime format display in API responses
+  - NSDL-64: Changed date format in card kit generate report API
+  - NSDL-94: Removed agent validation from get kit requests API (over-validation)
+  - NSDL-94: Removed min 1 filter requirement (UX improvement)
+  - NSDL-94: Removed VIEW_ALL_CARDKITS auth (permission simplification)
+
+================================================================================
+6. CI/CD AND DEVOPS WORK
+================================================================================
+
+6.1 Bitbucket Pipelines:
+  - Updated and refactored Bitbucket pipeline configuration (BHAR-574, multiple iterations)
+  - Refactored build step for efficiency
+  - Updated BASE_IMAGE references
+  - Updated Jib plugin version for container builds
+  - Added beta deploy to default pipeline (BHAR-636)
+  - Created pipeline backup file
+
+6.2 Kubernetes Deployments:
+  - Updated K8s resources for beta and UAT environments (BHAR-636)
+  - Updated K8s UAT deployment file
+  - Resolved K8s-related Sonar errors
+  - Removed K8s files to resolve Sonar hotspot issues (BHAR-574)
+
+6.3 Container Security:
+  - Multiple rounds of Trivy vulnerability fixes (BHAR-346, BHAR-499, BHAR-566, BHAR-574)
+  - Regular base image updates for security compliance (BHAR-574, BHAR-664, BHAR-665)
+  - Updated base image to resolve OSV (Open Source Vulnerability) issues
+
+6.4 Code Quality:
+  - Multiple rounds of SonarQube issue resolution (BHAR-574, BHAR-636)
+  - Fixed Sonar hotspots, vulnerabilities, and bugs
+  - Maintained Sonar exclusions for DTOs, configs, enums, etc.
+  - JaCoCo code coverage integration
+
+6.5 Dependency Management:
+  - Spring Boot version upgrades: 3.3.10 → 3.4.5 → 3.5.x
+  - Kafka compression algorithm change to Zstd
+  - Removed unused dependencies (logback, netty)
+  - Updated spring-boot-maven-plugin versions
+  - Jackson version management for serialization consistency
+
+6.6 Environment Configuration:
+  - Managed configs across 4 environments: dev, UAT, beta, prod
+  - Kafka security protocol configuration per environment
+  - AWS Secret Manager configuration updates
+  - Notification service base URL updates across all environments
+
+================================================================================
+7. TESTING CONTRIBUTIONS
+================================================================================
+
+7.1 Test Infrastructure:
+  - Flapdoodle Embedded MongoDB configured for integration tests
+  - JUnit 5 (Jupiter) test framework setup
+  - Spring Security Test dependency for auth testing
+  - Spring Boot Starter Test for integration testing
+
+7.2 Test-Related Commits:
+  - BHAR-574: Fixed test config related issues
+  - BHAR-574: Fixed tests issue and verbose logging issue
+  - NSDL-94: Resolved build failures (test compilation)
+  - NSDL-92: Resolved build failure (test impact)
+
+7.3 Test Coverage Configuration:
+  - JaCoCo configured for code coverage reporting
+  - Sonar test exclusions properly configured
+  - Coverage exclusions for DTOs, configs, enums, mappers (non-logic code)
+  - Surefire plugin configured for test execution
+
+================================================================================
+8. SUMMARY — INTERVIEW TALKING POINTS
+================================================================================
+
+Scale of Contribution:
+  - 267 commits over 20 months
+  - Built entire Partner Agent Kit Request module from scratch (~40+ commits)
+  - Designed and implemented custom authentication system (19 files, 1400+ lines)
+  - Managed Facets deployment — largest single initiative (~50+ commits)
+
+Key Technical Highlights:
+  - Designed dual-auth system (JWT + S2S) with custom Spring Security provider
+  - Built asset transfer module with V2 APIs, pagination, and S3 integration
+  - Implemented email notification integration using Retrofit
+  - Built Excel report generation system with Apache POI
+  - Migrated Kafka cluster with SASL security and Zstd compression
+  - Managed Spring Boot major version upgrades with zero downtime
+  - Resolved critical Tomcat CVE by strategic version pinning
+
+Ownership Demonstrated:
+  - End-to-end feature delivery (data model → API → service → tests → deployment)
+  - Multi-environment deployment management (dev, UAT, beta, prod)
+  - Security vulnerability remediation (Trivy, Sonar, OSV)
+  - Production incident handling (Kafka worker toggle, pod issues)
+  - Domain migration (NSDL → BH2)
+  - CI/CD pipeline maintenance and optimization
+
+================================================================================

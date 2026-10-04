@@ -1,0 +1,934 @@
+================================================================================
+NSDL SERVICES — COMPLETE CONTRIBUTION ANALYSIS (Kunal Ladhani)
+Interview Prep Document
+================================================================================
+
+4 Repositories Analyzed:
+  1. niyo-nsdl-pb-customer-service  (Main Customer Service — Kubernetes/Facets)
+  2. nsdl-pb-customer-service       (Customer Service — AWS Lambda)
+  3. niyo-nsdl-pb-lambda            (NSDL Lambda — Cron/Scheduled Jobs)
+  4. nsdl-pb-cron-lambda            (Cron Lambda — Scheduled Sync Jobs)
+
+================================================================================
+SECTION 1: TIMELINE PER REPO
+================================================================================
+
+1. niyo-nsdl-pb-customer-service (Main CS — K8s)
+   First Commit: 2024-06-19 (NSDL-39: added fields to aux_customer and pii vault)
+   Last Commit:  2026-03-12 (BHAR-574: moved configs to facets)
+   Active Duration: ~21 months
+   Total Commits by Kunal: ~170+
+
+2. nsdl-pb-customer-service (CS Lambda)
+   First Commit: 2025-02-27 (BHAR-339: updated the kafka config file)
+   Last Commit:  2026-02-27 (BHAR-635: error handling changes)
+   Active Duration: ~12 months
+   Total Commits by Kunal: ~100+
+
+3. niyo-nsdl-pb-lambda (NSDL Lambda)
+   First Commit: 2025-12-23 (BHAR-566: updated NIYO_NSDL_BASE_URL)
+   Last Commit:  2026-01-22 (BHAR-566: facets changes)
+   Active Duration: ~1 month
+   Total Commits by Kunal: 12
+
+4. nsdl-pb-cron-lambda (Cron Lambda)
+   First Commit: 2024-07-08 (NSDL-45: added basic setup of lambda fn)
+   Last Commit:  2025-10-09 (BHAR-200: refactored to update base image)
+   Active Duration: ~15 months
+   Total Commits by Kunal: ~50+
+
+================================================================================
+SECTION 2: TECH STACK PER REPO
+================================================================================
+
+1. niyo-nsdl-pb-customer-service (Main CS — K8s/Facets Deployment)
+   ─────────────────────────────────────────────────────────────
+   Language:       Java 17
+   Framework:      Spring Boot 3.5.11
+   Build Tool:     Maven (multi-module: application, commons, services, worker)
+   Database:       MongoDB (spring-boot-starter-data-mongodb)
+   Messaging:      Apache Kafka (spring-kafka)
+   HTTP Client:    OkHttp 4.10 + Retrofit 2.5
+   Security:       Spring Security, Spring Security Crypto
+   Secrets:        AWS Secrets Manager (aws-sdk-v2)
+   Mapping:        MapStruct 1.5.5
+   Logging:        Logstash Logback Encoder, Logback 1.5.25
+   Tracing:        OpenTracing
+   API Docs:       SpringDoc OpenAPI (Swagger UI)
+   Validation:     Spring Boot Starter Validation
+   Monitoring:     Spring Boot Actuator
+   Retry:          Spring Retry + Spring Aspects (AOP)
+   Serialization:  Jackson 2.18.6
+   Code Quality:   SonarQube (sonar-maven-plugin 5.2), JaCoCo 0.8.11, Snyk
+   Container:      Google JIB (multi-arch: amd64 + arm64)
+   Base Image:     Distroless Java 17 (gcr.io/distroless/java17-debian12)
+   Deployment:     Kubernetes via Facets Cloud (facetsctl)
+   CI/CD:          Bitbucket Pipelines (OIDC auth, ECR push, Facets deploy)
+   Architecture:   Separate API + Worker deployments
+
+2. nsdl-pb-customer-service (CS Lambda)
+   ─────────────────────────────────────
+   Language:       Java 17 (Runtime: java21 on Lambda)
+   Framework:      Spring Boot 3.5.8 + AWS Serverless Java Container (SpringBoot3)
+   Build Tool:     Maven (single module, shaded JAR / assembly ZIP)
+   Database:       MongoDB (spring-boot-starter-data-mongodb, mongodb-crypt 5.5.2)
+   Messaging:      Apache Kafka (spring-kafka)
+   HTTP Client:    OkHttp 4.12 + Retrofit 2.11
+   Secrets:        AWS Secrets Manager (aws-sdk-v2)
+   AWS Services:   Lambda, API Gateway (Private + Public), S3, SQS, KMS, VPC
+   Serialization:  Jackson (via Spring Boot)
+   Deployment:     AWS SAM (CloudFormation), Lambda SnapStart
+   CI/CD:          Bitbucket Pipelines
+   Memory:         7012 MB Lambda
+   Features:       IP-whitelisted callback API Gateway, VPC-attached Lambda
+
+3. niyo-nsdl-pb-lambda (NSDL Lambda)
+   ──────────────────────────────────
+   Language:       Java 17
+   Framework:      Plain AWS Lambda (no Spring Boot)
+   Build Tool:     Maven (shaded JAR)
+   HTTP Client:    OkHttp 4.12 + Retrofit 2.9
+   Encryption:     AWS Encryption SDK 2.2 + BouncyCastle
+   AWS Services:   Lambda, EventBridge (scheduled), SSM Parameter Store, KMS, VPC
+   Serialization:  Jackson 2.15 + Gson 2.8.9
+   Deployment:     AWS SAM
+   Schedule:       EventBridge — sync-customer-onboarding every 30 minutes
+   Memory:         7012 MB Lambda
+
+4. nsdl-pb-cron-lambda (Cron Lambda)
+   ─────────────────────────────────
+   Language:       Java 17
+   Framework:      Plain AWS Lambda (no Spring Boot)
+   Build Tool:     Maven (shaded JAR)
+   HTTP Client:    OkHttp 4.12
+   AWS Services:   Lambda, EventBridge (scheduled crons), CloudWatch Logs, VPC
+   Serialization:  Jackson 2.15 + Gson 2.11
+   Deployment:     AWS SAM
+   Schedules:
+     - mark-customer-for-sync: Weekly (Sunday 12:00 UTC)
+     - sync-customer-with-bank: Every 15 minutes
+     - sync-aadhaar-seeding-mis: Daily at 2:30 UTC
+   Memory:         256 MB Lambda
+
+================================================================================
+SECTION 3: MAJOR FEATURES BUILT (Grouped by Ticket/Feature)
+================================================================================
+
+─── REPO: niyo-nsdl-pb-customer-service (Main CS — K8s) ───
+
+NSDL-39: Customer Onboarding Data Enrichment (Jun-Jul 2024)
+  - Added new fields (fatherName, supervisorName) to aux_customer and PII vault
+  - Integrated PII Vault with schema version 2.0
+  - Fetched customer data from PII Vault and forwarded to SME service
+  - Added API Gateway ID configuration for PII Vault APIs across environments
+  - Removed extra whitespace when saving new fields to DB
+  - Refactored PII domain and gateway IDs for beta and prod
+
+NSDL-41: Account Details SMS Retrigger (Jun 2024)
+  - Exposed API endpoint for triggering account details SMS
+  - Fixed MongoDB connection errors
+  - Resolved build failures and API endpoint bugs
+
+NSDL-43: Customer Details API Enhancement (Jul 2024)
+  - Added fatherName and supervisorName to GET customer API
+  - Added API Gateway ID to PII Vault API calls
+
+BHAR-199: Kafka Topic Publishing (Feb 2025)
+  - Implemented and tested publish-to-topic functionality
+
+BHAR-339: Kafka Cluster Migration (Feb-Apr 2025)
+  - Updated Kafka config files for UAT cluster migration
+  - Refactored Kafka config to separate common config fields from env-specific
+  - Updated Kafka broker URLs for new cluster
+
+BHAR-429: Kubernetes Readiness Probes (Sep 2025)
+  - Added readiness probe to niyo-nsdl service, bypassing Istio
+  - Updated kube files for UAT, beta, and prod environments
+
+BHAR-466: Consumer Utils Singleton Scope Fix (Sep 2025)
+  - Fixed ConsumerUtils to be singleton-scoped using @Component (Spring default)
+  - Fixed related SonarQube issues
+
+BHAR-500: Kafka Compression Algorithm Change (Jul 2025)
+  - Changed Kafka compression algorithm to ZSTD for better performance
+  - Added separate pipeline for prod- branches
+  - Removed Datadog configs from UAT and beta
+
+BHAR-518: V2 Update Customer API Refactor (Jul 2025)
+  - Refactored request body of v2 update customer API
+  - Added validation to the API
+  - Set minimum app version to 204
+
+BHAR-536: Kubernetes Health Checks & Probes (Aug 2025)
+  - Added health check API endpoint
+  - Implemented readiness, liveness, and startup probes for UAT
+  - Updated kube files for beta and prod
+  - Updated API and worker configurations
+  - Fixed app version to 202, later updated to 204
+  - Removed extra health API and kafka-clients dependency
+  - Fixed Trivy security issues
+
+BHAR-566: Facets Cloud Migration (Sep 2025 - Jan 2026) [MAJOR]
+  - Migrated deployment from direct K8s to Facets Cloud platform
+  - Updated pom.xml and bitbucket-pipeline.yml for Facets deployment
+  - Refactored pipeline build steps for Docker image creation via JIB
+  - Fixed readiness and liveness check by separating metrics port
+  - Fixed SonarQube security hotspots and code smell issues
+  - Fixed all test cases for new architecture
+  - Updated worker server.port config
+  - Removed Kafka secret retrieval logic (moved to ASM)
+  - Added ASM (AWS Secrets Manager) logic for secrets management
+  - Implemented ASM in prod-only mode
+  - Updated PII Vault base URL and VPC endpoints
+  - Resolved git-secret-scan issues by removing API keys from config files
+  - Added MDC filter logging
+  - Updated CS to VPC endpoint
+  - Removed host header from PII Vault APIs
+  - Sent x-api-key only for prod environment for /cs/internal endpoint
+  - Updated logging configuration
+  - Refactored config files for Facets
+
+BHAR-574: Move Config to Facets (Mar 2026)
+  - Moved app version threshold to Facets configuration
+  - Moved additional configs to Facets platform
+
+BHAR-575: Internal Service Communication (Dec 2025)
+  - Updated NSDL Lambda VPC endpoint
+  - Configured secrets for Kafka from ASM
+  - Added configs for prod
+  - Fixed SonarQube code smell issues
+  - Updated baseUrl for cs-internal API
+  - Updated x-api-key field for CS API
+
+BHAR-608: AWS Config & Secret Retrieval (Dec 2025)
+  - Updated ASM secret retrieval logic
+  - Updated AWS config for UAT and prod
+  - Updated default config to dummy values (security)
+
+BHAR-615: Internal Sync API (Dec 2025 - Jan 2026) [MAJOR]
+  - Created internal sync API for customer onboarding data
+  - Created compound index for createdDate and corporateCode in MongoDB
+  - Added validation check on dates
+  - Fixed all Trivy/OSV security issues
+  - Reduced number of logs for performance
+  - Updated date range logic
+  - Made the sync loop async for better performance
+  - Refactored sync onboarding API
+  - Added worker configuration
+  - Resolved OkHttp errors
+  - Fixed Kafka consumer configuration to prevent missed messages
+
+BHAR-620: Internal Sync Flag (Jan 2026)
+  - Added "internally synced" flag to customer records
+  - Added internally synced flag check to internal sync API
+  - Created compound index on createdDate and internally-synced flag
+  - Fixed is-internally-synced query
+
+BHAR-568: App Version Change (Jan 2026)
+  - Forced app version change
+  - Fixed OSV-scanner and Trivy issues
+
+BHAR-653: Pipeline & Secret Updates (Jan 2026)
+  - Updated pipeline configuration
+  - Resolved secret issues
+  - Updated app version
+
+─── REPO: nsdl-pb-customer-service (CS Lambda) ───
+
+BHAR-339: Kafka Config Migration (Feb-Apr 2025)
+  - Updated Kafka config file for cluster migration
+  - Refactored Kafka config to separate common config fields
+
+BHAR-350: S2S Callback API (Mar 2025) [MAJOR]
+  - Created S2S (server-to-server) callback API for logging request/response
+  - Stored encryption key in environment variables
+  - Added API endpoints for callback handling
+  - Created separate callback event in API Gateway for UAT
+  - Refactored response DTO naming
+  - Used given encryption key in UAT
+
+BHAR-400: Notification Base URL Update (May 2025)
+  - Updated notification service base URL
+  - Refactored pipeline with beta deploy step for testing
+
+BHAR-499: Kafka Compression & Trivy Fixes (Jul 2025)
+  - Changed Kafka compression algorithm to ZSTD
+  - Added Kafka publish to get customer details
+  - Fixed all Trivy security issues
+  - Removed test code, added .vscode to .gitignore
+
+BHAR-505: SQS Queue Integration (Jul 2025) [MAJOR]
+  - Added SQS producer configuration setup
+  - Implemented SQS listener
+  - Updated SQS queue name and timeout (15 min)
+  - Added AWS SDK v2 BOM and fixed Trivy issues
+  - Refactored Spring handler method for Lambda
+  - Updated Lambda handler method
+  - Set ReservedConcurrentExecutions to 3 for prod
+  - Added prod configuration
+  - Changed S3 service implementation
+  - Changed URL shortener domain for UAT
+  - Sending sync call to notification service
+  - Added download URL implementation with logging
+  - Added beta deployment for prod branches
+  - Removed ReservedConcurrentExecutions setting (later)
+  - Added API Gateway logs in beta and UAT
+  - Refactored log retention policy
+
+BHAR-566: URL Shortener & Facets Changes (Jan 2026)
+  - Updated URL shortener domain
+  - Added S2S callback operations path
+
+BHAR-629: Secrets Manager & Pipeline Modernization (Jan 2026) [MAJOR]
+  - Moved ALL sensitive secrets to AWS Secrets Manager
+  - Fixed Trivy/OSV security issues
+  - Resolved SonarQube bugs
+  - Updated pipeline runner image
+  - Refactored Bitbucket pipeline extensively
+  - Updated mongo-crypt version
+
+BHAR-635: Error Handling Overhaul (Feb 2026) [MAJOR]
+  - Improved error handling for BC registration NSDL API
+  - Hardcoded pincode for NSDL registration API (temporary fix)
+  - Updated error handling logic
+  - SonarQube fixes
+  - Updated PDF converter domain
+  - Added retry logic to Kafka publisher
+  - Created Kafka publish method for testing
+  - Refactored error extractor logic (multiple iterations)
+  - Reverted hard-coded pincode and Kafka changes
+  - Refactored error handling logic (BHAR-665 related)
+
+BHAR-200: Maintenance & Security (Oct-Dec 2025)
+  - Updated base image in pipeline
+  - Refactored pipeline
+  - Removed old version of mongo-crypt
+  - Removed old S2S callback paths
+  - Updated URL shortener domain
+  - SonarQube bugs fixed
+  - Trivy fixes
+  - Added logging
+
+─── REPO: niyo-nsdl-pb-lambda (NSDL Lambda) ───
+
+BHAR-566: Facets Migration & Configuration (Dec 2025 - Jan 2026)
+  - Updated NIYO_NSDL_BASE_URL for new environment
+  - Resolved base image issues
+  - Resolved Trivy/OSV-scanner issues
+  - Added exception for SonarQube check in template
+  - Added exception request for downstream context
+  - Updated S2S URL
+  - Removed S3 access from template-uat
+  - Removed SonarQube step from pipeline
+  - Updated pipeline runner
+
+─── REPO: nsdl-pb-cron-lambda (Cron Lambda) ───
+
+NSDL-45: Lambda Function Setup & Deployment (Jul 2024) [MAJOR]
+  - Created the entire Lambda function from scratch
+  - Added basic Lambda setup with handler
+  - Resolved Maven dependency vulnerabilities (multiple rounds)
+  - Resolved test failures
+  - Added SAM template for UAT and prod environments
+  - Configured base URL and x-aws-gateway-id for UAT
+  - Added SSM permission to SAM template
+  - Set up Bitbucket CI/CD pipeline from scratch
+  - Deployed to UAT and prod
+  - Added response logging for mark-customer-for-sync and sync-customer actions
+  - Changed NSDL base URL and memory size configurations
+  - Changed cron expressions for scheduling
+
+NSDL-83: Aadhaar Seeding MIS Cron (Aug 2024)
+  - Created cron job to trigger Aadhaar seeding MIS sync
+  - Configured cron expression (changed from 8am UTC to 8am IST)
+  - Multiple cron expression adjustments
+
+NSDL-45 (continued): Log Retention & Resource Optimization (Jul-Aug 2024)
+  - Restricted CloudWatch log retention to 30 days
+  - Refactored SAM template to change memory size
+  - Changed resource allocation (memory optimization)
+
+BHAR-200: Base Image & Maintenance (Oct 2025)
+  - Refactored to update base image
+  - Added log retention group
+  - SonarQube fixes
+
+================================================================================
+SECTION 4: KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+1. Multi-Module Architecture (niyo-nsdl-pb-customer-service)
+   - Separated into application, commons, services, and worker modules
+   - API and Worker deployed as separate containers on Kubernetes
+   - Enables independent scaling of API vs background processing
+
+2. Lambda-to-Kubernetes Migration
+   - Originally built as AWS Lambda (nsdl-pb-customer-service)
+   - Migrated to Kubernetes via Facets Cloud (niyo-nsdl-pb-customer-service)
+   - Both versions maintained in parallel during transition
+   - Lambda version kept for specific use cases (S2S callbacks, SQS processing)
+
+3. Facets Cloud Adoption (BHAR-566)
+   - Migrated from direct K8s/Lambda deployments to Facets Cloud platform
+   - Used facetsctl CLI for deployment automation
+   - Separate Facets services: niyo-nsdl-cs-api and niyo-nsdl-cs-worker
+   - Google JIB for multi-arch container builds (amd64 + arm64)
+
+4. Event-Driven Architecture
+   - Kafka for async messaging between services
+   - SQS for Lambda-based queue processing
+   - EventBridge for scheduled cron jobs
+   - S2S callback APIs for bank-to-service communication
+
+5. Security Architecture
+   - AWS Secrets Manager for all sensitive credentials
+   - KMS encryption for secrets at rest
+   - MongoDB field-level encryption (mongodb-crypt)
+   - IP-whitelisted callback API Gateway for NSDL bank callbacks
+   - VPC-attached Lambdas for network isolation
+   - Private API Gateway endpoints with VPC endpoint policies
+   - Git secret scanning enforcement
+
+6. Database Design
+   - MongoDB with compound indexes (createdDate + corporateCode, createdDate + internally-synced)
+   - PII Vault integration for sensitive customer data (Aadhaar, etc.)
+   - Schema versioning (PII vault schema version 2.0)
+
+7. Kafka Configuration
+   - Migrated Kafka clusters (UAT migration)
+   - Changed compression algorithm from default to ZSTD for better throughput
+   - Separated common Kafka config from environment-specific config
+   - Added retry logic to Kafka publisher
+   - Fixed consumer configuration to prevent missed messages
+
+8. Lambda SnapStart
+   - Enabled Lambda SnapStart for nsdl-pb-customer-service
+   - Reduces cold start latency for Java Lambda functions
+   - Critical for 7GB memory Lambda functions
+
+9. Distroless Base Images
+   - Using gcr.io/distroless/java17-debian12 for minimal attack surface
+   - Custom base images from ECR (java-17-multiarch-non-root)
+
+================================================================================
+SECTION 5: BUG FIXES & PRODUCTION ISSUES HANDLED
+================================================================================
+
+1. MongoDB Connection Error (NSDL-41)
+   - Resolved MongoDB connection error in account details SMS feature
+   - Fixed build failures related to DB connectivity
+
+2. Kafka Consumer Missing Messages (BHAR-615)
+   - Fixed Kafka consumer configuration to prevent missed messages
+   - Critical production issue — messages were being lost
+
+3. OkHttp Error Resolution (BHAR-615)
+   - Resolved OkHttp client errors in internal sync API
+
+4. Readiness/Liveness Probe Failures (BHAR-566)
+   - Fixed readiness and liveness check issues by separating metrics port
+   - Pods were failing health checks, causing restarts
+
+5. Build Failures (Multiple)
+   - Resolved pom.xml issues causing build failures (BHAR-566)
+   - Fixed test case failures after architecture changes
+   - Resolved Maven dependency vulnerabilities (NSDL-45)
+
+6. API Endpoint Bug (NSDL-41)
+   - Fixed API endpoint routing bug for SMS retrigger
+
+7. is-internally-synced Query Bug (BHAR-620)
+   - Fixed MongoDB query for internally-synced flag
+   - Required multiple iterations to get the compound index right
+
+8. Error Handling for NSDL Registration API (BHAR-635)
+   - Improved error handling for BC registration NSDL API
+   - Temporary pincode hardcode for NSDL reg API (production workaround)
+   - Multiple iterations on error extractor logic
+
+9. Cron Expression Timezone Bug (NSDL-83)
+   - Changed cron expression from 8am UTC to 8am IST
+   - Aadhaar seeding MIS was running at wrong time
+
+10. Lambda Memory/Resource Issues (NSDL-45)
+    - Changed memory size and resource allocation for Lambda functions
+    - Optimized for cost vs performance
+
+================================================================================
+SECTION 6: CI/CD AND DEVOPS WORK
+================================================================================
+
+1. Bitbucket Pipelines — Full CI/CD Setup
+   - Built CI/CD pipelines from scratch for nsdl-pb-cron-lambda
+   - Configured OIDC authentication for AWS (no static credentials)
+   - Set up ECR push with multi-arch builds (amd64 + arm64)
+   - Separate pipeline steps for API and Worker builds
+   - Manual trigger gates for UAT and prod deployments
+   - Added beta deployment steps for testing prod branches
+
+2. AWS SAM Deployments
+   - Created SAM templates for UAT and prod (all Lambda repos)
+   - Configured API Gateway (Private + Public endpoints)
+   - Set up VPC configuration (security groups, subnets)
+   - Configured IAM roles with least-privilege policies
+   - Set up CloudWatch log groups with retention policies
+   - Configured EventBridge scheduled rules
+
+3. Facets Cloud Migration (BHAR-566)
+   - Migrated from SAM/K8s to Facets Cloud platform
+   - Integrated facetsctl CLI into Bitbucket Pipelines
+   - Configured separate Facets services for API and Worker
+   - Set up Facets release sync for automated deployments
+
+4. Container Strategy
+   - Google JIB for containerization (no Dockerfile needed)
+   - Multi-architecture builds (linux/amd64, linux/arm64)
+   - Distroless base images for security
+   - Custom ECR base images (java-17-multiarch-non-root)
+
+5. Security Scanning Pipeline
+   - Trivy vulnerability scanning (multiple fix rounds across all repos)
+   - OSV-scanner for dependency vulnerabilities
+   - SonarQube integration for code quality
+   - Git secret scanning enforcement
+   - Snyk integration for dependency security
+
+6. Secrets Management Migration
+   - Moved all sensitive secrets to AWS Secrets Manager (BHAR-629)
+   - Removed API keys from config files (git-secret-scan compliance)
+   - Configured KMS encryption for secrets
+   - Environment-specific secret ARNs
+
+7. Infrastructure as Code
+   - SAM templates with CloudFormation for Lambda infrastructure
+   - Kubernetes manifests for API and Worker deployments
+   - Readiness, liveness, and startup probes configuration
+   - Istio service mesh integration (bypassing for health checks)
+
+8. Pipeline Runner Updates
+   - Updated pipeline runner images across repos
+   - Maintained base image versions for security compliance
+
+================================================================================
+SECTION 7: TESTING CONTRIBUTIONS
+================================================================================
+
+1. Test Case Maintenance
+   - Fixed all test cases after Facets migration (BHAR-566)
+   - Resolved test failures during Lambda setup (NSDL-45)
+   - Fixed build and test issues during architecture changes
+
+2. Code Quality
+   - SonarQube integration with JaCoCo for code coverage
+   - Coverage exclusions configured for DTOs, domains, constants, enums, repos,
+     exceptions, configs, advice, mappers
+   - Resolved SonarQube security hotspots
+   - Fixed SonarQube code smell issues (multiple rounds)
+   - Sonar coverage reports via jacoco-aggregate
+
+3. Kafka Testing
+   - Created Kafka publish method specifically for testing (BHAR-635)
+   - Tested publish-to-topic functionality (BHAR-199)
+   - Tested SQS producer methods (BHAR-505)
+
+4. Security Testing
+   - Multiple rounds of Trivy vulnerability fixes across all repos
+   - OSV-scanner issue resolution
+   - Dependency vulnerability remediation
+
+================================================================================
+SECTION 8: INTERVIEW-READY TALKING POINTS
+================================================================================
+
+1. "I built and maintained 4 microservices for NSDL Payments Bank integration
+    at Niyo, handling customer onboarding, data sync, and bank API communication
+    across a 21-month period."
+
+2. "I led the migration from AWS Lambda to Kubernetes via Facets Cloud,
+    implementing a multi-module architecture with separate API and Worker
+    deployments for independent scaling."
+
+3. "I designed an event-driven architecture using Kafka, SQS, and EventBridge
+    for async processing — including customer sync jobs running every 15 minutes,
+    Aadhaar seeding MIS daily crons, and S2S callback handling."
+
+4. "I implemented comprehensive security measures including AWS Secrets Manager
+    integration, MongoDB field-level encryption, IP-whitelisted API Gateways,
+    VPC-attached Lambdas, and git secret scanning enforcement."
+
+5. "I built CI/CD pipelines from scratch using Bitbucket Pipelines with OIDC
+    auth, multi-arch container builds via Google JIB, and automated Facets
+    Cloud deployments."
+
+6. "I optimized Kafka performance by migrating compression to ZSTD, fixing
+    consumer configuration to prevent missed messages, and implementing
+    retry logic for publishers."
+
+7. "I created an internal sync API with async processing, compound MongoDB
+    indexes, and an 'internally synced' flag system to track sync state
+    across distributed services."
+
+8. "I handled production issues including Kafka message loss, Lambda cold
+    starts (mitigated with SnapStart), health check failures, and timezone
+    bugs in cron scheduling."
+
+================================================================================
+SECTION 9: COMPLETE COMMIT LOG (RAW)
+================================================================================
+
+--- niyo-nsdl-pb-customer-service ---
+ac522f6 2026-03-12 BHAR-574: moved configs to facets (PR #95)
+5137f26 2026-03-11 BHAR-574: local worker running
+9e4efb3 2026-03-11 BHAR-574: moved app version threshold to facets
+376b428 2026-03-11 BHAR-574: moved configs to facets
+272e785 2026-01-29 BHAR-653: updated pipeline, resolved secret issues
+bb0e89b 2026-01-29 BHAR-568: app version change (PR #93)
+f4de0dc 2026-01-29 BHAR-568: osv-scanner fixes
+1301162 2026-01-29 BHAR-568: trivy fixes
+9898dac 2026-01-29 BHAR-568: app version change forced (PR #92)
+e549560 2026-01-29 BHAR-568: app version change forced
+e3ca2ce 2026-01-22 BHAR-566: facets deployment (PR #82)
+1011879 2026-01-22 BHAR-566: refactor config files
+1b93b8e 2026-01-21 BHAR-566: refactor
+80799e3 2026-01-21 BHAR-566: updated logging config
+ac838d7 2026-01-21 BHAR-566: updated logging config
+d3eca2c 2026-01-16 BHAR-566: x-api-key only for prod for /cs/internal
+7833e7d 2026-01-13 BHAR-575: updated baseUrl for cs-internal API
+1ae6eaf 2026-01-13 BHAR-575: updated baseUrl for cs-internal API
+07168e3 2026-01-13 BHAR-575: updated x-api-key for cs-api
+4d64404 2026-01-12 BHAR-566: updated base-url of nsdl-pb-cs lambda
+795f472 2026-01-09 BHAR-566: removed host header from pii-vault apis
+61f5d71 2026-01-07 BHAR-615: Fix Kafka consumer config to prevent missed messages
+4beaf6b 2026-01-07 BHAR-620: added compound index on createdDate + internally-synced
+f7dd497 2026-01-07 BHAR-620: added index on createdDate + internally-synced
+2acbb63 2026-01-07 BHAR-620: refactor
+d2674ca 2026-01-07 BHAR-620: refactor
+b792884 2026-01-07 BHAR-620: added internally synced flag check to internal sync API
+d07de00 2026-01-07 BHAR-620: added internally synced flag
+7a8178a 2026-01-08 BHAR-566: refactor
+1448679 2026-01-08 BHAR-566: pulled from main
+7361902 2026-01-07 BHAR-620: internal sync flag (PR #90)
+44680cf 2026-01-07 BHAR-620: fixed is-internally-synced query
+4c14857 2026-01-07 BHAR-620: internal sync flag (PR #89)
+571890f 2026-01-07 BHAR-620: added compound index
+e6026cb 2026-01-07 BHAR-620: internal sync flag (PR #88)
+0a52242 2026-01-07 BHAR-620: added index
+6b2faef 2026-01-07 BHAR-620: refactor
+460eeaf 2026-01-07 BHAR-620: refactor
+5f428b4 2026-01-07 BHAR-620: added internally synced flag check
+f38404d 2026-01-07 BHAR-620: added internally synced flag
+09b1dc3 2025-12-26 BHAR-615: internal sync api (PR #87)
+f450d8f 2025-12-26 BHAR-615: refactor
+82a3bfb 2025-12-26 BHAR-615: internal sync api (PR #86)
+df97573 2025-12-26 BHAR-615: added config for worker
+1a7093d 2025-12-26 BHAR-615: made the loop async
+2408704 2025-12-26 BHAR-615: refactored the sync onb api
+16e4fe2 2025-12-26 BHAR-615: reduced no of logs
+4a7912c 2025-12-26 BHAR-615: update date range logic
+249631f 2025-12-24 BHAR-615: internal sync api (PR #85)
+7d20aba 2025-12-24 BHAR-615: resolved okkttp error
+ada2a72 2025-12-24 BHAR-615: internal sync api (PR #84)
+c255f71 2025-12-24 BHAR-615: removed maven.config changes
+150fa63 2025-12-24 BHAR-615: created compound index for createdDate + corporateCode
+31c4e38 2025-12-24 BHAR-615: fixed all trivy osv issues
+60c03ee 2025-12-24 BHAR-615: added validation check on dates
+a117078 2025-12-24 BHAR-615: created internal sync api
+4421519 2025-12-22 BHAR-566: updated pii-vault base url
+92fa0f2 2025-12-22 BHAR-566: refactor to test pii vault api
+5fb7da5 2025-12-22 BHAR-566: refactor to test pii vault api
+fdf4979 2025-12-22 BHAR-566: refactor to test pii vault api
+33000a6 2025-12-19 BHAR-608: updated asm secret retrival logic
+f2c632e 2025-12-18 BHAR-608: updated aws config for uat and prod
+2bcf332 2025-12-18 BHAR-608: updated default config to dummy values
+9be154f 2025-12-16 BHAR-575: added configs for prod
+f8a61e8 2025-12-16 BHAR-575: added configs
+94d5d34 2025-12-16 BHAR-575: picking up secrets for kafka from ASM
+37ef6da 2025-12-16 BHAR-575: picking up secrets for kafka from ASM
+f51cd45 2025-12-16 BHAR-566: logging secrets from ASM
+a563240 2025-12-16 BHAR-566: logging secrets from ASM
+8e8427c 2025-12-16 BHAR-566: refactor
+d64f633 2025-12-15 BHAR-566: using ASM in prod only
+1e8b050 2025-12-12 BHAR-566: added ASM logic
+eaffc71 2025-12-12 BHAR-566: added ASM logic
+7f5f4b7 2025-12-08 BHAR-566: removed bitbucket-pipeline-backup
+94ec219 2025-12-05 BHAR-575: fixed sonar code smell issues
+2a371b1 2025-12-04 BHAR-566: refactor pipeline build step
+fd4feb1 2025-12-04 BHAR-566: sending host to nsdl-pb-cs API calls
+d151220 2025-12-04 BHAR-575: updated nsdl lambda vpc endpoint
+fc09c52 2025-12-01 BHAR-566: removed cs aws-api-gateway-id from cs api requests
+62bba37 2025-11-14 BHAR-566: added logs in MDC filter
+db4036b 2025-11-13 BHAR-200: updated base image (PR #83)
+4de8d4d 2025-11-13 BHAR-200: updated base image
+2965906 2025-11-13 BHAR-200: updated base image
+7a3746c 2025-11-12 BHAR-566: updated cs to vpc endpoint
+7b77dbd 2025-11-04 BHAR-566: fixed build and test issues
+8871e09 2025-11-04 BHAR-566: git-secret-scan issue resolved
+4ba79c2 2025-11-04 BHAR-566: added a log
+5da739c 2025-10-01 BHAR-566: fixed readiness/liveness by separating metrics port
+cca392d 2025-10-01 BHAR-566: fixed readiness/liveness check issue
+33f9122 2025-10-01 BHAR-566: fixed sonar security hotspot issues
+2c66711 2025-10-01 BHAR-566: fixed sonar code smell issues
+3c17699 2025-10-01 BHAR-566: fixed sonar - NiyoOkHttpLoggingInterceptor
+13361ca 2025-10-01 BHAR-566: fixed sonar issue
+1c8fd06 2025-10-01 BHAR-566: fixed all the test cases
+9ffe721 2025-09-30 BHAR-466: consumer utils singleton scoped via @Component
+7e8cb18 2025-09-30 BHAR-466: fixed sonar issues
+e40ee42 2025-09-29 BHAR-566: updated worker server.port config
+2a005a5 2025-09-29 BHAR-566: updated worker config
+da4008a 2025-09-29 BHAR-566: updated worker config
+9e6b148 2025-09-26 BHAR-566: updated local mongo and kafka config
+708a7d8 2025-09-26 BHAR-566: updated bitbucket pipeline
+1d240b1 2025-09-25 BHAR-566: removed kafka secret retrival logic
+a890ad9 2025-09-24 BHAR-566: updated service name in pipeline
+9fd3fe1 2025-09-24 BHAR-566: updated plugin and maven version
+82269fa 2025-09-24 BHAR-566: refactored pom.xml to resolve build issue
+a00360e 2025-09-24 BHAR-566: refactored pom.xml to resolve build issue
+152a28e 2025-09-24 BHAR-566: refactored pom.xml for trivy/osv-scanner
+42c495f 2025-09-23 BHAR-566: refactored bitbucket-pipeline.yml
+84ed13e 2025-09-23 BHAR-566: refactored bitbucket-pipeline.yml
+b07fc5f 2025-09-23 BHAR-566: updated pom.xml and pipeline for facets
+953f21d 2025-09-23 BHAR-566: updated Readme.md
+82acf08 2025-09-09 BHAR-429: updated kube file for uat beta and prod
+2907b66 2025-09-08 BHAR-429: added readiness probe bypassing istio
+0bc9017 2025-09-08 BHAR-429: added readiness probe
+84b1800 2025-08-18 BHAR-536: update kube file (PR #80)
+a519732 2025-08-18 BHAR-536: removed kafka-clients dep
+27e980d 2025-08-18 BHAR-536: fixed trivy issue
+76568c2 2025-08-18 BHAR-536: updated min app version to 204
+6d86286 2025-08-12 BHAR-536: removed extra health api
+38d788f 2025-08-12 BHAR-536: fixed app version to 202
+ac5277c 2025-08-12 BHAR-536: updated app config for api and worker
+9e99673 2025-08-12 BHAR-536: updated api and worker kube file
+8366574 2025-08-12 BHAR-536: updated uat worker kube file
+f8f5840 2025-08-12 BHAR-536: updated uat worker kube with readiness probe
+bcf0f16 2025-08-12 BHAR-536: updated uat worker kube with readiness probe
+26fbd42 2025-08-12 BHAR-536: updated uat worker kube with readiness probe
+3a6bd36 2025-08-12 BHAR-536: updated uat worker kube with probe url
+2fd0ad3 2025-08-12 BHAR-536: updated uat worker kube with probes
+efa4ef1 2025-08-12 BHAR-536: updated uat kube file
+2348a02 2025-08-12 BHAR-536: updated kube file to add startup probe
+321b7c9 2025-08-12 BHAR-536: updated kube file to add startup probe
+aab77f9 2025-08-12 BHAR-536: added readiness and liveness probe for uat
+3b98aa4 2025-08-12 BHAR-536: added health check api + probes
+55f3b83 2025-08-12 BHAR-536: updated kube files for beta and prod
+d481e19 2025-07-22 BHAR-500: kafka compression algo (PR #77)
+4a5491d 2025-07-21 Merged main into BHAR-500
+959ff02 2025-07-17 BHAR-518: refactor put api body (PR #78)
+cfdc9c3 2025-07-17 BHAR-518: set min version to 204
+100de46 2025-07-17 BHAR-518: added validation to api
+6f8dbde 2025-07-17 BHAR-518: refactored request body of v2 update customer api
+e7afca4 2025-07-09 BHAR-500: added separate pipeline for prod- branches
+3df0955 2025-07-09 BHAR-500: removed datadog configs from uat and beta
+0c004e4 2025-07-08 BHAR-500: updated compression algo to zstd
+b18fe76 2025-04-16 Kafka cluster migration (PR #68)
+755a8c4 2025-04-16 BHAR-339: refactored kafka broker url
+ae2ef00 2025-04-16 BHAR-339: refactored kafka config
+836bb57 2025-03-10 Kafka cluster migration (PR #64)
+c6f0fe3 2025-02-27 BHAR-339: updated kafka config file
+bf91054 2025-02-07 BHAR-199: testing publish to topic
+17d983e 2025-02-07 BHAR-199: testing publish to topic
+8d5abdb 2024-07-05 NSDL-39: removing commented out code
+5eec530 2024-07-05 NSDL-39: removing extra spaces when saving fields
+03967a4 2024-07-04 NSDL-39: refactored pii aws gateway id for beta/prod
+c99a394 2024-07-04 NSDL-39: refactored pii domain id in worker
+4893c85 2024-07-03 NSDL-39: refactored piiVaultAwsApiGatewayId
+4d4ef5c 2024-07-03 NSDL-39: added piiVaultAwsApiGatewayId to beta
+ae7f17e 2024-07-03 NSDL-39: refactored piiVaultAwsApiGatewayId in env constants
+bd774a2 2024-07-03 NSDL-39: merged with master
+3973559 2024-07-02 NSDL-39: resolved in accordance with code review
+24cefa9 2024-07-01 NSDL-43: added fatherName and supervisorName to get api
+ebd06b6 2024-07-01 NSDL-43: added api gateway id to pii vault apis
+c365af1 2024-07-01 NSDL-39: refactored the error
+ddc081d 2024-06-26 NSDL-39: removed the todo comments
+7e78a87 2024-06-24 NSDL-41: resolved api endpoint bug
+00ade2e 2024-06-24 NSDL-41: resolved build error
+afc1139 2024-06-24 NSDL-41: resolved mongodb conn error
+e91666a 2024-06-24 NSDL-41: resolved build failure
+31e0260 2024-06-21 NSDL-41: exposed api endpoint for triggering account details sms
+55758de 2024-06-21 NSDL-39: pii vault schema version changed to 2.0
+8cf73f6 2024-06-20 NSDL-39: fetching data from PII vault + sending to sme service
+2b95b3e 2024-06-19 NSDL-39: refactor customer service impl
+8339750 2024-06-19 NSDL-39: added fields to aux_customer and pii vault
+
+--- nsdl-pb-customer-service (CS Lambda) ---
+5469dee 2026-02-27 BHAR-635: commented out beta deploy step
+22132ff 2026-02-27 BHAR-635: error handling changes (PR #84)
+67608a1 2026-02-27 BHAR-635: resolved comment
+443740b 2026-02-27 BHAR-635: refactor to error extractor logic
+bc86468 2026-02-27 BHAR-635: refactor to error extractor logic
+cdab8da 2026-02-27 BHAR-635: refactor to error extractor logic
+e5ba463 2026-02-27 BHAR-635: refactor to error extractor logic
+271f80a 2026-02-27 BHAR-635: refactor to error extractor logic
+0d8489c 2026-02-27 BHAR-635: refactor
+65984fe 2026-02-27 BHAR-635: reverted hard-coded pincode and kafka changes
+2f36b52 2026-02-25 BHAR-635: updated pdf-converter domain
+444a1d8 2026-02-25 BHAR-635: updated pdf-converter domain
+77cfae2 2026-02-25 BHAR-635: added retry logic to kafka publisher
+b3cdcd6 2026-02-25 BHAR-635: created kafka publish method for test
+eaebaf2 2026-02-24 BHAR-635: reverted changes in template file
+4736f5a 2026-02-23 BHAR-635: updated template files
+b490fab 2026-02-23 BHAR-665: refactored the error handling logic
+f67e386 2026-02-20 BHAR-635: sonar fixes
+19d84c3 2026-02-20 BHAR-635: updated error handling logic
+e8ce2a9 2026-02-12 BHAR-635: hardcoded pincode for nsdl reg api
+69da83b 2026-01-27 BHAR-635: improved error handling for bcregistration nsdl api
+5255f5d 2026-01-22 BHAR-566: facets changes (PR #82)
+0582178 2026-01-21 BHAR-566: added s2s callback operations path
+cb0da5b 2026-01-20 BHAR-629: updated mongo-crypt version
+059bc0b 2026-01-20 BHAR-629: updated pipeline
+a99f9e0 2026-01-20 BHAR-566: updated runner image
+97d286c 2026-01-20 BHAR-629: updated runner image
+76c00e7 2026-01-19 BHAR-629: refactored bitbucket pipeline
+c63c290 2026-01-19 BHAR-629: refactored bitbucket pipeline
+350a838 2026-01-19 BHAR-629: refactored bitbucket pipeline
+180958f 2026-01-19 BHAR-629: updated pipeline
+14ba532 2026-01-19 BHAR-629: updated pipeline runner image
+57d8a1e 2026-01-16 BHAR-629: resolved sonar bugs
+e72d242 2026-01-16 BHAR-629: resolved sonar bugs
+664a5bc 2026-01-16 BHAR-629: resolved sonar bugs
+c31f556 2026-01-16 BHAR-629: moved all sensitive secrets to aws secret manager
+60c040a 2026-01-16 BHAR-629: fixed trivy osv issues
+ef01392 2026-01-16 BHAR-566: updated url-shortner domain
+893d866 2025-12-16 BHAR-200: sonar bugs fixed
+cd911e9 2025-12-16 BHAR-200: trivy fixes
+b39ff50 2025-12-15 BHAR-200: updated url shortner domain
+81696a5 2025-12-15 BHAR-200: updated url shortner domain
+dd24c99 2025-11-18 BHAR-200: added log
+8a931a0 2025-10-15 BHAR-579: encryption key moved to NSDL ASM secrets
+68bdb82 2025-10-15 BHAR-579: api keys moved to ASM
+9863a37 2025-10-15 BHAR-579: git secret scan fixes impl
+d798dd5 2025-10-15 BHAR-579: sonar fixed implemented
+af33f11 2025-10-15 BHAR-579: trivy fixes done
+2a95170 2025-10-10 BHAR-200: removed old version of mongo-crypt
+c77a011 2025-10-10 BHAR-200: removed old s2s callback paths
+a9fc1a1 2025-10-08 BHAR-569: refactored pipeline
+ccd42d8 2025-10-08 BHAR-569: updated base image
+d364c0b 2025-10-07 BHAR-200: updated pipeline
+c3f190c 2025-10-07 BHAR-200: updated pipeline
+604c29c 2025-10-07 BHAR-200: updated base image in pipeline
+05b8e86 2025-10-06 BHAR-200: refactored pipeline
+d8a66e1 2025-07-22 Merge into BHAR-505-add-sqs
+2d4765e 2025-07-22 BHAR-499: kafka compression algo (PR #74)
+d7740c3 2025-07-22 BHAR-499: reverted commit 8ba77b7
+e27b058 2025-07-21 BHAR-499: all trivy issues fixed
+d1c9a13 2025-07-21 BHAR-499: removed test code
+49e5be7 2025-07-21 BHAR-499: added .vscode to .gitignore
+a9bdc0a 2025-07-21 BHAR-499: merged from main branch
+fe54036 2025-07-17 BHAR-505: refactored log retention policy
+d7522bf 2025-07-17 BHAR-505: added logs in uat for api gateway
+32868e0 2025-07-17 BHAR-505: added logs in beta for api gateway
+42af8ad 2025-07-17 BHAR-505: added logs in beta for api gateway
+8ba77b7 2025-07-17 BHAR-505: added logs in beta for api gateway
+194ea64 2025-07-17 BHAR-505: removed ReservedConcurrentExecutions
+aa4eead 2025-07-17 BHAR-505: removed ReservedConcurrentExecutions
+a1ad62e 2025-07-17 BHAR-505: sqs queue (PR #79)
+7e667be 2025-07-17 BHAR-505: changed to url shortner api key
+0f7d830 2025-07-17 BHAR-505: sending sync call to notification
+d973911 2025-07-17 BHAR-505: added beta deployment for prod branches
+b036ba1 2025-07-17 BHAR-505: added logs in download url impl
+0abd3e8 2025-07-17 BHAR-505: changed url-shortner uat api key
+16c1c61 2025-07-17 BHAR-505: changed template for beta
+d169025 2025-07-17 BHAR-505: changed domain for url shortner in UAT
+f918064 2025-07-16 BHAR-505: changed s3 service impl
+e45fa59 2025-07-16 BHAR-505: changed s3 service impl
+efc75f1 2025-07-16 BHAR-505: changed s3 service impl
+02c86f1 2025-07-15 BHAR-505: set ReservedConcurrentExecutions to 3
+3106f26 2025-07-15 BHAR-505: max concurrency set to 3 for prod
+a4dcf9d 2025-07-15 BHAR-505: added config for prod
+289d4fb 2025-07-15 BHAR-505: added config for prod
+b776741 2025-07-15 BHAR-505: added config for prod
+fa48c88 2025-07-15 BHAR-505: testing sqs producer method
+b53e640 2025-07-15 BHAR-505: testing sqs producer method
+9f7c3d8 2025-07-15 BHAR-505: updated lambda handler method
+0eb38ab 2025-07-15 BHAR-505: updated lambda handler method
+986bacd 2025-07-15 BHAR-505: refactor spring handler method
+43de5ef 2025-07-15 BHAR-505: refactor pom
+e9bdcc8 2025-07-15 BHAR-505: updated sqs queue name
+9bfb9b7 2025-07-15 BHAR-505: updated sqs queue timeout to 15min
+d47542d 2025-07-15 BHAR-505: added listener impl
+6a71278 2025-07-15 BHAR-505: added aws sdk v2 bom + trivy fix
+fd5838d 2025-07-15 BHAR-505: refactor
+eb571a9 2025-07-15 BHAR-505: added sqs producer config setup
+5972d7a 2025-07-09 BHAR-499: added kafka publish to get cust details
+8e7ac66 2025-07-09 BHAR-499: fixed trivy issues
+5b7b788 2025-07-08 BHAR-499: updated compression algo to zstd
+e662964 2025-05-13 BHAR-400: update notif base url (PR #73)
+1cd5f0f 2025-05-13 BHAR-400: refactor pipeline
+67e8311 2025-05-13 BHAR-400: refactor
+7f90622 2025-05-13 BHAR-400: refactor
+74a1f91 2025-05-13 BHAR-400: added beta deploy step for testing
+2ca30b7 2025-05-12 BHAR-400: updated notif base url
+cc62e6d 2025-05-09 Kafka cluster migration (PR #65)
+c90c649 2025-04-16 BHAR-339: refactored kafka config
+b5360cd 2025-02-27 BHAR-339: updated kafka config file
+
+--- niyo-nsdl-pb-lambda ---
+de4b907 2026-01-22 BHAR-566: facets changes (PR #3)
+48e579a 2026-01-20 BHAR-629: updated pipeline runner
+673211c 2026-01-15 BHAR-566: removed s3 access from template-uat
+fe927f3 2026-01-15 BHAR-566: removed sonar step
+862700a 2026-01-15 BHAR-566: updated s2s url
+5b5a95c 2025-12-23 BHAR-566: refactor
+be5540f 2025-12-23 BHAR-566: added exception for sonar check
+4de24c8 2025-12-23 BHAR-566: added exception request for downstream context
+dff042a 2025-12-23 BHAR-566: resolved base image issue
+0fcc72a 2025-12-23 BHAR-566: resolved trivy osv-scanner issues
+ea0c5ed 2025-12-23 BHAR-566: updated NIYO_NSDL_BASE_URL
+37b7807 2025-12-23 BHAR-566: updated NIYO_NSDL_BASE_URL
+
+--- nsdl-pb-cron-lambda ---
+b518cf9 2025-10-09 BHAR-200: refactored to update base image
+36ded69 2025-10-09 BHAR-200: refactored to add log retention grp
+4ca57d4 2025-10-09 BHAR-200: refactored for sonar fix
+e7ad4f9 2025-10-09 BHAR-200: refactored for sonar fix
+f86210c 2024-08-30 NSDL-83: add aadhaar mis cron (PR #9)
+0b36348 2024-08-30 Merged main into NSDL-83
+d274023 2024-08-30 NSDL-83: changed cron from 8am utc to 8am ist
+ff06f02 2024-08-29 NSDL-83: add aadhaar mis cron (PR #8)
+e5c471f 2024-08-29 NSDL-83: changed cron expression
+ddb8ae4 2024-08-29 NSDL-83: changed cron expression
+e932268 2024-08-29 NSDL-83: changed cron expression
+b4adf5f 2024-08-29 NSDL-83: created cron job for aadhaar seeding mis sync
+91017ac 2024-08-06 Merged main into feature-restrict-log-retention
+f85c83e 2024-08-06 feature-change-cron-exp (PR #4)
+806d38b 2024-07-17 NSDL-45: restrict log retention to 30 days
+7167f27 2024-07-12 hotfix-change-resource-allocation (PR #6)
+bbb9a45 2024-07-12 NSDL-45: refactored sam template memory size
+97a02cd 2024-07-12 hotfix-change-resource-allocation (PR #5)
+1b89efa 2024-07-12 NSDL-45: changed nsdl-base-url and memory size
+6cc1f7b 2024-07-12 NSDL-45: changed nsdl-base-url and memory size
+afeff29 2024-07-11 NSDL-45: changed cron exp
+4b9726c 2024-07-11 feature-deploy-to-uat (PR #3)
+de5bc03 2024-07-11 NSDL-45: refactored ci cd pipeline s3 bucket name
+2ae7f28 2024-07-10 feature-deploy-to-uat (PR #2)
+05f818e 2024-07-10 NSDL-45: added x-aws-gateway-id
+d0c4cfa 2024-07-10 NSDL-45: added prod arn
+cb207da 2024-07-10 NSDL-45: refactored sam template-prod
+58dfa1b 2024-07-10 NSDL-45: added response log to mark customer for sync
+80b8ab2 2024-07-10 NSDL-45: added response log to sync customer
+dbe46ed 2024-07-10 NSDL-45: added ssm permission to sam template
+ec8c1ea 2024-07-10 NSDL-45: refactored sam commands in uat-deploy
+f74427b 2024-07-10 NSDL-45: refactored sam commands in uat-deploy
+341b70c 2024-07-10 NSDL-45: un-commented uat-deploy step
+8b4d940 2024-07-10 NSDL-45: refactored test step
+c3548ea 2024-07-10 NSDL-45: refactored test step in pipeline
+15aab34 2024-07-10 NSDL-45: refactored test step in pipeline
+324599b 2024-07-10 NSDL-45: commented out uat deploy step
+4297f56 2024-07-10 feature-add-lambda-fn (PR #1)
+ccbddd8 2024-07-10 NSDL-45: refactored uat-deploy step
+cf24094 2024-07-09 NSDL-45: refactored bitbucket pipeline
+d819029 2024-07-09 NSDL-45: added sam template for prod
+c61d3c5 2024-07-09 NSDL-45: added x-aws-gateway-id in env file
+5c322e4 2024-07-09 NSDL-45: resolved sam template code review issues
+a6422c0 2024-07-09 NSDL-45: removed un-needed dependencies
+fcde378 2024-07-09 NSDL-45: added sam template for uat env
+c51a27e 2024-07-09 NSDL-45: added base url and x-aws-gateway-id for uat
+d6f7b77 2024-07-09 NSDL-45: resolved test failure
+5525ac4 2024-07-09 NSDL-45: resolved maven dependency vulnerabilities
+9b910a8 2024-07-09 NSDL-45: resolved maven dependency vulnerabilities
+51821f6 2024-07-09 NSDL-45: resolved maven dependency vulnerabilities
+6b7906e 2024-07-08 NSDL-45: added basic setup of lambda fn
+
+================================================================================
+END OF ANALYSIS
+================================================================================

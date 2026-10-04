@@ -1,0 +1,719 @@
+================================================================================
+BHARAT VAS (VALUE ADDED SERVICES) — DETAILED CONTRIBUTION ANALYSIS
+Author: Kunal Ladhani
+Repository: niyo-bharat/ybl/bharat-vas
+Purpose: Interview Preparation Reference
+================================================================================
+
+================================================================================
+1. TIMELINE
+================================================================================
+
+First Commit:  2023-10-16 (NXUSFB-190: added consent-capture package)
+Last Commit:   2026-04-03 (BHAR-663: fixed error logging issue)
+Active Period:  ~2.5 years of continuous contributions
+Total Commits: 443 commits (including merges, stash entries, and feature work)
+
+Contribution Phases:
+  - Phase 1 (Oct 2023 – Nov 2023): Initial feature work — consent capture, logger fixes
+  - Phase 2 (Jul 2024 – Nov 2024): Major feature development — HyperTest, CAM v3,
+    insurance, Kafka, query optimization, audit events, ledger integration
+  - Phase 3 (Dec 2024 – Jun 2025): Infrastructure & DevOps — Facets deployment,
+    Kafka migration, OSV/Trivy/Sonar remediation, pipeline overhaul
+  - Phase 4 (Jul 2025 – Apr 2026): Production hardening — Kafka compression,
+    account statement rework, SDLC compliance, AWS SDK v3 migration, OTel
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+Language & Runtime:
+  - TypeScript (compiled via tsc, tsconfig.build.json)
+  - Node.js 22 (Docker base image: node22)
+
+Framework:
+  - Express.js (REST API server)
+  - typescript-rest (decorator-based REST controllers)
+  - typescript-ioc (dependency injection)
+
+Database:
+  - MongoDB via Mongoose (v6.6.2)
+  - MongoDB Memory Server (for testing)
+
+Caching:
+  - Redis via ioredis (v5.0.6, cluster mode support)
+
+Messaging / Event Streaming:
+  - Apache Kafka via KafkaJS (v2.2.4)
+  - Zstd compression codec (@kafkajs/zstd)
+  - Kafka consumer workers (separate Dockerfile-worker process)
+
+Cloud & Infrastructure:
+  - AWS S3 (@aws-sdk/client-s3, v3 — migrated from v2)
+  - AWS Secrets Manager (@aws-sdk/client-secrets-manager)
+  - AWS ECR (container registry)
+  - AWS EKS (Kubernetes orchestration)
+  - Kubernetes (multi-env: dev, UAT, beta, prod)
+  - Facets.cloud (secrets management, deployment platform)
+
+Observability:
+  - Datadog (dd-trace, datadog-metrics)
+  - OpenTelemetry annotations (BHAR-696)
+  - Custom nc-node-logger (internal Niyo package)
+  - Correlation ID tracking via AsyncLocalStorage
+
+CI/CD:
+  - Bitbucket Pipelines (multi-stage: build → UAT → beta → prod)
+  - Docker multi-stage builds (API + Worker separate images)
+  - SonarQube (code quality, hotspots, vulnerabilities)
+  - Trivy (container image scanning)
+  - OSV Scanner (dependency vulnerability scanning)
+  - Snyk (dependency scanning — later replaced)
+
+Testing:
+  - Jest (unit testing framework)
+  - Supertest (HTTP integration testing)
+  - ts-jest (TypeScript test compilation)
+  - @faker-js/faker (test data generation)
+  - HyperTest SDK (API testing/replay — NMB-359)
+
+Other Key Libraries:
+  - Axios (HTTP client)
+  - Joi (request validation)
+  - googleapis (Google API integration)
+  - xlsx/SheetJS (Excel file generation)
+  - moment / moment-timezone (date handling)
+  - i18n (internationalization)
+  - lodash (utility functions)
+
+================================================================================
+3. MAJOR FEATURES BUILT (Grouped by Ticket/Feature)
+================================================================================
+
+--- 3.1 CONSENT CAPTURE MODULE (NXUSFB-190 / NMB-170) — Oct 2023 ---
+
+Built a complete consent capture system from scratch:
+  - Created consent-capture package (model, controller, service, routes)
+  - Consent data model with fields: consentType (string), accessContacts,
+    ipAddress, userAgent, createdAt/updatedAt (Date type)
+  - Builder pattern for consent data creation and updates
+  - Secured API endpoint with authentication
+  - CRN (Customer Reference Number) resolution from userId
+  - Multiple iterations on data model and API design (7+ commits refining)
+
+Interview Talking Points:
+  - Regulatory compliance feature for fintech (consent management)
+  - Designed flexible schema to support multiple consent types
+  - Iterated on API contract with frontend team
+
+--- 3.2 NODE LOGGER FIX & CORRELATION ID (USFBX2-277/412/423) — Nov 2023 ---
+
+Fixed critical observability issues in the logging infrastructure:
+  - Updated nc-node-logger to v1.0.3
+  - Implemented AsyncLocalStorage (ALS) based correlation ID propagation
+  - Made ALS correlation ID second priority (after explicit header)
+  - Resolved appName configuration issue in logger
+  - Fixed build failures from logger version upgrade
+
+Interview Talking Points:
+  - Distributed tracing / request correlation across microservices
+  - AsyncLocalStorage for context propagation in Node.js
+  - Debugging production logging issues
+
+--- 3.3 INSURANCE QUERY OPTIMIZATION (NMB-343) — Jul 2024 ---
+
+Optimized database queries for insurance module:
+  - Added >= n-30 days check instead of unbounded query
+  - Prevented full collection scans on insurance data
+  - Reduced query execution time and database load
+
+Interview Talking Points:
+  - MongoDB query optimization
+  - Identifying and fixing N+1 / unbounded query patterns
+  - Production performance improvement
+
+--- 3.4 HYPERTEST POC & INTEGRATION (NMB-359) — Aug–Oct 2024 ---
+
+Led the Proof of Concept for HyperTest (API testing/replay platform):
+  - Set up HyperTest SDK integration (iterated through versions v2.16-6 → v41 → v42 → v44)
+  - Configured HyperTest for both API server and Kafka worker processes
+  - Added htTestConfig.js and .npmrc to build pipeline
+  - Created separate Dockerfile-worker with HyperTest support
+  - Configured NODE_OPTIONS and memory limits (--max-old-space-size=2gb)
+  - Unmocked AWS Secret Manager for realistic test execution
+  - Updated Kafka connection implementation for test compatibility
+  - Generated tests for worker service
+  - Added transaction and balance API test coverage
+  - Initialized worker service on HyperTest dashboard
+
+Interview Talking Points:
+  - Evaluating and integrating third-party testing platforms
+  - API replay testing for microservices
+  - Configuring test infrastructure for Kafka consumer workers
+  - Memory management in Node.js test environments
+
+--- 3.5 ACKO INSURANCE DEBIT FIX (NMB-375) — Aug 2024 ---
+
+Debugged and fixed a critical insurance payment processing issue:
+  - Fixed Kafka payload builder for Acko insurance debit worker
+  - Added correlation ID to Acko insurance debit payload
+  - Refactored raise cancellation request handler
+  - Fixed stringified value storage in payloadVal
+  - Added granular logging at each processing level
+  - Temporarily disabled @Secured annotation for debugging
+  - Multiple production hotfix iterations (7+ PRs merged)
+
+Interview Talking Points:
+  - Production incident debugging methodology
+  - Kafka message payload debugging
+  - Insurance payment processing in fintech
+  - Iterative hotfix deployment strategy
+
+--- 3.6 DATABASE QUERY OPTIMIZATION (NMB-354/355) — Aug 2024 ---
+
+Optimized MongoDB queries for performance:
+  - Added compound index for frequently queried collections
+  - Added projection to Zopper insurance queries (fetch only needed fields)
+  - Added >= condition in BimaPlan query to bound result sets
+  - Refactored query patterns for efficiency
+
+Interview Talking Points:
+  - MongoDB indexing strategy (compound indexes)
+  - Query projection for reducing data transfer
+  - Identifying slow queries in production
+
+--- 3.7 TENANT DETAILS & NOTIFICATION SERVICE (NMB-387) — Aug 2024 ---
+
+Added multi-tenant notification support:
+  - Implemented x-notification-tenant-id header for email API calls
+  - Ensured correct tenant routing for notification service
+
+--- 3.8 BIMAPLAN INSURANCE REMOVAL (NMB-400) — Aug 2024 ---
+
+Decommissioned BimaPlan insurance integration:
+  - Removed/commented out BimaPlan object from /insurance API response
+  - Cleaned up associated code
+
+--- 3.9 KAFKA DELAY QUEUE V2 MIGRATION (NMB-408) — Sep 2024 ---
+
+Migrated Kafka delay queue to v2 architecture:
+  - Updated delay queue topic publishing to v2
+  - Tested delay topic publish flow end-to-end
+  - Refactored pipeline for deployment
+  - Multiple test iterations in UAT environment
+
+Interview Talking Points:
+  - Kafka delayed message processing patterns
+  - Event-driven architecture evolution
+
+--- 3.10 CAM V3 INTEGRATION & AUDIT EVENTS (NMB-418/419) — Sep–Oct 2024 ---
+
+Integrated Customer Activity Management (CAM) v3 API and built audit event system:
+  - Integrated CAM v3 API for customer activity tracking
+  - Built complete audit event Kafka publish module
+  - Created audit payload builder with:
+    * Correlation ID in metadata
+    * Target field in metadata
+    * Timestamp in seconds (not milliseconds)
+    * Error handling: publishes to audit error event topic on failure
+  - Added mandatory pipeline steps for deployment safety
+  - Refactored get balance API
+
+Interview Talking Points:
+  - Audit trail implementation for fintech compliance
+  - Kafka-based event publishing with error handling
+  - API versioning and migration (v2 → v3)
+  - Idempotent event publishing patterns
+
+--- 3.11 LEDGER SERVICE V2 API INTEGRATION (NMB-441) — Oct 2024 – Mar 2025 ---
+
+Major integration with new Ledger Service for transaction statement generation:
+  - Migrated to Ledger Service v2 API for transaction statement generation
+  - Changed tenantId from NIYO_BHARAT → NIYO across auth and device binding
+  - Updated auth service and device binding tenant configuration
+  - Added UAT and beta worker deploy steps to pipeline
+  - Fixed xlsx vulnerability
+  - Resolved OSV and Trivy security issues
+  - Upgraded multiple dependencies
+  - Removed test APIs after successful validation
+
+Interview Talking Points:
+  - Service-to-service API migration
+  - Multi-tenant architecture changes
+  - Coordinating breaking changes across microservices
+
+--- 3.12 INSURANCE BANNER REMOVAL (NMB-443) — Oct–Nov 2024 ---
+
+Cleaned up deprecated insurance configurations:
+  - Removed Acko and Zopper insurance configs
+  - Added beta deploy step to pipeline
+  - Changed tenantId to NIYO
+
+--- 3.13 UNNECESSARY LOG CLEANUP (BHAR-200) — Feb 2025 ---
+
+Production log optimization:
+  - Removed excessive/unnecessary logs polluting production
+  - Removed metric published logs
+  - Improved error message logging (log error messages, not full objects)
+  - Created test endpoints for validation
+  - Refactored pipeline
+  - Resolved worker log correlation ID issue (Apr 2026)
+
+Interview Talking Points:
+  - Log hygiene in production systems
+  - Balancing observability with log volume/cost
+
+--- 3.14 KAFKA CLUSTER MIGRATION (BHAR-339/344) — Feb–May 2025 ---
+
+Migrated UAT Kafka cluster:
+  - Refactored Kafka config files for new cluster
+  - Updated SSL configuration (ssl: true)
+  - Refactored Kafka config constants
+  - Created test Kafka API for validation, removed after success
+  - Resolved Trivy security issues
+  - Temporarily disabled @Secured annotation for UAT testing
+
+Interview Talking Points:
+  - Kafka cluster migration with zero downtime
+  - SSL/TLS configuration for Kafka
+  - Validation strategy for infrastructure migrations
+
+--- 3.15 ARCHIVAL API & LEDGER INTEGRATION (NMB-441 continued) — Mar–Apr 2025 ---
+
+Built ledger archival API integration:
+  - Resolved OSV vulnerabilities and Trivy issues
+  - Commented out Snyk check step (migrating security scanners)
+  - Fixed build failures and dependency issues
+
+--- 3.16 NOTIFICATION BASE URL UPDATE (BHAR-403/404) — May 2025 ---
+
+Updated notification service endpoints:
+  - Changed notification base URL across all environment config files
+    (dev, staging, beta, production)
+
+--- 3.17 KAFKA REBALANCING FIX & COMPRESSION (BHAR-502) — Jul–Aug 2025 ---
+
+Resolved critical Kafka consumer rebalancing issue and upgraded compression:
+  - Fixed Kafka consumer rebalancing issue (production stability fix)
+  - Updated KafkaJS version to v2.2.4
+  - Implemented Zstd compression codec for Kafka messages
+  - Updated Node.js base image (multiple iterations: node-slim, etc.)
+  - Fixed segfault-handler build issues for UAT/beta
+  - Suppressed repetitive health check logs
+  - Resolved Trivy and OSV security issues
+  - Refactored Docker images (v1 → v2)
+  - Updated Kube deployment files to disable Datadog in UAT/beta
+  - Refactored CI/CD pipeline
+
+Interview Talking Points:
+  - Kafka consumer group rebalancing — causes, symptoms, fixes
+  - Zstd vs other compression algorithms for Kafka
+  - Docker image optimization (multi-stage builds, slim images)
+  - Production stability incident response
+
+--- 3.18 UNUSED KAFKA TOPICS CLEANUP (BHAR-537) — Aug 2025 ---
+
+Cleaned up Kafka topic sprawl:
+  - Removed unused Kafka topics
+  - Removed Kafka test topic
+  - Restored BIMA_POLICY_RENEWAL_TOPIC consumer (accidentally removed)
+  - Restored insurance retry logic
+  - Fixed Trivy issues
+
+Interview Talking Points:
+  - Kafka topic lifecycle management
+  - Careful decommissioning with rollback awareness
+
+--- 3.19 POD SCALING OPTIMIZATION (BHAR-400) — Jul 2025 ---
+
+Optimized production resource usage:
+  - Reduced production pod replicas from higher count to 2
+  - Cost optimization while maintaining availability
+
+--- 3.20 ACCOUNT STATEMENT WORKER TIMEOUT (BHAR-507) — Jul 2025 ---
+
+Fixed account statement generation reliability:
+  - Added 2-minute timeout to account statement worker
+  - Added 2-minute timeout to ledger archival API calls
+  - Prevented worker hangs on slow ledger responses
+
+--- 3.21 OSV & TRIVY REMEDIATION (BHAR-391) — Jun 2025 ---
+
+Security vulnerability remediation:
+  - Fixed OSV scanner issues
+  - Fixed build errors from dependency updates
+  - Refactored Kafka worker setup
+  - Fixed beta deploy step and bitbucket pipeline
+  - Refactored Kafka and worker initialization
+  - Added Kafka config in staging file
+  - Deployed UAT worker
+
+--- 3.22 RESOURCE OPTIMIZATION (BHAR-432) — Jun 2025 ---
+
+Optimized compute resources:
+  - Refactored resources allocated to VAS API and worker in beta/UAT
+  - Updated pdfConverter URL for beta environment
+
+--- 3.23 FACETS DEPLOYMENT MIGRATION (BHAR-568/569) — Oct 2025 – Dec 2025 ---
+
+Led the complete migration from legacy deployment to Facets.cloud platform:
+
+  Infrastructure Migration:
+    - Removed AWS Secret Manager logic from codebase (secrets now in Facets)
+    - Moved all secrets from config files to Facets environment variables
+    - Moved DB URLs and connection strings to Kubernetes secrets
+    - Removed Graylog configuration (migrating observability)
+    - Updated MongoDB connection logic for Facets
+    - Updated Kafka local connection logic for Facets
+    - Updated Redis connection (cluster mode toggle, connection logging)
+
+  Dead Code & Dependency Cleanup:
+    - Removed algo360 dead code
+    - Removed aadhaarInfo, epfStatement, kotakInsurance modules
+    - Removed unrequired dependencies and files
+    - Removed Zopper encryption method
+
+  Docker & Pipeline Overhaul:
+    - Created separate Dockerfiles for API and Worker
+    - Updated Docker base images (multi-arch node22)
+    - Updated bitbucket-pipelines.yml for Facets deployment
+    - Updated OIDC roles for AWS authentication
+    - Updated S3 bucket names for new infrastructure
+    - Updated runner images in pipeline
+    - Refactored Dockerfile references
+
+  Security & Compliance (SDLC):
+    - Resolved 30+ SonarQube code smell issues
+    - Resolved SonarQube bugs
+    - Resolved SonarQube security hotspots
+    - Resolved SonarQube vulnerabilities
+    - Resolved false positive Sonar issues (with exceptions)
+    - Resolved OSV scanner issues
+    - Resolved Trivy container scanning issues
+    - Resolved git-secret-scan findings in beta
+    - Removed passwords from Kubernetes manifests
+    - Removed mocked data and test data from codebase
+    - Removed dev and unrequired secrets
+    - Removed K8s files to resolve Sonar hotspots
+    - Updated Docker image to support Zstd compression algorithm
+
+  Redis Connection Fixes:
+    - Fixed Redis connection issues
+    - Toggled Redis cluster mode off for Facets
+    - Updated DB connection strings
+    - Added Redis connection logging for debugging
+    - Removed Redis debug logs after stabilization
+
+Interview Talking Points:
+  - Cloud platform migration (legacy → Facets.cloud)
+  - Secrets management strategy (code → K8s secrets → Facets env vars)
+  - SDLC compliance and security remediation at scale
+  - SonarQube quality gate enforcement
+  - Container security scanning (Trivy, OSV)
+  - Infrastructure as Code evolution
+  - Zero-downtime migration strategy
+
+--- 3.24 ACCOUNT STATEMENT CHANGES (BHAR-589/592/600/616) — Nov 2025 – Jan 2026 ---
+
+Reworked account statement generation with narration improvements:
+
+  Statement Narration Overhaul (BHAR-592/600):
+    - Refactored statement narration builder
+    - Integrated Levy Service API for fee narration data
+    - SMS fee narration now picked from Levy note field
+    - Subscription fee narration picked from Levy createdAt
+    - Inactivity fee narration fixed
+    - Statement narration uses due date as reference
+    - Removed extra logs after stabilization
+    - Reverted accidental cardTransactions.ts deletion
+
+  Footer & Text Updates (BHAR-589):
+    - Updated account statement footer text
+    - Moved staging secrets from config to Facets
+    - Updated Dockerfile (base image, user root, removed max-heap-size)
+    - Fixed Trivy security issues
+
+  Address Removal (BHAR-616):
+    - Removed address from account statement footer
+    - Multiple iterations to get formatting correct
+
+Interview Talking Points:
+  - Financial statement generation (regulatory requirement)
+  - Integrating with internal Levy Service for fee transparency
+  - PDF generation pipeline (pdfConverter service)
+  - Iterative refinement with business stakeholders
+
+--- 3.25 DATADOG CONFIGURATION UPDATE (BHAR-569 sub-task) — Jan 2026 ---
+
+  - Updated default Datadog configuration
+  - Updated bitbucket-pipeline runner image
+
+--- 3.26 SDLC PIPELINE FIXES & SECURITY HARDENING (BHAR-663) — Mar 2026 ---
+
+Major SDLC compliance and security hardening initiative:
+  - Added x-api-key header to auth and IAM endpoints
+  - Resolved SDLC hotspots
+  - Removed dev and unrequired secrets
+  - Moved DB URL to Kubernetes secrets
+  - Moved remaining secrets to K8s
+  - Removed mocked data and test data
+  - Removed Zopper encryption method
+  - Made Dockerfile changes (multiple iterations)
+  - Removed passwords from K8s manifests
+  - Refactored .dockerignore
+
+Interview Talking Points:
+  - API security (x-api-key authentication)
+  - SDLC compliance in fintech
+  - Secrets management best practices
+
+--- 3.27 AWS SDK V2 → V3 MIGRATION (BHAR-663) — Mar–Apr 2026 ---
+
+Migrated AWS SDK from v2 to v3:
+  - Updated all AWS client usage to new v3 clients
+  - Migrated S3, Secrets Manager, and presigner to @aws-sdk v3
+  - Deleted AWS SDK v2 files
+  - Removed Kafka admin (unused)
+  - Fixed AWS SDK compatibility issues
+  - Added linter and prettier dependencies
+  - Fixed lint and format issues across codebase
+  - Updated bitbucket pipeline (6+ iterations)
+  - Fixed Mongoose errors from dependency updates
+  - Fixed build failures
+  - Not subscribing to Leap topics in beta (environment-specific config)
+  - Reverted Dockerfile changes that caused issues
+  - Fixed error logging issue
+
+Interview Talking Points:
+  - AWS SDK migration strategy (v2 → v3 modular clients)
+  - Reduced bundle size with modular AWS SDK imports
+  - Managing breaking changes in major dependency upgrades
+
+--- 3.28 OPENTELEMETRY INTEGRATION (BHAR-696) — Apr 2026 ---
+
+Added OpenTelemetry instrumentation:
+  - Added OTel annotations to service
+  - Complementing existing Datadog tracing with OTel standard
+
+Interview Talking Points:
+  - OpenTelemetry adoption strategy
+  - Vendor-neutral observability
+  - Distributed tracing in microservices
+
+--- 3.29 DEVICE ENDPOINT FIX — Sep 2025 ---
+
+Fixed routing bug:
+  - Added missing leading slash to @Path decorator on device endpoint
+  - Quick but impactful fix preventing 404s on device API
+
+================================================================================
+4. KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+4.1 Dual-Process Architecture (API + Worker)
+  - Separate Docker images for API server and Kafka worker
+  - API handles HTTP requests; Worker processes Kafka events
+  - Independent scaling and deployment
+  - Separate Dockerfiles: Dockerfile (API) and Dockerfile-worker
+
+4.2 Event-Driven Architecture via Kafka
+  - Kafka consumers for: account statements, insurance payments,
+    policy renewals, cron jobs, transaction events, card status updates,
+    job posts, WhatsApp chatbot, settlement handling
+  - Zstd compression for Kafka messages (BHAR-502)
+  - Delay queue pattern for retry/scheduled processing
+  - Audit event publishing with error topic fallback
+
+4.3 Secrets Management Evolution
+  - Phase 1: Secrets in config files (hardcoded)
+  - Phase 2: AWS Secrets Manager (runtime fetch)
+  - Phase 3: Kubernetes secrets (mounted at deploy time)
+  - Phase 4: Facets environment variables (platform-managed)
+  Decision: Progressively externalized secrets for better security posture
+
+4.4 Multi-Environment Deployment Strategy
+  - 4 environments: development, UAT, beta, production
+  - Environment-specific config files (config/default.js, staging.js, etc.)
+  - Kubernetes deployments per environment
+  - Manual promotion gates (UAT → beta → prod)
+
+4.5 Observability Stack
+  - Datadog for APM and metrics
+  - Custom nc-node-logger with correlation ID support
+  - OpenTelemetry annotations (latest addition)
+  - AsyncLocalStorage for request context propagation
+
+4.6 Security-First Pipeline
+  - SonarQube for code quality and security hotspots
+  - Trivy for container image vulnerability scanning
+  - OSV Scanner for dependency vulnerabilities
+  - Git secret scanning
+  - OIDC-based AWS authentication (no static credentials)
+
+4.7 MongoDB Connection Strategy
+  - Mongoose with connection pooling
+  - Compound indexes for query optimization
+  - Projection-based queries to reduce data transfer
+  - MongoDB Memory Server for isolated testing
+
+================================================================================
+5. BUG FIXES & PRODUCTION ISSUES HANDLED
+================================================================================
+
+5.1 Acko Insurance Debit Worker Failure (NMB-375) — Aug 2024
+  - Symptom: Insurance debit payments failing silently
+  - Root Cause: Kafka payload builder not correctly stringifying payloadVal;
+    missing correlation ID in payload
+  - Fix: Refactored payload builder, added correlation ID, added granular logging
+  - Impact: 7+ PRs over 2 days to diagnose and fix in production
+  - Approach: Added logging at each level → identified payload issue → fixed builder
+
+5.2 Kafka Consumer Rebalancing (BHAR-502) — Jul–Aug 2025
+  - Symptom: Kafka consumers repeatedly rebalancing, causing message processing delays
+  - Root Cause: Consumer configuration and Node.js base image compatibility
+  - Fix: Updated KafkaJS version, updated Node base image, refactored Docker image
+  - Impact: Stabilized Kafka consumer group across all environments
+
+5.3 Redis Connection Failure (BHAR-568/569) — Dec 2025
+  - Symptom: Redis connections failing after Facets migration
+  - Root Cause: Cluster mode enabled when Facets Redis is standalone
+  - Fix: Turned off redis.clusterMode, updated connection strings, added logging
+  - Impact: Restored caching layer functionality
+
+5.4 Account Statement Narration Bugs (BHAR-592) — Dec 2025
+  - Symptom: Incorrect fee narrations in customer account statements
+  - Root Cause: Narration builder not pulling data from Levy Service
+  - Fix: Integrated Levy Service API, updated narration builder for SMS fee,
+    subscription fee, and inactivity fee
+  - Impact: Correct financial statements for regulatory compliance
+
+5.5 Worker Log Correlation ID Issue (BHAR-200) — Feb 2026
+  - Symptom: Kafka worker logs missing correlation IDs
+  - Fix: Resolved correlation ID propagation in worker context
+
+5.6 Mongoose Error After AWS SDK Migration (BHAR-663) — Apr 2026
+  - Symptom: Build failures and Mongoose errors after AWS SDK v3 migration
+  - Fix: Resolved dependency conflicts, fixed build configuration
+
+5.7 Device Endpoint 404 (Sep 2025)
+  - Symptom: Device API returning 404
+  - Root Cause: Missing leading slash in @Path decorator
+  - Fix: Added "/" prefix to route path
+
+5.8 segfault-handler Build Failure (BHAR-502) — Jul 2025
+  - Symptom: Docker build failing in UAT/beta due to segfault-handler native module
+  - Fix: Updated Docker base image and build configuration
+
+5.9 Health Check Log Noise (BHAR-502) — Jul 2025
+  - Symptom: Health check endpoints flooding logs
+  - Fix: Suppressed repetitive health check log entries
+
+================================================================================
+6. CI/CD AND DEVOPS WORK
+================================================================================
+
+6.1 Bitbucket Pipeline Architecture
+  - Designed multi-stage pipeline: Build → UAT → Beta → Prod
+  - Parallel builds for API and Worker images
+  - Manual promotion gates between environments
+  - OIDC-based AWS authentication (no static credentials in pipeline)
+  - Multiple OIDC roles for different environments:
+    * NIYO_UAT_BITBUCKET_OIDC_ECR_NINJAFACTORY (UAT)
+    * BETA_BITBUCKET_OIDC_NINJAFACTORY (Beta)
+    * BITBUCKET_OIDC_NINJAFACTORY_NIYOPAY (Prod)
+
+6.2 Docker Optimization
+  - Multi-stage Docker builds (build stage → production stage)
+  - Separate Dockerfiles for API and Worker processes
+  - Base image evolution: node → node-slim → custom multi-arch node22
+  - Memory optimization: --max-old-space-size=2048
+  - .dockerignore refinement
+  - Zstd compression support in Docker image
+
+6.3 Kubernetes Deployment Management
+  - Managed K8s deployment files for 4 environments
+  - Pod replica management (scaled down prod to 2 replicas)
+  - Resource allocation tuning for API and Worker pods
+  - Disabled Datadog agent in UAT/beta (cost optimization)
+  - Migrated secrets from K8s manifests to Facets platform
+
+6.4 Security Pipeline Integration
+  - Integrated SonarQube quality gates
+  - Integrated Trivy container scanning
+  - Integrated OSV dependency scanning
+  - Resolved 50+ security findings across all scanners
+  - Managed false positive exceptions
+  - Git secret scanning enforcement
+
+6.5 Facets.cloud Migration
+  - Migrated deployment from manual K8s to Facets platform
+  - Moved all secrets to Facets environment variables
+  - Updated pipeline for Facets-compatible deployments
+  - Updated Docker images for Facets infrastructure
+
+================================================================================
+7. TESTING CONTRIBUTIONS
+================================================================================
+
+7.1 HyperTest Integration (NMB-359)
+  - Led HyperTest SDK POC and integration
+  - Configured for both API server and Kafka worker
+  - Set up test infrastructure in CI/CD pipeline
+  - Iterated through 4+ SDK versions for compatibility
+  - Generated worker service tests
+  - Added transaction and balance API test coverage
+
+7.2 Test Infrastructure
+  - Project uses Jest + Supertest + ts-jest + MongoDB Memory Server
+  - 30 test files covering major services:
+    * account-statement, app-installation, ATM withdrawal notification
+    * biller payment, clever-tap, configuration, covers
+    * customer meta info, device info, document scan
+    * FCM sender, FT recharge suggestion, inward statement
+    * job portal, order, pincode, pradhan (agent, payout, service)
+    * push notification, referral, remote form, reward
+    * segment, spot, string, submission
+    * TOS consent management, WhatsApp chatbot
+  - @faker-js/faker for realistic test data generation
+
+7.3 Test Endpoint Strategy
+  - Created temporary test endpoints for validating:
+    * Kafka cluster migration (BHAR-344)
+    * Ledger service integration (NMB-441)
+    * General connectivity testing (BHAR-200)
+  - Disciplined removal of test endpoints after validation
+
+================================================================================
+8. SUMMARY OF IMPACT
+================================================================================
+
+Quantitative:
+  - 443 total commits over 2.5 years
+  - 30+ pull requests merged
+  - 50+ security findings resolved (Sonar + Trivy + OSV)
+  - 4 environment deployments managed (dev, UAT, beta, prod)
+  - AWS SDK v2 → v3 migration completed
+  - Kafka compression migration (none → Zstd)
+
+Qualitative:
+  - Owned the Facets.cloud platform migration end-to-end
+  - Built consent capture module from scratch (regulatory compliance)
+  - Stabilized Kafka consumer infrastructure
+  - Established SDLC security compliance across the service
+  - Improved observability (correlation IDs, OTel, Datadog)
+  - Optimized database queries and resource allocation
+  - Maintained and evolved CI/CD pipeline across 2.5 years
+
+Key Themes for Interviews:
+  1. Fintech domain expertise (payments, insurance, statements, compliance)
+  2. Event-driven architecture (Kafka consumers, producers, delay queues)
+  3. Cloud infrastructure (AWS, EKS, ECR, S3, Secrets Manager)
+  4. DevOps & CI/CD (Bitbucket Pipelines, Docker, Kubernetes)
+  5. Security & compliance (SDLC, SonarQube, Trivy, OSV, secrets management)
+  6. Production debugging (Kafka rebalancing, Redis, insurance payments)
+  7. Platform migration (legacy → Facets.cloud)
+  8. Observability (Datadog, OpenTelemetry, correlation IDs)
+
+================================================================================
+END OF ANALYSIS
+================================================================================

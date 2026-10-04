@@ -1,0 +1,88 @@
+LinkedIn Content Pack (SDE2 Positioning)
+Prepared from your contribution history across nc-risk-engine, Utkarsh, NSDL, and Bharat
+
+====================================================
+1) Headline options
+====================================================
+Option 1:
+Software Engineer | Backend & Platform Systems | Java/Spring + Node.js | Microservices | Reliability, Security, Observability
+
+Option 2:
+Backend Engineer (Fintech) | Building Scalable Microservices Across Onboarding, Payments, and Transaction Systems
+
+Option 3:
+SDE2 Candidate | Distributed Backend Services | API Integrations | CI/CD | Production Hardening
+
+Option 4:
+Software Engineer | Multi-service Ownership in Fintech | Java, Spring Boot, Node.js, Kafka, AWS
+
+====================================================
+2) About section (primary version)
+====================================================
+I am a backend engineer with hands-on ownership across high-throughput fintech microservices since Dec 2022, spanning risk systems, customer onboarding, transaction orchestration, card operations, NSDL integrations, and Bharat platform services.
+
+Over the last few years, I have worked across Java/Spring and Node.js stacks, contributing to 25+ repositories with strong ownership in customer-service, onboarding, transaction, inventory, ledger, and integration layers. My work consistently combines feature delivery with production engineering: CI/CD improvements, deployment config migration, security remediation (Trivy/OSV/secret scanning), observability integrations (Datadog/OpenTelemetry), and reliability hardening in Kafka/API-driven systems.
+
+I enjoy building backend systems that are not just functional, but resilient, secure, and maintainable at scale. I am currently targeting SDE2 opportunities where I can own end-to-end service outcomes and drive system-level improvements.
+
+====================================================
+3) About section (compact version)
+====================================================
+Backend engineer in fintech with end-to-end ownership across microservices in onboarding, customer, transaction, card, and platform domains. Experienced in Java/Spring Boot and Node.js, with strong focus on reliability, security hardening, CI/CD, observability, and cross-service integrations. Currently exploring SDE2 roles with higher system ownership and platform impact.
+
+====================================================
+4) Experience bullets - use/adapt in current role
+====================================================
+- Owned backend development and production hardening across multiple fintech microservices in Utkarsh, NSDL, and Bharat ecosystems.
+- Delivered and stabilized customer onboarding, transaction, and card flows across service and BFF layers.
+- Implemented integration-heavy workflows involving IAM/auth services, NSDL domains, PDF/converter services, and Kafka-based event flows.
+- Improved platform reliability through targeted error-handling refactors, retry logic, health/readiness tuning, and staging-to-prod defect closures.
+- Drove CI/CD and deployment updates across pipelines, Kubernetes templates, and environment-specific configuration models.
+- Led security and compliance remediation efforts: dependency upgrades, scanner issue resolution (Trivy/OSV/secret scanner), and secret management hygiene.
+- Contributed to platform modernization initiatives, including config/facets migrations, SDK/framework upgrades, and observability enablement (Datadog/Otel annotations).
+
+====================================================
+5) Featured section post ideas
+====================================================
+Post idea 1 - "From feature engineer to systems owner"
+Talk about how you moved from writing APIs to owning deployment readiness, security posture, and production stability.
+
+Post idea 2 - "Lessons from multi-service migrations"
+Share practical lessons on changing domains/config models across many services without breaking delivery velocity.
+
+Post idea 3 - "Reliability is a product feature"
+Explain Kafka/error-handling/health-check improvements and why these are critical for user trust.
+
+====================================================
+6) Skills to pin (priority order)
+====================================================
+1. Java
+2. Spring Boot
+3. Node.js
+4. TypeScript
+5. Microservices
+6. REST APIs
+7. Kafka
+8. AWS
+9. Kubernetes
+10. CI/CD
+11. Distributed Systems
+12. Application Security
+13. Observability
+14. Backend Architecture
+
+====================================================
+7) Recruiter-ready one-liner
+====================================================
+Backend engineer with deep fintech microservices experience (Java/Spring + Node.js), strong production ownership, and proven delivery across onboarding, transaction, and platform modernization programs.
+
+====================================================
+8) Message template when applying to SDE2 roles
+====================================================
+Hi <Name>,
+
+I am exploring SDE2 backend opportunities. In my current role, I own multi-service delivery across fintech systems covering onboarding, customer, transactions, and platform integrations, with strong focus on reliability, security hardening, CI/CD, and observability. I would be glad to connect and discuss relevant openings in your team.
+
+Thanks,
+Kunal
+

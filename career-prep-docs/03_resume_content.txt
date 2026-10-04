@@ -1,0 +1,304 @@
+================================================================================
+RESUME CONTENT — KUNAL LADHANI
+================================================================================
+Below are multiple versions and bullet points you can mix and match.
+For SDE-2 roles, focus on: ownership, system design, scale, impact,
+and cross-functional work.
+
+================================================================================
+PROFESSIONAL SUMMARY (Pick one)
+================================================================================
+
+VERSION A:
+Software Engineer with 3+ years of experience building production-grade
+banking microservices at Niyo Solutions. Built 7+ microservices from scratch
+across 14 repositories (~4,100+ commits), led Facets Cloud migrations,
+Spring Boot 3 upgrades, and own multiple backend services for neobanking
+products. Proficient in Java, TypeScript, Spring Boot, NestJS, Kafka,
+MongoDB, and AWS. Looking for SDE-2 roles with system design ownership.
+
+VERSION B:
+Backend engineer specializing in fintech microservices. 3+ years building
+customer onboarding, agent onboarding, fund transfer, card management,
+lending, and notification systems for neobanking products. Experience across
+Java/Spring Boot and TypeScript/NestJS with event-driven architectures
+(Kafka, SQS, EventBridge), cloud infrastructure (AWS/K8s/Facets), and
+CI/CD pipelines with security scanning. Built 7+ services from scratch.
+
+VERSION C (Short):
+Software Engineer | 3+ years | Java, TypeScript, Spring Boot, NestJS |
+Microservices, Kafka, AWS, MongoDB | Built and own banking platform backends.
+
+================================================================================
+TECHNICAL SKILLS
+================================================================================
+
+Languages:        Java 17, TypeScript, JavaScript
+Frameworks:       Spring Boot 3.x, NestJS, Express.js
+Databases:        MongoDB, MySQL, JPA/Hibernate, Liquibase
+Messaging:        Apache Kafka (Confluent, AWS MSK), AWS SQS, EventBridge
+Cloud & Infra:    AWS (S3, KMS, ECR, EKS, ASM, SQS, Lambda, SAM, API Gateway),
+                  Docker, Kubernetes, Facets Cloud
+CI/CD:            Bitbucket Pipelines, SonarQube, Snyk, Trivy, OSV Scanner
+Monitoring:       Datadog, OpenTelemetry, Graylog
+Testing:          JUnit 5, Jest, Mockito, SonarQube Quality Gates, HyperTest
+API & Protocols:  REST, Swagger/OpenAPI, Retrofit, SFTP, SSE, gRPC
+Architecture:     Microservices, BFF Pattern, Event-Driven, Worker Pattern,
+                  Serverless (Lambda)
+Tools:            Git, Jira, Bitbucket, Docker Compose, Google JIB, Apache POI,
+                  PDFBox, MapStruct
+
+================================================================================
+WORK EXPERIENCE
+================================================================================
+
+NIYO SOLUTIONS INC.
+Software Development Engineer
+December 2022 – Present
+
+--- BHARAT BANKING PLATFORM (Java/Spring Boot) | Jul 2024 – Present ---
+
+• Own the customer service backend for Bharat (Yes Bank partnership),
+  a production banking product serving active customers
+
+• Led Spring Boot 3 migration — upgraded 20+ dependencies (Kafka, MongoDB,
+  JPA/Hibernate, Swagger, Datadog), resolved circular dependency and bean
+  configuration issues, updated Docker base images, zero downtime
+
+• Built cross-sell notification API supporting Credit Card and Personal Loan
+  products with campaign tracking, UTM links, and template-based SMS via
+  Yes Bank notification gateway
+
+• Designed and implemented levy management system — integrated collect
+  request APIs via Retrofit, built Kafka consumers for settlement events,
+  implemented SMS fee collection listeners and subscription fee APIs
+
+• Migrated notification system to template-based architecture with 15+
+  SMS templates covering account lifecycle events (activation, closure,
+  card operations, fund transfers, phone updates)
+
+• Migrated Kafka infrastructure from Confluent to AWS MSK with ZSTD
+  compression, refactored producer/consumer configurations across API
+  and worker modules
+
+• Implemented security hardening — moved secrets to Kubernetes secrets,
+  resolved Sonar vulnerabilities and hotspots, added Trivy scanning to
+  CI/CD, implemented auth filters with endpoint whitelisting
+
+• Optimized infrastructure — configured readiness/liveness probes for
+  API and worker pods, tuned pod scaling (reduced from 4 to 2 pods),
+  updated CPU/memory limits, added OpenTelemetry instrumentation
+
+• Built presigned URL utility API for secure S3 file access and debit
+  freeze API for account management
+
+--- UTKARSH BANKING PLATFORM (TypeScript/NestJS) | Jun 2023 – Jul 2024 ---
+
+• Architected and built 5 microservices from scratch for a neobanking
+  platform with Utkarsh Small Finance Bank — Customer Service, BFF,
+  Transaction Service, Card Service, and Bank Connector
+
+• Designed complete customer onboarding flow — registration, eKYC OTP
+  verification, PAN validation, Video KYC initiation/status, bank
+  registration, and account opening — handling the full lifecycle from
+  app signup to active bank account
+
+• Built fund transfer system supporting NEFT, IMPS, and IFT (Internal
+  Fund Transfer) with daily transaction limits (₹5L cap), OTP-based
+  authorization, duplicate transaction prevention, and beneficiary
+  cooldown periods
+
+• Implemented Account Opening Form (AOF) PDF generation pipeline —
+  HTML template engine, PDF converter integration, SFTP upload to bank
+  server with SSH key authentication, Kafka consumer for async processing,
+  and S3 backup storage
+
+• Built account statement PDF generation with HTML templating, KMS-encrypted
+  S3 storage, password-protected PDFs, and signed URL downloads
+
+• Implemented real-time event streaming using Kafka MSK producers and
+  Server-Sent Events (SSE) for fund transfer and beneficiary status updates
+
+• Built BFF (Backend for Frontend) layer with comprehensive DTO validation,
+  nested object validation, error message standardization, and workbench
+  admin module for internal operations
+
+• Set up CI/CD pipelines across all 5 services with Jest testing, SonarQube
+  quality gates, ECR vulnerability scanning, and secret detection — enforcing
+  SDLC compliance
+
+• Implemented card management APIs — active card fetch, CVV details, PIN
+  management, domestic/international channel locks, card BIN validation,
+  and virtual debit card generation
+
+--- BHARAT AGENT ONBOARDING (Java/Spring Boot) | Oct 2024 – Present ---
+
+• Built the entire agent onboarding microservice from scratch (544 commits,
+  primary developer) — login/OTP, agent invite, BGV, risk assessment,
+  business approvals, and Kafka-based activity tracking
+
+• Designed multi-channel API architecture (/ag, /app, /wb) enabling
+  independent API evolution for agent-facing, mobile app, and web
+  backoffice channels
+
+• Built end-to-end Background Verification (BGV) system — Digio face match
+  API integration, dynamic HTML-to-PDF report generation with PDFBox,
+  PAN masking for PII compliance, and RBAC-based access control
+
+• Led Facets Cloud migration (60+ commits) — Datadog APM, AWS Secrets
+  Manager, custom Spring Security auth system
+
+--- BHARAT VAS (TypeScript/Node.js) | Oct 2023 – Present ---
+
+• Own the Value Added Services backend (443 commits over 2.5 years) —
+  consent capture, insurance processing, account statements, audit events,
+  and 10+ Kafka consumer workers
+
+• Led Facets.cloud platform migration, AWS SDK v2 → v3 migration, fixed
+  critical Kafka consumer rebalancing, implemented Zstd compression
+
+--- NSDL PAYMENTS BANK SERVICES (Java + Lambda) | Jun 2024 – Present ---
+
+• Built 4 microservices for NSDL PB — customer service (K8s + Lambda),
+  NSDL Lambda, and cron Lambda (built from scratch with SAM/EventBridge)
+
+• Created internal sync API, S2S callback API with IP-whitelisted gateway,
+  SQS integration, and led Lambda-to-K8s migration via Facets Cloud
+
+--- INVENTORY MANAGER (Java/Spring Boot) | Jul 2024 – Mar 2026 ---
+
+• Built Partner Agent Kit Request module from scratch, custom dual-auth
+  system (19 files, 1400+ lines), Asset Transfer V2 APIs with S3
+  presigned URLs, and Excel report generation
+
+--- LEDGER SERVICE (Java/Spring Boot) | Sep 2024 – Present ---
+
+• Led Spring Boot 2→3 migration (60+ commits, Java 8→17, zero downtime),
+  bulk transaction sync via Kafka with rate limiting and ZSTD compression
+
+--- OA LENDING OFFERS SERVICE (Java/Spring Boot) | Nov 2024 – Jun 2025 ---
+
+• Built greenfield personal loan offer service — CSV ingestion from ABFL,
+  EMI calculation engine, consent capture with SSE, Kafka integration
+
+--- RISK ENGINE (Java/Spring Boot) | Jan 2023 – Apr 2023 ---
+
+• Built a configurable risk assessment engine from scratch — multi-module
+  Maven project with API, Worker, and Commons modules
+
+• Implemented 10+ risk validators (Address, CKYC, CRIF, DeviceId, Email,
+  Income, IP Address, Occupation, PIN) with parameterized unit tests
+
+• Integrated Sign3 third-party API for social/digital footprint verification
+  (WhatsApp, Google, LinkedIn, Skype presence data)
+
+• Built maker-checker approval workflow for risk rule changes — preferences
+  required approval before activation, preventing unauthorized modifications
+
+• Implemented bulk data management with Excel upload/download, user report
+  generation, and data access layer separation
+
+================================================================================
+RESUME BULLET POINTS — PICK YOUR BEST 12-15
+================================================================================
+(Ordered by impact. Use these if you want a more concise experience section)
+
+1. Built 7+ microservices from scratch across 14 repos (~4,100+ commits)
+   for neobanking products with 3 partner banks (Utkarsh SFB, Yes Bank, NSDL PB)
+
+2. Built entire agent onboarding service (544 commits, sole developer) —
+   login/OTP, BGV with face match, risk assessment, business approvals,
+   multi-channel API architecture, Kafka event-driven activity tracking
+
+3. Built 5 NestJS microservices from scratch for Utkarsh neobanking platform
+   — customer onboarding, fund transfers, card management, account statements
+
+4. Led Spring Boot 2→3 migrations across 3+ services — Java 8→17, Spring
+   Security 5→6, javax→jakarta, zero-downtime deployments
+
+5. Led Facets Cloud migration across 5+ services — deleted legacy K8s,
+   integrated Datadog APM, migrated secrets to AWS Secrets Manager
+
+6. Built BGV system with Digio face match API, dynamic PDF report generation,
+   PAN masking, and RBAC-based access control
+
+7. Designed fund transfer system with NEFT/IMPS/IFT support, daily limits,
+   OTP authorization, and duplicate transaction prevention
+
+8. Built AOF PDF generation pipeline with SFTP upload, Kafka async
+   processing, and S3 backup — automating bank document delivery
+
+9. Built greenfield lending offers service — CSV ingestion from partner bank,
+   EMI calculation engine, consent capture with SSE, Kafka integration
+
+10. Implemented event-driven architectures with Kafka (MSK + KafkaJS),
+    SQS, EventBridge, and SSE across 10+ services
+
+11. Built custom dual-auth system (19 files, 1400+ lines) supporting
+    JWT-Visionary tokens and S2S API calls
+
+12. Created AWS Lambda functions with SAM templates, EventBridge scheduling,
+    Lambda SnapStart, and IP-whitelisted API Gateways
+
+13. Migrated AWS SDK v2 → v3, fixed Kafka consumer rebalancing, implemented
+    Zstd compression across multiple services
+
+14. Set up CI/CD pipelines with SonarQube, Snyk, Trivy, OSV, and ECR
+    scanning across all services — enforcing SDLC compliance
+
+15. Built configurable risk engine with 10+ validators, Sign3 integration,
+    and maker-checker approval workflow
+
+================================================================================
+PROJECTS SECTION (if your resume has a separate projects section)
+================================================================================
+
+PROJECT 1: Utkarsh Neobanking Platform
+Tech: NestJS, TypeScript, MongoDB, Kafka (MSK), AWS (S3, KMS), Docker, K8s
+• Built 5 microservices from scratch for a neobanking product
+• Customer onboarding, fund transfers, card management, account statements
+• Real-time events with Kafka + SSE, PDF generation with SFTP upload
+
+PROJECT 2: Bharat Customer Service
+Tech: Java 17, Spring Boot 3, MongoDB, MySQL, Kafka (MSK), AWS, K8s
+• Own production banking service backend
+• Led Spring Boot 3 migration, built cross-sell and levy management systems
+• Template-based notification system with 15+ SMS types
+
+PROJECT 3: Risk Assessment Engine
+Tech: Java 17, Spring Boot, MongoDB, Kafka, Excel processing
+• Configurable rule-based risk scoring engine
+• 10+ validators, Sign3 API integration, maker-checker workflow
+• Comprehensive test coverage with parameterized tests
+
+================================================================================
+EDUCATION & CERTIFICATIONS
+================================================================================
+(Add your own education details here)
+
+Certifications to consider getting before interviews:
+- AWS Certified Developer – Associate
+- AWS Certified Solutions Architect – Associate
+- Any Kafka certification
+
+================================================================================
+TIPS FOR YOUR RESUME
+================================================================================
+
+1. Keep it to 1 page (max 2 for 3+ years experience)
+2. Lead with your strongest project (Utkarsh — built from scratch)
+3. Use numbers where possible (5 microservices, 15+ templates, 20+ deps)
+4. For SDE-2 roles, emphasize:
+   - System design decisions you made
+   - Ownership and end-to-end delivery
+   - Cross-service work (you touched 7 repos)
+   - Production experience (deployments, scaling, monitoring)
+   - Mentoring or leading (if applicable)
+5. Tailor bullets to the job description — if they mention Kafka, lead
+   with your Kafka work; if they mention AWS, lead with your AWS work
+6. Action verbs: Built, Designed, Implemented, Led, Migrated, Owned,
+   Architected, Optimized, Established
+
+================================================================================
+END OF RESUME CONTENT
+================================================================================

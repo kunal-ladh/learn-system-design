@@ -1,0 +1,357 @@
+================================================================================
+LINKEDIN PROFILE CONTENT — KUNAL LADHANI
+================================================================================
+This is the plain-text version. For the full playbook with tables, tactical
+guidance, and a quick-apply checklist, see 02_linkedin_content-refined.md.
+For ready-to-publish posts, see linkedin-posts.md.
+
+================================================================================
+SECTION 1: HEADLINE (4 OPTIONS — PICK ONE)
+================================================================================
+
+OPTION A — IMPACT-FIRST (RECOMMENDED FOR SDE2 JOB SEARCH):
+  Backend Engineer | Built 7 microservices for 3 banking partners |
+  Java · Spring Boot · Kafka · AWS
+
+OPTION B — RECRUITER-KEYWORD-OPTIMIZED:
+  SDE2 Backend Engineer | Java · Spring Boot · Kafka · AWS ·
+  Microservices · Event-Driven · Fintech
+
+OPTION C — COMPANY-FIRST:
+  Software Engineer at Niyo Solutions | Building Neobanking Platforms |
+  Java · TypeScript · Spring Boot · Kafka · AWS
+
+OPTION D — SHORT:
+  Backend Engineer | Fintech | Java · TypeScript · Microservices
+
+Pick A for SDE2 search. It signals scope without saying "looking for a job".
+
+================================================================================
+SECTION 2: ABOUT / SUMMARY (3 VERSIONS — PICK ONE)
+================================================================================
+
+VERSION A — LONG (RECRUITER-FRIENDLY, RECOMMENDED):
+--------------------------------------------------
+Backend engineer with 3+ years building production banking systems at Niyo
+Solutions. I've designed, built, and shipped microservices that power
+neobanking products across 3 partner banks (Utkarsh SFB, Yes Bank, NSDL
+Payments Bank) — handling customer onboarding, agent onboarding, KYC/BGV,
+fund transfers, card management, lending offers, and notifications.
+
+My work spans the full backend lifecycle — designing APIs and data models,
+building Kafka event pipelines, setting up CI/CD with security scanning
+(SonarQube, Trivy, Snyk), and deploying to Kubernetes/Facets Cloud. I work
+across Java (Spring Boot) and TypeScript (NestJS/Express) stacks and switch
+between them based on product needs.
+
+What I've shipped:
+-> Built 7+ microservices from scratch across 14 repos (4,100+ commits)
+-> Owned an entire agent onboarding service as the sole developer
+   (544 commits) — login, BGV with face match, risk assessment,
+   business approvals
+-> Architected 5 NestJS microservices for the Utkarsh neobanking platform
+-> Led Spring Boot 2→3 migrations and Facets Cloud migrations across 5+
+   services
+-> Built event-driven flows with Kafka (MSK), SQS, EventBridge, and SSE
+-> Created AWS Lambda functions with SAM, EventBridge scheduling, SnapStart
+-> Set up CI/CD with SonarQube, Snyk, Trivy, OSV, and ECR scanning
+
+Currently looking for SDE-2 backend roles where I can own system design
+decisions and continue scaling reliability-critical fintech systems.
+
+
+VERSION B — MEDIUM (PEER-FRIENDLY):
+-----------------------------------
+Backend engineer building neobanking platforms at Niyo Solutions. I ship
+microservices in Java (Spring Boot) and TypeScript (NestJS) that handle
+customer onboarding, agent onboarding, fund transfers, card management,
+lending, and real-time notifications for banking products.
+
+3+ years, 4,100+ commits across 14 repos. Built 7+ services from scratch,
+led Spring Boot 2→3 and Facets Cloud migrations, and own multiple production
+banking backends. Stack: Kafka (MSK), AWS (Lambda, S3, SQS, EventBridge,
+ECR, K8s), MongoDB, MySQL, CI/CD with security scanning.
+
+Looking for SDE-2 roles with system-design ownership.
+
+
+VERSION C — SHORT (PUNCHY):
+---------------------------
+Backend engineer · 3+ yrs · Java/Spring Boot + TypeScript/NestJS · Built 7+
+banking microservices for 3 partner banks at Niyo. 4,100+ commits across
+14 repos. Strong in Kafka, AWS, microservices, event-driven systems.
+Looking for SDE-2.
+
+================================================================================
+SECTION 3: EXPERIENCE
+================================================================================
+
+TITLE: Software Development Engineer
+COMPANY: Niyo Solutions Inc.
+DURATION: December 2022 – Present
+LOCATION: Bengaluru, India
+
+INTRO PARAGRAPH:
+Building backend systems for Niyo's neobanking products — Bharat (Yes Bank
+partnership) and Utkarsh (Utkarsh Small Finance Bank). Working across
+Java/Spring Boot and TypeScript/NestJS microservices with MongoDB, Kafka,
+and AWS.
+
+
+PROJECT BLOCKS (ORDERED MOST-IMPRESSIVE FIRST)
+==============================================
+
+BHARAT AGENT ONBOARDING (Java/Spring Boot) — Oct 2024 to Present
+----------------------------------------------------------------
+Solo-built greenfield microservice for agent onboarding across the Bharat
+product line.
+
+- Built the entire agent onboarding microservice from scratch as the
+  sole developer (544 commits) — login/OTP, agent invite, BGV with
+  Digio face match, risk assessment, business approvals, Kafka
+  activity tracking
+- Designed multi-channel API architecture (/ag, /app, /wb) enabling
+  independent evolution for agent-facing, mobile app, and web
+  backoffice clients
+- Built end-to-end Background Verification (BGV) system — Digio face
+  match API, dynamic HTML-to-PDF report generation, PAN masking for
+  PII compliance, RBAC-based access
+- Led Facets Cloud migration (60+ commits) — Datadog APM, AWS Secrets
+  Manager, custom Spring Security auth
+
+
+UTKARSH BANKING PLATFORM (TypeScript/NestJS) — Jun 2023 to Jul 2024
+-------------------------------------------------------------------
+Architected 5 microservices for a complete neobanking product launch with
+Utkarsh SFB.
+
+- Architected and built 5 microservices from scratch — Customer Service,
+  BFF, Transaction Service, Card Service, Bank Connector
+- Designed full customer onboarding flow — registration, eKYC OTP,
+  PAN validation, Video KYC, bank registration, account opening
+- Built fund transfer system supporting NEFT/IMPS/IFT with daily limits
+  (₹5L cap), OTP authorization, duplicate prevention, beneficiary cooldown
+- Implemented AOF PDF generation pipeline — HTML templating, PDF converter,
+  SFTP upload to bank, Kafka async processing, S3 backup
+- Built real-time event streaming using Kafka MSK + Server-Sent Events
+  (SSE) for fund transfer and beneficiary status updates
+
+
+BHARAT CUSTOMER SERVICE & VAS (Java + TypeScript) — Oct 2023 to Present
+-----------------------------------------------------------------------
+Own two production banking backends with 443+ commits on VAS alone over
+2.5 years.
+
+- Own customer service backend for Bharat — onboarding, KYC,
+  notifications, levy management, cross-sell APIs
+- Led Spring Boot 3 migration — upgraded 20+ dependencies (Kafka,
+  MongoDB, JPA/Hibernate, Datadog), zero downtime
+- Migrated Kafka infrastructure from Confluent to AWS MSK with ZSTD
+  compression across API and worker modules
+- Built template-based SMS notification system with 15+ templates
+  covering account lifecycle events
+- Led AWS SDK v2->v3 migration on VAS and fixed critical Kafka consumer
+  rebalancing in production
+
+
+NSDL PAYMENTS BANK SERVICES (Java + AWS Lambda) — Jun 2024 to Present
+---------------------------------------------------------------------
+Built 4 microservices and led Lambda-to-K8s migration for NSDL PB
+integration.
+
+- Built 4 microservices — Customer Service (K8s), Customer Service
+  (Lambda), NSDL Lambda, Cron Lambda — from scratch with SAM templates
+  and EventBridge scheduling
+- Created S2S callback API with IP-whitelisted gateway, SQS integration,
+  and Lambda SnapStart for cold-start optimization
+- Led Lambda-to-K8s migration via Facets Cloud — consolidated runtime,
+  reduced cold-start latency
+
+
+LEDGER SERVICE (Java/Spring Boot) — Sep 2024 to Present
+-------------------------------------------------------
+Led Spring Boot 2→3 + Java 8→17 migration with zero downtime.
+
+- Led Spring Boot 2→3 migration (60+ commits, Java 8→17, javax→jakarta)
+  with zero downtime in production
+- Built bulk transaction sync via Kafka with rate limiting and ZSTD
+  compression
+
+
+INVENTORY MANAGER (Java/Spring Boot) — Jul 2024 to Present
+----------------------------------------------------------
+Built Partner Agent Kit module and custom dual-auth security layer.
+
+- Built Partner Agent Kit Request module from scratch
+- Designed custom dual-auth system (19 files, 1,400+ lines) supporting
+  JWT-Visionary tokens and S2S API calls
+- Built Asset Transfer V2 APIs with S3 presigned URLs and Excel report
+  generation
+
+
+OA LENDING OFFERS SERVICE (Java/Spring Boot) — Nov 2024 to Jun 2025
+-------------------------------------------------------------------
+Built greenfield personal loan offers service end-to-end.
+
+- Built greenfield personal loan offer service — CSV ingestion from
+  ABFL, EMI calculation engine, consent capture with SSE, Kafka
+  integration
+
+
+RISK ENGINE (Java/Spring Boot) — Jan 2023 to Apr 2023
+-----------------------------------------------------
+First project at Niyo — built configurable risk assessment engine from
+scratch.
+
+- Built configurable risk assessment engine — multi-module Maven
+  project with API, Worker, Commons modules
+- Implemented 10+ risk validators (Address, CKYC, CRIF, DeviceId, Email,
+  Income, IP, Occupation, PIN) with parameterized unit tests
+- Integrated Sign3 third-party API for social/digital footprint
+  verification
+- Built maker-checker approval workflow for risk rule changes
+
+================================================================================
+SECTION 4: SKILLS
+================================================================================
+
+TOP 3 TO PIN ON LINKEDIN (for SDE2 backend recruiter search):
+1. Java
+2. Spring Boot
+3. Apache Kafka
+
+FULL SKILLS LIST (BY CATEGORY):
+
+Languages:
+  Java, TypeScript, JavaScript, SQL
+
+Backend Frameworks:
+  Spring Boot, Spring Security, NestJS, Express.js, Hibernate, JPA
+
+Data:
+  MongoDB, MySQL, Liquibase, Redis (basic)
+
+Messaging / Streaming:
+  Apache Kafka, AWS MSK, AWS SQS, AWS EventBridge, RabbitMQ
+
+Cloud & Infra:
+  AWS (S3, KMS, ECR, EKS, ASM, SQS, Lambda, SAM, API Gateway),
+  Docker, Kubernetes, Facets Cloud
+
+DevOps & CI/CD:
+  Git, Bitbucket Pipelines, SonarQube, Snyk, Trivy, OSV Scanner
+
+Monitoring:
+  Datadog, OpenTelemetry, Graylog
+
+Testing:
+  JUnit 5, Jest, Mockito, HyperTest
+
+APIs & Protocols:
+  REST, OpenAPI/Swagger, gRPC (basic), SSE, SFTP, Retrofit
+
+Architecture Patterns:
+  Microservices, Event-Driven Architecture, BFF Pattern, Worker Pattern,
+  Serverless
+
+DOMAIN SKILLS (add separately):
+  Fintech, Neobanking, Payment Systems, KYC / eKYC / BGV, Risk
+  Management, Agent Onboarding, Lending, Card Management
+
+================================================================================
+SECTION 5: POSTS / FEATURED
+================================================================================
+
+4 POST HOOKS (full drafts available in linkedin-posts.md):
+
+1. "Our Kafka consumers rebalanced on every deployment. Here's what we
+   found and how we fixed it."
+   (Anchor: Bharat VAS consumer fix)
+
+2. "Migrating Spring Boot 2 to 3 isn't just javax → jakarta. Here are
+   the 5 unexpected issues we hit."
+   (Anchor: Ledger + Bharat Customer Service migrations)
+
+3. "I built our entire agent onboarding service from scratch as the only
+   engineer. Here's the architecture and what I'd do differently."
+   (Anchor: Bharat Agent Onboarding)
+
+4. "We moved 10+ services from Confluent Cloud to AWS MSK. The cost
+   savings were obvious. The gotchas weren't."
+   (Anchor: Bharat Customer Service Kafka migration)
+
+POSTING CADENCE WHILE JOB-SEARCHING:
+  - 1 original post per week (Monday/Tuesday 9 AM IST)
+  - 5 thoughtful comments per week
+  - 1-2 article shares with takeaway
+  - 3-5 network DMs per week
+
+================================================================================
+SECTION 6: RECOMMENDATIONS
+================================================================================
+
+WHO TO ASK + WHAT TO HIGHLIGHT:
+
+- Your tech lead / EM:
+    Architecture decisions, ownership, end-to-end delivery
+- Senior engineer on Utkarsh:
+    Building 5 microservices from scratch, NestJS work
+- Senior engineer on Bharat:
+    Migration leadership, Kafka work, Spring Boot 3
+- Product manager you've worked with:
+    Delivery reliability, cross-functional collaboration
+- Peer engineer:
+    Code quality, debugging, helping unblock teammates
+
+DM TEMPLATE FOR REQUESTING RECOMMENDATIONS:
+
+  Hi [name],
+
+  I'm in the middle of a job search for SDE2 roles and a few
+  interviewers have asked about recommendations. Would you be open
+  to writing a short one for my LinkedIn?
+
+  If it helps, here are 2-3 things you could mention (feel free to
+  use your own framing):
+  - [specific thing 1]
+  - [specific thing 2]
+  - [specific thing 3]
+
+  Happy to return the favor — I'd be glad to write one for you too.
+
+  Thanks!
+  Kunal
+
+================================================================================
+SECTION 7: PROFILE HYGIENE
+================================================================================
+
+DO:
+  - Clean headshot, neutral background, smiling
+  - Custom URL: linkedin.com/in/kunalladhani (or closest available)
+  - Add personal email + GitHub in contact section
+  - Turn ON "Open to Work" — Recruiters Only (not your network)
+  - Set minimum compensation in career interests (recruiters filter on this)
+
+DON'T:
+  - Add "looking for a job" to your headline
+  - Change your profile picture frequently
+  - Post motivational quotes / generic career content
+  - Endorse skills you don't actually have
+  - Use the "Open to Work" green frame on your photo (preserves
+    negotiating leverage)
+
+================================================================================
+QUICK REFERENCE CHEAT SHEET
+================================================================================
+
+HEADLINE:        Option A (impact-first)
+TOP 3 SKILLS:    Java · Spring Boot · Apache Kafka
+ABOUT:           Version A while job-searching
+EXPERIENCE:      Lead with Agent Onboarding (sole dev, 544 commits)
+POSTING:         1 post/week + 5 comments/week + 3-5 DMs/week
+RECOMMENDATIONS: Target 3-5 strong ones before applying heavily
+
+================================================================================
+END OF LINKEDIN CONTENT
+================================================================================

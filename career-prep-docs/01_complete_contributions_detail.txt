@@ -1,0 +1,866 @@
+================================================================================
+KUNAL LADHANI — COMPLETE CONTRIBUTION DETAIL AT NIYO SOLUTIONS
+Role: Software Development Engineer (SDE-1)
+Tenure: December 2022 — Present (April 2026)
+Total Commits Across All Repos: ~2,233
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. Career Timeline & Project Progression
+2. Project 1: NC Risk Engine (Jan 2023 – Apr 2023)
+3. Project 2: Utkarsh Banking Platform (Jun 2023 – Jul 2024)
+4. Project 3: Bharat YBL Customer Service (Jul 2024 – Present)
+5. Cross-Cutting Technical Contributions
+6. Key Technical Skills Demonstrated
+7. Impact & Metrics
+8. Interview Talking Points (STAR Format Ready)
+
+================================================================================
+1. CAREER TIMELINE & PROJECT PROGRESSION
+================================================================================
+
+Dec 2022    : Joined Niyo Solutions as SDE-1
+Jan 2023    : Started nc-risk-engine (first project, Java/Spring Boot)
+Apr 2023    : Risk Engine completed and shipped to production
+Jun 2023    : Moved to Utkarsh Banking Platform (NestJS/TypeScript)
+              - Built 5 microservices from scratch
+Jul 2024    : Transitioned to Bharat YBL Customer Service (Java/Spring Boot)
+              - Took ownership of a large-scale production banking service
+Apr 2026    : Present — Still actively contributing to Bharat
+
+Progression: Started with a risk/compliance tool → Built an entire banking
+platform from ground up → Took ownership of a large-scale production
+banking service with 320+ commits.
+
+================================================================================
+2. PROJECT 1: NC RISK ENGINE
+================================================================================
+Repo: niyo-commons/nc-risk-engine
+Tech Stack: Java 17, Spring Boot 3.x, Kafka, MongoDB, Excel/CSV processing
+Timeline: January 2023 – April 2023
+Commits: 215
+Architecture: Multi-module Maven project (API, Worker, Commons, Coverage)
+
+WHAT IS IT:
+-----------
+A configurable risk assessment engine used across Niyo's banking products to
+evaluate customer risk profiles during onboarding. It integrates with third-party
+data providers (Sign3 for social/digital footprint, CKYC for identity verification)
+and applies rule-based risk scoring.
+
+WHAT I BUILT:
+-------------
+a) Core Risk Engine APIs:
+   - LOB (Line of Business) REST API — full CRUD
+   - Attribute API for configuring risk parameters
+   - Subrule CRUD APIs with ordering logic
+   - Preference management APIs (create, update, approve/reject workflow)
+   - Utility APIs for operational support
+
+b) Rule Engine & Validators:
+   - Built validators for: Address, CKYC, Common, CRIF, DeviceId, Email,
+     Income, IpAddress, Occupation, PIN
+   - Each validator had comprehensive unit tests (parameterized tests)
+   - Social count gate logic (set to 80% threshold)
+
+c) Sign3 Integration:
+   - Integrated Sign3 third-party API for digital footprint data
+   - Added fields for WhatsApp, Google, LinkedIn, Skype presence
+   - Built user report download API (Excel format)
+   - Added Sign3 data enrichment to risk profiles
+
+d) Data Management:
+   - CSV and Excel upload/download functionality for bulk operations
+   - Later removed CSV in favor of Excel-only (cleaner UX)
+   - Bulk override functionality for risk rules
+   - Fixed duplicate preference approval issues
+
+e) Code Quality & Testing:
+   - Wrote comprehensive unit tests for all validators
+   - Service layer tests (RiskServiceImpl, UploadServiceImpl, etc.)
+   - Parameterized tests to reduce code smells
+   - Sonar fixes across the entire codebase
+   - Separated Data Access Layer (DAL) for cleaner architecture
+
+f) Bug Fixes:
+   - Fixed duplicate change-request approval bug (NIYOB-1703)
+   - Fixed null rows in bulk override (NIYOB-1704)
+   - Fixed NPE in User CKYC details
+   - Fixed update-subrule request ordering issue
+   - Fixed user details API auth issue
+
+KEY TALKING POINTS FOR INTERVIEWS:
+-----------------------------------
+- "I built a configurable risk engine from scratch that evaluated customer risk
+  profiles using 10+ validators across identity, financial, and digital footprint
+  dimensions."
+- "I integrated Sign3 API for social media presence verification, adding WhatsApp,
+  Google, LinkedIn, and Skype data points to risk scoring."
+- "I implemented a maker-checker workflow for risk rule changes — preferences had
+  to be approved before going live, preventing unauthorized risk parameter changes."
+- "I achieved high test coverage with parameterized unit tests across all validators
+  and service layers, fixing Sonar code smells proactively."
+
+================================================================================
+3. PROJECT 2: UTKARSH BANKING PLATFORM
+================================================================================
+Timeline: June 2023 – July 2024
+Total Commits: ~1,698 across 5 microservices
+Tech Stack: NestJS, TypeScript, MongoDB, Kafka (Confluent + MSK), AWS (S3, KMS,
+            SQS, ASM), Docker, Kubernetes, Bitbucket Pipelines
+
+This was the BIGGEST project in terms of scope. I built an entire neobanking
+platform from the ground up across 5 microservices.
+
+--- 3A. SA-UTKARSH-CUSTOMER-SERVICE (638 commits) ---
+Repo: niyo-utkarsh/sa-utkarsh-customer-service
+Role: Primary developer and architect
+
+WHAT I BUILT:
+- Complete customer onboarding flow:
+  * Customer registration API
+  * eKYC OTP (send + verify) APIs
+  * PAN verification API
+  * Video KYC (VKYC) initiation and status check APIs
+  * Open account API (bank registration + account opening)
+  * Profile details API with comprehensive validation
+
+- Customer Data Management:
+  * Customer existence check API
+  * Customer profile and account details APIs
+  * Deduplication API with additional fields
+  * Aadhaar seeding status tracking
+  * Aadhaar token encryption integration
+
+- Nominee & Guardian Management:
+  * Added nominee and guardian to customer model
+  * Built validation logic for nominee (age-based guardian requirement)
+  * Made nominee optional with proper schema handling
+
+- Minor Check Functionality:
+  * Implemented minor customer detection and handling
+  * Age-based validation and restrictions
+
+- Pincode Service:
+  * Created pincode model and fetch API
+  * Serviceable location validation in profile details
+  * Branch code and branch name mapping
+
+- Notification System:
+  * Welcome notification API
+  * SMS and email notification registration handlers
+  * Cron job handler for scheduled notifications
+
+- SSE (Server-Sent Events) Integration:
+  * Built SSE service with generic payload builder
+  * SSE events constants and event methods
+  * Real-time event streaming for customer status updates
+
+- AOF (Account Opening Form) Generation:
+  * Built HTML-to-PDF application form generator
+  * Populated customer data into AOF template
+  * Integrated with PDF converter service
+  * SFTP upload to bank server (with SSH key auth)
+  * S3 upload as backup
+  * Kafka consumer for async AOF processing
+
+- Kafka Integration:
+  * Confluent Kafka setup and refactoring
+  * Publisher for AOF from open-account method
+  * Consumer for AOF processing
+  * Worker process with separate Dockerfile
+
+- Customer Location Tracking:
+  * Saving GPS city from x-gps-city header
+  * State from x-gps-state header
+  * Onboarding location storage
+
+- enableAEPS Field:
+  * Added AEPS (Aadhaar Enabled Payment System) toggle
+  * Sent to bank connector in open-account and registration
+
+- NC Node Logger:
+  * Implemented custom logging library (nc-node-logger v1.0.3)
+  * Structured logging across the service
+
+- CI/CD Pipeline:
+  * Set up Bitbucket Pipelines with test, sonar, quality-gate steps
+  * ECR scan and secret scan steps for SDLC compliance
+  * Docker base image updates
+  * Snyk vulnerability fixes
+
+- Test Suite:
+  * Set up Jest testing framework
+  * Health check tests, profile validator tests
+  * Mock setup for all external APIs
+  * Test step in CI/CD pipeline
+
+- Code Quality:
+  * Sonar code smell fixes (dozens of commits)
+  * Removed commented code, unused imports
+  * Removed Datadog tracer and metrics (cleanup)
+  * Heap snapshot debugging for memory issues
+
+--- 3B. SA-UTKARSH-X2-BFF (450 commits) ---
+Repo: niyo-utkarsh/sa-utkarsh-x2-bff
+Role: Primary developer
+
+WHAT I BUILT:
+- BFF (Backend for Frontend) Layer:
+  * Validation layer between mobile app and microservices
+  * DTO validation with class-validator and class-transformer
+  * Nested DTO validation (custom implementation)
+  * Error message standardization
+
+- Customer Hub APIs:
+  * Summary details API (aggregated customer view)
+  * Hub details API
+  * Profile page API
+  * Customer existence API
+
+- Card Management APIs:
+  * Fetch active card API
+  * Card details API (CVV details)
+  * Set PIN API
+  * Card channel lock/unlock (domestic + international)
+  * Card limits API
+  * Card order details
+
+- Fund Transfer APIs:
+  * Initiate fund transfer with OTP flow
+  * Authorize fund transfer
+  * Transaction callback API
+  * Daily FT limit logic (5 lakh cap)
+
+- Beneficiary Management:
+  * Add beneficiary with OTP verification
+  * Verify beneficiary API
+  * Delete beneficiary API
+  * Beneficiary cooldown period
+  * Account number validation (alphanumeric check)
+
+- Notification Integration:
+  * SMS notification for fund transfers
+  * OTP send/resend/verify flow
+  * Template-based notification system
+  * Add payee SMS notification
+
+- Workbench Module:
+  * Built admin workbench module from scratch
+  * Get customers by status API
+  * Customer count API
+  * VKYC tracking IDs API
+  * Update customer API
+
+- Account Statement:
+  * Create account statement request API
+  * Get statement details by request ID
+  * PDF account statement generation
+
+- IFSC Validation:
+  * Validate IFSC code API
+  * IFSC details fetch API
+
+- Infrastructure:
+  * Liveness and readiness probes
+  * Access logger middleware (removed headers from logs for security)
+  * Datadog tracer integration and later removal
+  * CI/CD pipeline with ECR, secret scan, sonar steps
+
+--- 3C. SA-UTKARSH-TRANSACTION-SERVICE (478 commits) ---
+Repo: niyo-utkarsh/sa-utkarsh-transaction-service
+Role: Primary developer
+
+WHAT I BUILT:
+- Fund Transfer System:
+  * NEFT/IMPS fund transfer APIs
+  * IFT (Internal Fund Transfer) — same bank transfers
+  * Daily transaction limit enforcement (5 lakh cap)
+  * Duplicate clientTxnRefId prevention
+  * Credit/debit flag handling
+  * Narration length clipping (>35 chars)
+  * Branch code extraction from beneficiary account number
+
+- Beneficiary Service:
+  * Full CRUD for beneficiaries
+  * Cooldown period logic for new beneficiaries
+  * IFSC validation pipe
+  * Same-bank NEFT/IMPS restriction (UTKS to UTKS)
+  * Soft delete (isDeleted flag) with FT restriction
+
+- Transaction History:
+  * Transaction history API with status filters (success, failed, pending)
+  * ATM/POS/ECOM transaction type handling
+  * Date range validation (start > end check)
+
+- Account Statement PDF Generation:
+  * Complete HTML template with header, footer, QR code
+  * Transaction list generator
+  * PDF converter integration (puppeteer-core + chromium)
+  * S3 upload with KMS encryption
+  * Password-protected PDFs
+  * Signed URL generation for download
+  * Static assets management (SVG files, images)
+
+- Kafka Integration:
+  * MSK (Managed Streaming for Kafka) producer setup
+  * SSE events for fund transfer and beneficiary
+  * X2 event publishing
+  * Topic management and configuration
+
+- Validate IFSC Implementation:
+  * IFSC code validation against bank database
+
+- Error Handling:
+  * Standardized error messages as per error sheet
+  * Gateway timeout handler
+  * Duplicate confirm FT request prevention
+  * Error response bug fixes
+
+- CI/CD & Code Quality:
+  * Sonar integration with quality gate
+  * Test cases for IFSC controller
+  * Pipeline memory optimization (docker image memory tuning)
+  * Datadog tracer integration
+
+--- 3D. SA-UTKARSH-CARD-SERVICE (130 commits) ---
+Repo: niyo-utkarsh/sa-utkarsh-card-service
+Role: Primary developer
+
+WHAT I BUILT:
+- Card APIs:
+  * Fetch active card API
+  * Card details DTO with Swagger annotations
+  * Generate VDC (Virtual Debit Card) API
+  * Set PIN API
+  * Card channel lock/unlock (domestic + international)
+  * Card BIN prefix validation
+  * GL access code integration for card orders
+
+- Card Channel Management:
+  * Domestic and international channel locks
+  * ATM, POS, contactless channel locked for virtual cards (PDC check)
+  * Build card channel status method
+
+- NC Logger Implementation:
+  * Custom logging library integration
+
+- Testing & Quality:
+  * Basic test suite setup
+  * Sonar code smell fixes
+  * JSDoc documentation
+  * Snyk vulnerability fixes
+
+--- 3E. NX-UK-UTKARSH-BANK-CONNECTOR (2 commits) ---
+Minor contribution — demo auth fix for staging environment.
+
+================================================================================
+4. PROJECT 3: BHARAT YBL CUSTOMER SERVICE
+================================================================================
+Repo: niyo-bharat/ybl/customer-service
+Tech Stack: Java, Spring Boot, MongoDB, MySQL (JPA/Hibernate), Kafka (AWS MSK),
+            AWS (S3, KMS), Kubernetes, Datadog, Retrofit, Liquibase
+Timeline: July 2024 – Present (April 2026)
+Commits: 320
+Architecture: Multi-module Maven (api-utility, repository, services, app_config,
+              application, worker, coverage)
+
+WHAT I BUILT/OWNED:
+-------------------
+a) IMS Connector Integration:
+   - Updated IMS connector APIs to support bankProgram parameter
+   - Added bankProgram to assignCardKitToCustomerInternal API
+   - Updated mocks for test cases
+   - Fixed IMS internal S2S (server-to-server) calls
+   - Updated IMS base URLs and domain changes
+
+b) Cross-Sell API:
+   - Built complete cross-sell notification system
+   - Product types: Credit Card, Personal Loan (Paisa247)
+   - Campaign ID management per product
+   - SMS template integration with notification service
+   - UTM link tracking in SMS content
+   - VIEW_CUSTOMER auth permission integration
+
+c) Levy & Fee Management:
+   - Integrated levy collect requests API via Retrofit
+   - SMS fee collection listener (CustomerAccountSMSFeeListener)
+   - Account activation tracking activity
+   - Subscription fee API
+   - Monthly service fee and inactivity fee configuration
+   - Kafka topic for COLLECT_REQUEST_CREATION and SETTLEMENT
+
+d) Notification System Overhaul:
+   - Migrated to template-based SMS notifications (Yes Bank)
+   - Added template IDs for 15+ notification types:
+     * Old phone update, new phone update
+     * Deactivate account, deactivate account warning
+     * Collect request settlement
+     * Linked account status (rejected/success)
+     * Channel status update, card status update
+     * Bulk card block, replace card
+     * Phone number verified, account balance
+     * Primary card activation, add payee
+   - Support phone number integration in SMS templates
+   - Updated notification base URLs
+
+e) Spring Boot 3 Migration (BHAR-433):
+   - Major migration effort — upgraded Spring Boot version
+   - Updated dependencies: Kafka, Swagger, MongoDB, Logger
+   - Refactored MongoDB drivers (removed old driver, kept starter)
+   - Updated JPA/Hibernate configuration
+   - Updated Datadog API client and trace versions
+   - Updated Docker base and runner images
+   - Fixed bean configuration issues (circular dependencies, lazy loading)
+   - Updated OkHttp, HttpClient5, HttpCore5 dependencies
+   - Removed DCB client (deprecated bank connector)
+   - Refactored Yes Bank client naming
+
+f) Kafka Migration & Configuration:
+   - Migrated UAT Kafka cluster
+   - Refactored Kafka common config beans
+   - Changed compression algorithm to ZSTD
+   - Kafka serialization method refactored to String
+   - Topic management for levy, collect requests, settlement
+
+g) Security & Compliance:
+   - Removed secrets from repo, moved to K8s secrets
+   - Resolved all Sonar issues (vulnerabilities, bugs, hotspots)
+   - Trivy security scan fixes (multiple rounds)
+   - Auth filter implementation with whitelisted endpoints
+   - Added CIN to MDC (Mapped Diagnostic Context) for tracing
+
+h) Infrastructure & DevOps:
+   - Readiness and liveness probes for API and worker pods
+   - Pod scaling (reduced CS-API pods to 2 for cost optimization)
+   - K8s configuration updates (CPU/memory limits)
+   - Removed Graylog, updated logging configuration
+   - Folder structure reorganization for better readability
+   - Datadog metrics (only in PROD environment)
+   - OpenTelemetry annotation added
+
+i) Debit Freeze API:
+   - Exposed debit freeze API endpoint
+
+j) Presigned URL API:
+   - Built GET /v1/utility/presignedURL API for S3 access
+
+k) Workflow Engine Integration:
+   - Upgraded workflow-engine versions (1.3.1 → 1.4-RELEASE)
+   - Fixed null pointer exceptions with null checks
+
+l) Device Data Optimization:
+   - Removed deviceDataXml storage from DB (data optimization)
+
+m) App Version Management:
+   - Multiple app version updates for production releases
+
+================================================================================
+5. PROJECT 4: BHARAT AGENT ONBOARDING (Oct 2024 – Mar 2026)
+================================================================================
+Repo: niyo-bharat/nsdl/bharat-agent-onboarding
+Tech Stack: Java 17, Spring Boot 3.x, MongoDB, Kafka, AWS (S3, SQS, Secrets
+            Manager), Retrofit, PDFBox, Datadog, Kubernetes/Facets
+Commits: 544 (effectively the primary/sole developer)
+Architecture: Multi-channel controllers (/ag, /app, /wb), Service-DAO-Repository,
+              Worker pattern (Kafka + SQS)
+
+BUILT THE ENTIRE SERVICE FROM SCRATCH. Key features:
+
+a) Login Module & OTP System (NSDL-98, NSDL-109):
+   - Generate/verify/resend OTP APIs with Notification Service integration
+   - JWT token creation post-verification, OTP mocking for dev/uat
+   - Multi-tenant support (tenant-id, consumer-id headers)
+
+b) Agent Invite Flow (NSDL-99):
+   - Complete agent invite API with multipart file upload
+   - Auto-incrementing agent code generation (AgentSequence collection)
+   - S3 document upload, notification integration for invite SMS/email
+
+c) Risk Engine Integration (NSDL-102, NSDL-112):
+   - External Risk Engine API integration for agent risk scoring
+   - Risk status check API, risk details persisted in agent document
+
+d) IAM Module Integration (NSDL-115):
+   - IAM API service client (Retrofit-based) for user provisioning
+   - Create user, check existence (mobile + email uniqueness)
+   - Employee ID generation with auto-incrementing counter
+
+e) BGV (Background Verification) System (BHAR-148, BHAR-175):
+   - End-to-end BGV flow: document collection → face match → report generation
+   - Digio face match API integration for identity verification
+   - Dynamic BGV report generation using HTML templates + PDFBox
+   - PAN masking for PII compliance, officer selfie capture
+   - RBAC permissions (BHARAT_BGV_OFFICER role)
+
+f) Business Approval Flow (BHAR-11, BHAR-337):
+   - Multi-level approval workflow with permission-based access
+   - Approver email ID storage, IAM API integration for employee ID lookup
+   - Activity logging with current user and approver details
+
+g) Agent Activity Status & Kafka Integration (BHAR-258, BHAR-199):
+   - Kafka producer/consumer with internal topics
+   - Workers: NewAgentOnboardingWorker, OnboardingActivityWorker
+   - Batch processing with parallelized publishing
+   - SQS-based cron worker for activity tracking
+
+h) Facets Cloud Migration (BHAR-575) — 60+ commits:
+   - Migrated from raw K8s to Facets Cloud orchestration
+   - Datadog APM integration, AWS Secrets Manager migration
+   - Custom Spring Security auth system (AuthenticationFilter, NiyoAuthenticationProvider)
+
+================================================================================
+6. PROJECT 5: BHARAT VAS (Value Added Services) (Oct 2023 – Apr 2026)
+================================================================================
+Repo: niyo-bharat/ybl/bharat-vas
+Tech Stack: TypeScript, Node.js 22, Express, MongoDB/Mongoose, Redis/ioredis,
+            Kafka/KafkaJS, AWS (S3 v3, Secrets Manager), Docker, K8s/Facets
+Commits: 443 over 2.5 years
+Architecture: Dual-process (API + Worker), Event-driven via Kafka
+
+Key features:
+
+a) Consent Capture Module (NXUSFB-190):
+   - Built from scratch — model, controller, service, routes
+   - Regulatory compliance feature for fintech
+
+b) HyperTest POC & Integration (NMB-359):
+   - Led HyperTest SDK POC for API testing/replay platform
+   - Configured for both API server and Kafka worker processes
+
+c) Insurance Payment Processing (NMB-375):
+   - Fixed critical Acko insurance debit worker failure
+   - Kafka payload builder debugging, correlation ID fixes
+
+d) CAM v3 Integration & Audit Events (NMB-418/419):
+   - Customer Activity Management v3 API integration
+   - Audit event Kafka publish module with error topic fallback
+
+e) Ledger Service v2 API Integration (NMB-441):
+   - Migrated to Ledger Service v2 for transaction statements
+   - Changed tenantId from NIYO_BHARAT → NIYO
+
+f) Facets.cloud Platform Migration (BHAR-568/569) — MAJOR:
+   - Removed AWS Secret Manager logic, moved to Facets env vars
+   - Dead code cleanup (algo360, aadhaarInfo, epfStatement, kotakInsurance)
+   - Docker overhaul, pipeline modernization
+   - 30+ SonarQube code smell fixes, security hotspot resolution
+
+g) AWS SDK v2 → v3 Migration (BHAR-663):
+   - Migrated all AWS clients to modular @aws-sdk v3
+   - Reduced bundle size with modular imports
+
+h) Kafka Rebalancing Fix & Zstd Compression (BHAR-502):
+   - Fixed critical Kafka consumer rebalancing issue
+   - Implemented Zstd compression codec
+
+i) Account Statement Narration Overhaul (BHAR-592/600):
+   - Integrated Levy Service API for fee narration data
+   - SMS fee, subscription fee, inactivity fee narrations
+
+================================================================================
+7. PROJECT 6: NSDL SERVICES (Jun 2024 – Mar 2026)
+================================================================================
+4 repos: niyo-nsdl-pb-customer-service (170+ commits),
+         nsdl-pb-customer-service Lambda (100+ commits),
+         niyo-nsdl-pb-lambda (12 commits),
+         nsdl-pb-cron-lambda (50+ commits)
+Tech Stack: Java 17, Spring Boot 3.x, AWS Lambda/SAM, MongoDB, Kafka, SQS,
+            EventBridge, KMS, Google JIB, Facets Cloud
+
+Key features:
+
+a) Customer Onboarding Data Enrichment (NSDL-39):
+   - PII Vault integration (schema v2.0) for fatherName, supervisorName
+   - Fetched data from PII Vault, forwarded to SME service
+
+b) Cron Lambda — Built from Scratch (NSDL-45):
+   - Created entire Lambda function: handler, SAM template, CI/CD pipeline
+   - 3 scheduled jobs: mark-customer-for-sync (weekly), sync-customer-with-bank
+     (every 15 min), sync-aadhaar-seeding-mis (daily)
+
+c) S2S Callback API (BHAR-350):
+   - Server-to-server callback API for bank communication
+   - IP-whitelisted API Gateway, encryption key management
+
+d) SQS Queue Integration (BHAR-505):
+   - SQS producer/listener setup, Lambda handler integration
+   - ReservedConcurrentExecutions management, download URL implementation
+
+e) Internal Sync API (BHAR-615):
+   - Customer onboarding data sync with async processing
+   - Compound MongoDB indexes, "internally synced" flag system
+   - Fixed Kafka consumer config to prevent missed messages
+
+f) Facets Cloud Migration (BHAR-566):
+   - Migrated from Lambda/K8s to Facets Cloud
+   - AWS Secrets Manager integration, VPC endpoint configuration
+
+g) Lambda-to-Kubernetes Migration:
+   - Originally Lambda, migrated to K8s via Facets
+   - Both versions maintained in parallel during transition
+
+================================================================================
+8. PROJECT 7: INVENTORY MANAGER (Jul 2024 – Mar 2026)
+================================================================================
+Repo: niyo-bharat/ybl/inventory-manager
+Tech Stack: Java 17, Spring Boot 3.5.x, MongoDB, Kafka, AWS (S3, Secrets Manager),
+            Retrofit, Apache POI, Google ZXing, Javers, MapStruct
+Commits: 267 over 20 months
+
+Key features:
+
+a) Asset Transfer Module — V2 APIs (NSDL-55):
+   - POST create transfer, verify transfer, transfer summary
+   - My-transfers pagination, filter card kits, update status
+   - S3 upload logging, bankProgram mandatory validation
+
+b) Partner Agent Kit Request Module — Built from Scratch (NSDL-82):
+   - Complete data model, API, service, repository layers
+   - Email notification integration via Retrofit
+   - Validation on subUserType/userType, role-based access
+
+c) Partner Agent Kit Details & Reports (NSDL-94):
+   - Dynamic query builder for flexible filtering
+   - Kit request cancellation, Excel report download (Apache POI)
+   - Kit issuance report generation
+
+d) Custom Authentication System (BHAR-574) — 19 new files, 1400+ lines:
+   - AuthenticationFilter, NiyoAuthenticationProvider
+   - Dual auth: JWT-Visionary tokens AND S2S API calls
+   - DownstreamContextFilter for user context propagation
+
+e) Assets Transfer with Payment & Pre-Signed URL API (BHAR-428):
+   - S3 presigned URL generator, AwsPresignedUrlType enum
+   - UtilityResource REST controller
+
+f) Facets Deployment & Auth System (BHAR-574) — 50+ commits:
+   - Full Facets migration, deleted legacy K8s files
+   - Customer Service API client integration
+   - Sonar hotspot/vulnerability resolution
+
+================================================================================
+9. PROJECT 8: LEDGER SERVICE (Sep 2024 – Apr 2026)
+================================================================================
+Repo: niyo-bharat/ybl/ledger-service
+Tech Stack: Java 17, Spring Boot 3.5.13, MongoDB, Redis (Redisson), Kafka,
+            AWS (S3, STS, Secrets Manager), Resilience4j, MapStruct, Retrofit
+Commits: 130+ over 18 months
+
+Key features:
+
+a) Spring Boot Major Version Upgrade — BHAR-432 (60+ commits):
+   - Java 8→17, Spring Boot 2→3, Jetty→Tomcat
+   - Spring Security 5→6 migration (WebSecurityCustomizer)
+   - Jakarta namespace migration (javax → jakarta)
+   - JWT auth migration to jwt-visionary-plugin
+   - Zero-downtime migration
+
+b) Transaction Sync & Kafka Optimization (BHAR-400):
+   - Bulk transaction sync via Kafka topic publishing
+   - Rate limiting (CRN entries capped at 100)
+   - ZSTD compression for Kafka producers
+   - Pod count optimization (cost reduction)
+
+c) Kafka Cluster Migration (BHAR-342):
+   - Environment-specific replica strategies (3 prod, 1 UAT)
+   - Zero message loss during migration
+
+d) Facets Deployment Migration (BHAR-592):
+   - Externalized secrets, removed SQS, Redis standalone mode
+   - Pipeline modernization
+
+e) OpenTelemetry Integration (BHAR-700):
+   - Distributed tracing with OTel annotations
+
+================================================================================
+10. PROJECT 9: OA LENDING OFFERS SERVICE (Nov 2024 – Jun 2025)
+================================================================================
+Repo: oa-lending-offers-service
+Tech Stack: Java 17, Spring Boot 3.5.0, MongoDB, AWS S3, Retrofit, Kafka
+Commits: 121 (GREENFIELD — built from scratch)
+
+Key features:
+
+a) Service Creation (GO-28314):
+   - Entire service from scratch: project structure, Swagger, logging,
+     security, Docker, S3, MongoDB, exception handler, Retrofit client
+
+b) Personal Loan Offer System (GO-28430) — 70+ commits:
+   - CSV file processing for ABFL (Aditya Birla Finance) loan offers
+   - S3 integration for reading offer files
+   - EMI date calculation engine
+   - Loan status tracking (PENDING, ACTIVE)
+   - Multi-environment K8s deployment from scratch
+
+c) Consent Capture & Kafka Integration (GO-34312):
+   - Consent capture API with SSE for real-time updates
+   - Kafka producer for event-driven consent processing
+
+d) Service Decommissioning (GO-37835):
+   - Graceful shutdown (replica zero), security compliance before shutdown
+
+================================================================================
+11. CROSS-CUTTING TECHNICAL CONTRIBUTIONS
+================================================================================
+
+a) CI/CD Pipeline Engineering:
+   - Set up Bitbucket Pipelines across ALL Utkarsh services
+   - Added: test, sonar, quality-gate, ECR scan, secret scan steps
+   - SDLC compliance enforcement
+   - Docker image optimization
+   - Snyk vulnerability scanning integration
+
+b) Logging Infrastructure:
+   - Implemented nc-node-logger across all Utkarsh services
+   - Structured logging with request context
+   - Access logger middleware (security-conscious — removed headers from logs)
+
+c) Testing Culture:
+   - Set up Jest testing frameworks across 4 NestJS services
+   - Wrote unit tests for validators, services, controllers
+   - Parameterized tests for comprehensive coverage
+   - Sonar quality gate enforcement in pipelines
+
+d) Code Quality:
+   - Hundreds of Sonar code smell fixes across all repos
+   - Consistent code formatting (Prettier + ESLint)
+   - JSDoc documentation across services
+   - DTO validation patterns (class-validator)
+
+e) Security:
+   - Removed API keys from headers
+   - Moved secrets to K8s secrets
+   - KMS encryption for S3 uploads
+   - Trivy and Snyk vulnerability fixes
+   - Secret scanning in CI/CD
+
+================================================================================
+6. KEY TECHNICAL SKILLS DEMONSTRATED
+================================================================================
+
+Languages: Java 17, TypeScript, JavaScript
+Frameworks: Spring Boot 3.x, NestJS, Express
+Databases: MongoDB, MySQL (JPA/Hibernate/Liquibase)
+Messaging: Apache Kafka (Confluent, AWS MSK), SQS
+Cloud (AWS): S3, KMS, ASM (Secrets Manager), ECR, EKS
+DevOps: Docker, Kubernetes, Bitbucket Pipelines, Helm
+Monitoring: Datadog, OpenTelemetry, Graylog
+Testing: JUnit, Jest, Mockito, SonarQube
+API Design: REST, Swagger/OpenAPI, Retrofit
+Architecture: Microservices, BFF Pattern, Event-Driven, Worker Pattern
+Protocols: SFTP, SSE (Server-Sent Events)
+Tools: Git, Jira, Bitbucket, SonarQube, Snyk, Trivy
+
+================================================================================
+13. IMPACT & METRICS
+================================================================================
+
+- ~4,100+ total commits across 14 repositories
+- Built 7+ microservices/services from scratch (Utkarsh platform, Agent
+  Onboarding, OA Lending Offers, Cron Lambda, Consent Capture, etc.)
+- Contributed to 4 major banking products (Risk Engine, Utkarsh, Bharat YBL,
+  NSDL Payments Bank)
+- Owned end-to-end customer onboarding flow for 3 banking products
+- Led 3 Spring Boot major version migrations (Risk Engine, Ledger, Customer Service)
+- Led Facets Cloud migration across 5+ services
+- Built custom authentication systems (19 files, 1400+ lines for Inventory Manager)
+- Implemented 15+ SMS notification templates for Bharat
+- Built BGV (Background Verification) system with PDF report generation
+- Set up CI/CD pipelines with security scanning (SonarQube, Trivy, Snyk, OSV)
+  across all services
+- Managed Kafka migrations (Confluent → AWS MSK) across 6+ services
+- Built event-driven architectures with Kafka, SQS, EventBridge, and SSE
+- Created AWS Lambda functions with SAM templates and EventBridge scheduling
+- Migrated AWS SDK v2 → v3 for bharat-vas
+- 544 commits on agent-onboarding alone (primary developer)
+
+================================================================================
+14. INTERVIEW TALKING POINTS (STAR FORMAT READY)
+================================================================================
+
+STORY 1: "Building a Banking Platform from Scratch"
+Situation: Niyo needed a new neobanking platform with Utkarsh Small Finance Bank.
+Task: Build the entire backend — customer onboarding, KYC, transactions, cards.
+Action: Designed and built 5 NestJS microservices (Customer, BFF, Transaction,
+        Card, Bank Connector) with MongoDB, Kafka, and AWS integrations.
+Result: Platform went live, handling customer onboarding, fund transfers,
+        card management, and account statements.
+
+STORY 2: "AOF Generation & SFTP Integration"
+Situation: Bank required physical Account Opening Forms uploaded to their SFTP.
+Task: Generate PDFs from customer data and upload to bank's SFTP server.
+Action: Built HTML template engine, integrated PDF converter, implemented SFTP
+        upload with SSH key auth, added Kafka consumer for async processing,
+        S3 backup storage.
+Result: Automated AOF generation and delivery, eliminating manual process.
+
+STORY 3: "Spring Boot 3 Migration (Multiple Services)"
+Situation: Multiple services on older Spring Boot needed upgrade.
+Task: Migrate to Spring Boot 3 with all dependency updates.
+Action: Led migrations for Bharat CS, Ledger Service, and others — updated 20+
+        dependencies each time, resolved circular deps, Spring Security 5→6
+        breaking changes, javax→jakarta namespace, updated Docker images.
+Result: Successfully migrated without downtime across multiple services.
+
+STORY 4: "Risk Engine with Maker-Checker Workflow"
+Situation: Needed a configurable risk assessment tool for customer onboarding.
+Task: Build a rule engine with approval workflows.
+Action: Built 10+ validators, Sign3 integration, preference management with
+        approve/reject workflow, bulk upload/download in Excel.
+Result: Risk engine used across products for customer risk scoring.
+
+STORY 5: "Building Agent Onboarding Service from Scratch (544 commits)"
+Situation: NSDL Payments Bank needed a complete agent onboarding system.
+Task: Build the entire service — login, invite, BGV, risk assessment, approvals.
+Action: Designed multi-channel architecture (/ag, /app, /wb), built BGV system
+        with Digio face match and PDF report generation, integrated IAM for
+        user provisioning, Kafka for event-driven activity tracking, and
+        migrated to Facets Cloud.
+Result: Complete agent onboarding platform handling the full lifecycle from
+        invite to activation with compliance checks.
+
+STORY 6: "Facets Cloud Migration Across 5+ Services"
+Situation: Multiple services deployed on raw K8s needed platform migration.
+Task: Migrate to Facets Cloud for better deployment orchestration.
+Action: Led migration across agent-onboarding, VAS, NSDL CS, inventory-manager,
+        and ledger-service — moved secrets to Facets/ASM, updated pipelines,
+        deleted legacy K8s files, configured facetsctl CLI deployments.
+Result: Standardized deployment across all services, improved secret management.
+
+STORY 7: "Building a Greenfield Lending Offers Service"
+Situation: Needed a personal loan offer processing system for ABFL partnership.
+Task: Build the entire service from scratch.
+Action: Architected Spring Boot 3 service, built CSV ingestion from S3, EMI
+        calculation engine, consent capture with SSE, Kafka integration,
+        multi-environment K8s deployment.
+Result: Loan offer processing system live in production, later gracefully
+        decommissioned when business needs changed.
+
+STORY 8: "Real-time Event System with Kafka & SSE"
+Situation: Mobile app needed real-time updates for transactions and beneficiaries.
+Task: Implement event-driven architecture for real-time notifications.
+Action: Set up Kafka MSK producers, SSE service with generic payload builder,
+        event publishing for fund transfers and beneficiary operations.
+Result: Real-time updates delivered to mobile app, improving user experience.
+
+STORY 9: "Kafka Consumer Rebalancing Production Fix"
+Situation: Kafka consumers in bharat-vas repeatedly rebalancing, causing delays.
+Task: Diagnose and fix the consumer group instability.
+Action: Updated KafkaJS version, updated Node base image, implemented Zstd
+        compression, refactored Docker images, suppressed health check log noise.
+Result: Stabilized Kafka consumer group across all environments.
+
+STORY 10: "Custom Authentication System for Inventory Manager"
+Situation: Inventory manager needed dual-auth (JWT + S2S) with Spring Security.
+Task: Build a complete auth system from scratch.
+Action: Created 19 files (1400+ lines) — AuthenticationFilter, custom
+        NiyoAuthenticationProvider, JWT parsing library, DownstreamContextFilter
+        for user context propagation, role-based access control.
+Result: Secure dual-auth system supporting both user JWT tokens and
+        service-to-service API calls.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

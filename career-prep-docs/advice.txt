@@ -1,0 +1,38 @@
+Here's how I'd approach it if I were you:
+
+Step 1: LinkedIn + Resume first (this weekend)
+
+Update your LinkedIn using 02_linkedin_content.txt — pick the headline, about section, and experience bullets that feel natural to you. Don't copy-paste everything, pick what resonates. Then update your resume using 03_resume_content.txt — keep it to 1-2 pages, lead with agent onboarding and utkarsh (your strongest stories). Start applying once these are live. Don't wait until you feel "ready" — you'll prep in parallel.
+
+Step 2: Pick your 5 core stories
+
+From the 10 STAR stories in 01_complete_contributions_detail.txt, pick 5 you can talk about for 3-5 minutes each without notes. I'd recommend:
+
+Agent onboarding from scratch (544 commits, sole dev — shows ownership)
+Utkarsh platform (5 microservices from scratch — shows architecture)
+Spring Boot 2→3 migration (shows you handle complexity and risk)
+Kafka consumer rebalancing fix (shows production debugging skills)
+BGV system or AOF pipeline (shows end-to-end feature delivery)
+Practice these out loud. Literally talk to yourself or a friend. The first time you say it out loud it'll feel clunky — that's normal. By the 3rd time it'll flow.
+
+Step 3: For HR/HM rounds
+
+Use 01_complete_contributions_detail.txt as your reference bible. HR will ask "tell me about your current role" — you don't list 14 repos. You say: "I've been at Niyo for 3+ years building banking backends. I started with a risk engine, then built an entire neobanking platform from scratch across 5 microservices, and now I own multiple production services including one I built solo with 544 commits." Then let them ask follow-ups.
+
+HM will dig deeper — "what was the hardest technical problem you solved?" That's where the Kafka rebalancing fix, the Spring Boot migration, or the Facets Cloud migration stories come in. Use the detailed analysis files (agent_onboarding_analysis.txt, bharat_vas_analysis.txt, etc.) to refresh specifics before each interview.
+
+Step 4: For technical/system design rounds
+
+You have real system design experience — use it. If they ask you to design a payment system, you've literally built one. If they ask about event-driven architecture, you've done Kafka across 10+ services. Pull from your actual work, not textbook answers. Interviewers can tell the difference.
+
+The key things to emphasize for SDE-2:
+
+You didn't just write code, you made architecture decisions (multi-channel controllers, dual-auth systems, worker patterns)
+You owned services end-to-end (not just features within someone else's service)
+You handled production incidents (Kafka rebalancing, NPEs, migration rollbacks)
+You improved things proactively (security hardening, Sonar fixes, Facets migration)
+Step 5: DSA prep (parallel track)
+
+This is the one thing these docs won't help with. If you're not already doing Leetcode/Neetcode, start now — 1-2 problems a day, focus on medium difficulty. Most SDE-2 interviews still gate on this.
+
+One more thing — don't undersell yourself. 4,100+ commits across 14 repos, 7+ services built from scratch, sole developer on a 544-commit service, migrations, production debugging, multi-stack (Java + TypeScript) — that's not SDE-1 output. Walk into those interviews knowing that.

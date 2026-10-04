@@ -1,0 +1,117 @@
+Resume Content Pack for SDE2 Applications
+Use this as source material to tailor 1-page or 2-page resume versions.
+
+====================================================
+1) Professional summary options
+====================================================
+Summary Option A:
+Backend engineer with 3+ years of hands-on fintech microservices experience, working across Java/Spring Boot and Node.js ecosystems. Delivered and stabilized customer onboarding, transaction, card, and platform services while driving CI/CD, security remediation, observability, and deployment modernization.
+
+Summary Option B:
+Software engineer with strong system ownership across distributed backend services. Proven track record of shipping product features and production hardening initiatives (reliability, security, and infra alignment) across 25+ repositories in high-scale fintech environments.
+
+====================================================
+2) High-impact resume bullets (core role)
+====================================================
+- Contributed 4,900+ commits (3,700+ non-merge) across 25+ backend repositories since Dec 2022, with deep ownership in onboarding, customer, transaction, inventory, ledger, and integration services.
+- Owned end-to-end microservice execution across Java/Spring Boot and Node.js stacks, including API design, business logic, inter-service integrations, and production rollout.
+- Implemented and stabilized critical customer and onboarding flows, including state propagation, S3/SFTP-driven processing paths, and downstream service orchestration.
+- Delivered transaction and statement workflow enhancements, including PDF/converter integration and environment-specific reliability fixes in staging/production.
+- Drove migration-heavy platform changes: domain/base-url transitions, config model modernization (facets), and framework/dependency upgrades.
+- Improved production reliability through error-handling refactors, retry logic, health/readiness tuning, and Kafka configuration hardening.
+- Led security and compliance improvements by resolving Trivy/OSV/secret-scanner findings and upgrading vulnerable libraries/components.
+- Strengthened observability and diagnostics via Datadog/OpenTelemetry annotations and contextual logging improvements.
+- Improved release hygiene with repeated CI/CD pipeline refinements, Kubernetes template updates, and environment configuration cleanup.
+
+====================================================
+3) Project highlights (ready-to-paste)
+====================================================
+
+Project: nc-risk-engine (2023)
+Role-focused bullets:
+- Enhanced risk engine service logic across upload, preference, and report/download components.
+- Added/expanded unit and parameterized test coverage; resolved quality-gate and sonar issues.
+- Fixed API behavior and request ordering issues in subrule/update flows to improve correctness.
+
+Project: Utkarsh Service Suite (2023-2024)
+Scope: customer-service, transaction-service, x2-bff, card-service
+Role-focused bullets:
+- Delivered backend features across onboarding, customer, beneficiary, fund transfer, and card control domains.
+- Improved statement generation and formatting flows with better integration handling for downstream PDF systems.
+- Built and refined BFF orchestration and validation paths to reduce edge-case failures.
+- Supported deployment reliability through pipeline updates, readiness/liveness refactors, and config cleanup.
+
+Project: NSDL Integrations (2024-2026)
+Scope: bharat-agent-onboarding, niyo-nsdl-pb-customer-service, nsdl-pb-customer-service, nsdl lambdas
+Role-focused bullets:
+- Implemented and maintained onboarding/customer-service integrations with NSDL-facing systems.
+- Refactored error extraction/handling and improved Kafka publishing reliability in integration-heavy flows.
+- Executed app-version and domain transitions while preserving backward compatibility across environments.
+- Migrated and aligned configuration/deployment patterns toward facets-based setup.
+
+Project: Bharat/YBL Platform Services (2023-2026)
+Scope: bharat-vas, customer-service, inventory-manager, sme-service, weir, ledger-service, transaction
+Role-focused bullets:
+- Owned cross-service modernization initiatives including SDK/framework upgrades and config migration programs.
+- Delivered IAM/auth/domain integration updates and internal API key/context propagation changes.
+- Resolved large waves of security and vulnerability findings without disrupting feature release timelines.
+- Added observability and operational improvements across services to accelerate production debugging and stability.
+
+====================================================
+4) Skills section (resume-friendly)
+====================================================
+Languages:
+- Java
+- TypeScript
+- JavaScript
+- SQL
+
+Frameworks/Runtime:
+- Spring Boot
+- Node.js
+- Express/Nest-style service patterns
+
+Distributed Systems:
+- Microservices
+- REST APIs
+- Event-driven integrations (Kafka)
+- Service-to-service auth/integration
+
+Cloud/DevOps:
+- AWS
+- Kubernetes
+- CI/CD pipelines (Bitbucket)
+- Deployment configuration management
+
+Reliability/Security/Quality:
+- Production debugging and hardening
+- Error handling and resilience patterns
+- Vulnerability remediation (Trivy/OSV/secret scanning)
+- Test coverage and static analysis improvements
+- Observability (Datadog/OpenTelemetry)
+
+====================================================
+5) SDE2-focused achievements section (optional)
+====================================================
+- Scaled from single-service contributions to multi-service ecosystem ownership spanning customer, onboarding, transaction, and platform domains.
+- Demonstrated consistent execution in both feature delivery and production engineering, reducing operational risk during rapid releases.
+- Led several migration and hardening efforts (config model changes, dependency modernization, security fixes) across parallel services.
+- Established strong credibility in integration-heavy environments with external/internal dependencies and strict reliability expectations.
+
+====================================================
+6) Tailoring notes by company type
+====================================================
+For product companies:
+- Emphasize distributed systems, ownership, reliability, and observability.
+
+For fintech/banking:
+- Emphasize secure integrations, app-version controls, compliance/security remediation, and production safeguards.
+
+For platform/infrastructure teams:
+- Emphasize CI/CD, config migration, dependency modernization, and cross-service standardization.
+
+====================================================
+7) Suggested resume title line
+====================================================
+Software Engineer | Backend Microservices | Java/Spring Boot, Node.js | Reliability, Security, Platform Ownership
+
