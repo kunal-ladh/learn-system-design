@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How to find your system's real ceiling with load testing, size headroom with N+1 and safety-factor math, apply the USE method, and decide how much overprovisioning an outage is worth.
 related: ["[[Autoscaling]]", "[[Back of the Envelope Estimation]]", "[[Scalability]]"]
 ---
@@ -57,12 +57,12 @@ required = ceil( (peak RPS × safety factor) / per-pod capacity ) + redundancy
 ```
 
 - **Peak RPS** — from history and forecast, not average: plan for the worst hour, not the mean.
-- **Safety factor** — typically 1.25–1.5×, covering forecast error, degraded-mode per-pod capacity, and burst-before-autoscaling. Equivalently stated as a **utilization target**: run at 50–70% of measured ceiling so a 1.4–2× surprise is survivable.
+- **Safety factor** — covering forecast error, degraded-mode per-pod capacity, and burst-before-autoscaling. A safety factor `f` *is* a **utilization target** of `1/f`, and the two are quoted interchangeably, so do the conversion rather than assuming: 1.25× is an 80% target, 1.4× is ~70%, 2× is 50%. The 50–70% targets this note uses throughout therefore mean a safety factor of roughly **1.4–2×** — and the `+ redundancy` term below pushes realised utilization lower still, which is why a worked example can carry a 1.3 factor and still land inside the band.
 - **Redundancy: N+1** (or N+2 at scale) — the fleet must meet peak with one instance lost (deploy, node drain, crash). At small N this dominates: if N=2 pods carry peak, you run 3. The same logic applies a level up as **AZ redundancy**: survive one availability zone's worth of capacity disappearing.
 
 Two pieces of queueing arithmetic make the sizing defensible rather than folkloric:
 
-- **Little's Law**: `concurrency = arrival rate × time in system` (L = λW). At 1,500 RPS with 200 ms average latency, ~300 requests are in flight at any instant — that number must fit inside the fleet's total thread/connection budget, which is how you convert an RPS target into pool sizes. It also runs backward as a sanity check: a pod with 200 worker threads and 200 ms mean latency *cannot* exceed ~1,000 RPS no matter what the CPU graph says.
+- **Little's Law**: `concurrency = arrival rate × time in system` (L = λW). At 1,500 RPS with 200 ms average latency, ~300 requests are in flight at any instant — that number must fit inside the fleet's total thread/connection budget, which is how you convert an RPS target into pool sizes. It also runs backward as a sanity check: a pod with 200 worker threads and 200 ms mean latency *cannot* exceed ~1,000 RPS no matter what the CPU graph says, because 200 threads ÷ 0.2 s is the arithmetic ceiling. Use that number as an upper bound only — `W` is not a constant. As you approach the ceiling, queueing inflates time-in-system, so the achievable RPS at an acceptable p99 is always strictly below the Little's Law figure.
 - **The utilization-latency curve is nonlinear**: as utilization approaches 100%, queueing delay grows without bound (in the M/M/1 idealization, wait time scales with ρ/(1−ρ) — at 50% utilization the queue term is 1×, at 90% it is 9×). This is the mathematical reason "run everything at 90%" fails: the last fraction of utilization is purchased with your tail latency, which is why utilization targets sit at 50–70%.
 
 ### Forecast the growth
@@ -78,7 +78,7 @@ The operational ritual that keeps this alive is a lightweight **capacity review*
 
 ### The economics: overprovisioning vs outage
 
-Overprovisioning has a precise, boring cost shape: **idle capacity × unit price × time** — linear, predictable, budgetable. Outages have a lumpy, fat-tailed cost: lost transactions during the window, support and engineering time, customer churn, and in fintech, regulatory exposure and partner-trust damage. The comparison that settles most arguments: the premium for running a payment fleet at 50% instead of 80% utilization is often a few node-hours a day — typically far less than the cost of a single peak-hour payment outage. The honest statement of the trade: you are buying *insurance* whose premium is the idle-capacity bill; choose the deductible (utilization target) per tier — aggressive on stateless easily-scaled tiers, conservative on anything stateful or revenue-bearing.
+Overprovisioning has a precise, boring cost shape: **idle capacity × unit price × time** — linear, predictable, budgetable. Outages have a lumpy, fat-tailed cost: lost transactions during the window, support and engineering time, customer churn, and in fintech, regulatory exposure and partner-trust damage. Do the comparison with the real multiplier rather than a vibe: dropping from an 80% to a 50% utilization target means `0.8 / 0.5` = **1.6× the fleet**, a 60% larger compute bill for that tier. On a handful of pods that is a few node-hours a day and obviously worth it against one peak-hour payment outage; on a large fleet it is a line item someone will defend in a budget review. Either way the number is knowable in advance, which is the whole argument — one side of this trade can be priced and the other cannot. The honest statement of the trade: you are buying *insurance* whose premium is the idle-capacity bill; choose the deductible (utilization target) per tier — aggressive on stateless easily-scaled tiers, conservative on anything stateful or revenue-bearing.
 
 ### Worked example: sizing a fintech flow for a 10× festival-day spike
 

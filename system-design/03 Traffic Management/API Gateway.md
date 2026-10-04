@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: What an API gateway does at the edge — authn, rate limiting, routing, transformation — how it differs from a load balancer and reverse proxy, and why business logic must not live there.
 related: ["[[Load Balancers]]", "[[Rate Limiting]]", "[[Reverse Proxy vs Forward Proxy]]", "[[How JWT Works]]"]
 ---
@@ -77,7 +77,7 @@ The scoping model is the power feature: "rate-limit everyone to 1000/min, except
 
 ### The "smart pipes" risk
 
-The microservices principle is **smart endpoints, dumb pipes** (Martin Fowler's phrasing): intelligence belongs in services; the network fabric between them should be dumb. Gateways invite violation because they're *such* a convenient place to add logic — and each addition seems small:
+The microservices principle is **smart endpoints, dumb pipes** (James Lewis and Martin Fowler's phrasing, 2014): intelligence belongs in services; the network fabric between them should be dumb. Gateways invite violation because they're *such* a convenient place to add logic — and each addition seems small:
 
 - "Just combine these two backend responses for mobile" → the gateway now contains an orchestration workflow.
 - "Just reject orders over ₹50,000 here" → a *business rule* now lives in gateway config, invisible to the service's tests, versioned separately from the domain code, owned by whoever owns the gateway.

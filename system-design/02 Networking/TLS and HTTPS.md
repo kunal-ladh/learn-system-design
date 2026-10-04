@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: What TLS guarantees, what the handshake costs, how TLS 1.3 and session resumption cut that cost, and why where you terminate TLS is an architecture decision.
 related: ["[[API Security Essentials]]", "[[API Gateway]]", "[[TCP vs UDP]]", "[[Service Mesh]]"]
 ---
@@ -43,7 +43,7 @@ Mapped to concrete attacks:
 **Handshake at a concept level.** Before data flows, the two sides must (1) agree on cryptographic algorithms, (2) authenticate the server, and (3) derive shared symmetric keys. The expensive asymmetric cryptography is used only for this setup; the bulk traffic uses fast symmetric encryption (AES-GCM or ChaCha20-Poly1305).
 
 - **TLS 1.2**: ClientHello → ServerHello + certificate → key exchange → finished. **Two round trips** on top of the TCP handshake before application data — ~3 RTTs total to the first HTTP byte on a cold connection.
-- **TLS 1.3**: the client *guesses* the key-exchange group and sends its key share in the first flight; the server replies with its share, certificate, and is ready. **One round trip.** 1.3 also removed every legacy footgun — static RSA key exchange, weak ciphers, renegotiation — so all 1.3 connections have **forward secrecy** (a stolen server key cannot decrypt past recorded traffic) by construction.
+- **TLS 1.3**: the client *guesses* the key-exchange group and sends its key share in the first flight; the server replies with its share, certificate, and is ready. **One round trip** — unless the client guessed the group wrong, in which case a HelloRetryRequest costs one extra RTT. 1.3 also removed every legacy footgun — static RSA key exchange, weak ciphers, renegotiation — so a full 1.3 handshake always uses ephemeral Diffie-Hellman and is therefore **forward-secret**: a stolen server key cannot decrypt past recorded traffic.
 
 ```mermaid
 sequenceDiagram
@@ -56,15 +56,15 @@ sequenceDiagram
     Note over C,S: one RTT to application data
 ```
 
-**Session resumption.** Handshakes cost RTTs and CPU; resumption amortizes them across connections. The server hands the client an encrypted **session ticket**; on the next connection the client presents it and both sides resume from cached key material — skipping certificate exchange and (in 1.3) optionally sending **0-RTT early data**: the first request rides in the very first packet. 0-RTT's sharp edge: early data can be **replayed** by an attacker who recorded it, so it is safe only for idempotent requests — never for a payment POST. (See [[Idempotency]].)
+**Session resumption.** Handshakes cost RTTs and CPU; resumption amortizes them across connections. The server hands the client an encrypted **session ticket**; on the next connection the client presents it and both sides resume from cached key material — skipping the certificate exchange and the expensive asymmetric work. Be precise about what that buys: a resumed TLS 1.3 handshake is **still one round trip**; the saving is CPU and bytes, not RTTs. Only **0-RTT early data**, which 1.3 optionally allows on top of resumption, actually deletes the round trip — the first request rides in the client's very first flight. 0-RTT's sharp edge: early data can be **replayed** by an attacker who recorded it, so it is safe only for idempotent requests — never for a payment POST. (See [[Idempotency]].)
 
-**Certificate chain.** Your server presents a chain: *leaf* certificate (your hostname, your public key) ← signed by an *intermediate* CA ← signed by a *root* CA that ships in OS/browser trust stores. The verifier walks the chain to a trusted root, checks hostnames, validity dates, and revocation. Operationally this means: certificates **expire** (public leaf-cert maximum lifetimes have been ratcheting down — ~398 days since 2020, with an industry-approved schedule shortening this further through the late 2020s; Let's Encrypt/ACME normalized ~90-day automated renewal), a forgotten renewal is a total outage, and serving an incomplete chain (missing intermediate) breaks some clients but not others — a classic "works on my machine" bug.
+**Certificate chain.** Your server presents a chain: *leaf* certificate (your hostname, your public key) ← signed by an *intermediate* CA ← signed by a *root* CA that ships in OS/browser trust stores. The verifier walks the chain to a trusted root, checks hostnames, validity dates, and revocation. Operationally this means: certificates **expire**, and the window keeps shrinking (public leaf certs were capped at 398 days from 2020; a 2025 CA/Browser Forum ballot steps that down to 200 days for certificates issued from March 2026, 100 days from 2027, and 47 days from 2029 — at which point unautomated renewal stops being viable at all. Let's Encrypt/ACME normalized ~90-day certificates years earlier), a forgotten renewal is a total outage, and serving an incomplete chain (missing intermediate) breaks some clients but not others — a classic "works on my machine" bug.
 
 Four handshake-adjacent mechanisms you'll meet in real configs:
 
 - **SNI (Server Name Indication)** — the client states the hostname it wants *in the ClientHello*, so one IP can serve certificates for many domains (all shared hosting and CDNs depend on this). It's also the main plaintext metadata leak in TLS; Encrypted Client Hello (ECH) is the in-progress fix, deployed partially as of ~2024.
 - **ALPN (Application-Layer Protocol Negotiation)** — the handshake also negotiates the protocol that will run *inside* the tunnel (h1.1 vs h2); it's how browsers end up on HTTP/2 without an extra round trip ([[HTTP 1.1 vs HTTP 2 vs HTTP 3]]).
-- **OCSP stapling** — revocation checking without the client calling the CA per handshake: the server periodically fetches a signed "this cert is still good" statement and staples it into the handshake. Plain OCSP (client calls CA) is a privacy leak and an availability coupling; stapling removes both.
+- **OCSP stapling** — revocation checking without the client calling the CA per handshake: the server periodically fetches a signed "this cert is still good" statement and staples it into the handshake. Plain OCSP (client calls CA) is a privacy leak and an availability coupling; stapling removes both. Era note: OCSP itself is receding — the CA/Browser Forum made it optional and Let's Encrypt retired its OCSP responders in 2025, pushing revocation back toward CRLs — so treat OCSP as something you may still meet rather than the direction of travel.
 - **Certificate pinning** — a client hard-codes which key/cert it will accept, defeating a compromised or coerced CA. Powerful and dangerous: pin the wrong thing or rotate without updating clients and you've bricked your own mobile app's connectivity until a store release ships. Modern guidance: pin only with automated rotation discipline, prefer pinning to an intermediate or your own CA, and always ship a backup pin.
 
 **mTLS (mutual TLS)** — both sides present certificates, so the *server also authenticates the client*. This turns TLS into service-to-service identity: service A can only call service B if A holds a certificate issued by the internal CA. The price is running a certificate infrastructure — issuance, short-lived rotation, revocation — for every workload, which is precisely the job a [[Service Mesh]] (Istio/Linkerd with SPIFFE-style identities) automates. Banks and partner APIs also mandate mTLS at the edge for machine clients.
@@ -85,7 +85,7 @@ The trade is **operational convenience and L7 intelligence vs the size of your p
 
 | You gain | You pay |
 |---|---|
-| Confidentiality + integrity + server identity | handshake RTTs (1 in 1.3, ~0 resumed) and CPU (small with AES-NI; real at extreme connection-churn scale) |
+| Confidentiality + integrity + server identity | handshake RTTs — 1 in 1.3, still 1 when resumed, 0 only with 0-RTT early data and its replay risk — and CPU (small with AES-NI; real at extreme connection-churn scale) |
 | Forward secrecy (1.3) | certificate lifecycle operations — expiry is an outage class of its own |
 | mTLS: cryptographic service identity | an internal CA and rotation machinery for every workload |
 | Edge termination: central control point | a large trusted plaintext zone behind it |
@@ -101,7 +101,7 @@ The trade is **operational convenience and L7 intelligence vs the size of your p
 
 A certificate-operations checklist that prevents most TLS incidents:
 
-- Automate issuance and renewal (ACME/ATM-style), and **alert on renewal failure**, not just on imminent expiry — silent automation death is the common path to an expired cert.
+- Automate issuance and renewal (ACME), and **alert on renewal failure**, not just on imminent expiry — silent automation death is the common path to an expired cert.
 - Monitor expiry *externally* for every public and partner-facing endpoint, including ones "nobody changed" — inventory drift is how the forgotten admin subdomain takes down an integration.
 - Keep a dated calendar for certs you can't automate (partner-pinned mTLS client certs, HSM-backed keys) with owners named.
 - Test the *chain* from a strict client (Java, OpenSSL s_client) after every rotation, not just from a browser.
@@ -124,7 +124,7 @@ A certificate-operations checklist that prevents most TLS incidents:
 
 ## Interview angle
 
-The 60-second version: *"TLS gives three things: confidentiality, integrity, and authentication of the server via a certificate chain to a trusted CA. The handshake negotiates ciphers and derives symmetric keys — two RTTs in 1.2, one in 1.3, near-zero with session resumption, and 1.3 made forward secrecy mandatory. mTLS adds client certificates, turning TLS into service-to-service identity. The design decision is termination: at the edge you get central certs and L7 routing but a plaintext internal zone; end-to-end you get confidentiality but a blind edge; most real systems terminate at the edge and re-encrypt inward, and a service mesh automates the mTLS version of that."*
+The 60-second version: *"TLS gives three things: confidentiality, integrity, and authentication of the server via a certificate chain to a trusted CA. The handshake negotiates ciphers and derives symmetric keys — two RTTs in 1.2, one in 1.3. Session resumption skips the certificate and the asymmetric crypto but is still a one-RTT handshake — only 0-RTT early data puts the request in the first flight, and that data is replayable. 1.3 also dropped static RSA key exchange, so every full handshake is forward-secret. mTLS adds client certificates, turning TLS into service-to-service identity. The design decision is termination: at the edge you get central certs and L7 routing but a plaintext internal zone; end-to-end you get confidentiality but a blind edge; most real systems terminate at the edge and re-encrypt inward, and a service mesh automates the mTLS version of that."*
 
 Classic follow-ups: *What does TLS NOT protect against?* (Compromised endpoints, metadata/timing, authorization.) *Why is 0-RTT dangerous?* (Replay.) *How do certificates actually establish trust?* (Chain to a pre-installed root; signatures bind hostname→key.) *Why might a bank require mTLS from partners?* (Machine identity that can't be phished or leaked as easily as an API key — and when it is leaked, it expires.)
 
@@ -143,7 +143,7 @@ Classic follow-ups: *What does TLS NOT protect against?* (Compromised endpoints,
 **Q3 (scenario): Your mobile app's p99 connection setup to the API is slow from high-latency networks. Which TLS levers reduce round trips, and what's the risk of the most aggressive one?**
 
 > [!question]- Q3 answer
-> Ensure TLS 1.3 end-to-end at the edge (1 RTT instead of 2); enable session resumption so repeat connections skip the full handshake; keep connections alive to avoid handshakes altogether (see [[HTTP 1.1 vs HTTP 2 vs HTTP 3]]); and optionally 0-RTT early data for a true first-flight request. The aggressive one is 0-RTT: early data is replayable, so it must carry only idempotent requests — a replayed GET is noise, a replayed transfer initiation is an incident.
+> Ensure TLS 1.3 end-to-end at the edge (1 RTT instead of 2); enable session resumption so repeat connections skip the certificate exchange and the asymmetric crypto — still one RTT, but far cheaper; keep connections alive to avoid handshakes altogether (see [[HTTP 1.1 vs HTTP 2 vs HTTP 3]]); and optionally 0-RTT early data for a true first-flight request. The aggressive one is 0-RTT: early data is replayable, so it must carry only idempotent requests — a replayed GET is noise, a replayed transfer initiation is an incident.
 
 ## Sources
 

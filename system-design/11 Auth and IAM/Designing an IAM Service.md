@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How to design a central identity and access management service from scratch — token issuance, signing-key custody and JWKS rotation, authn/authz separation, gateway vs per-service validation, session management, regulator-grade audit logging, and surviving your own outage.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[API Gateway]]"]
 ---
@@ -99,7 +99,7 @@ Every security-relevant event — login success/failure, MFA challenge/result, t
 Soberly: if verification is local (JWT + cached JWKS), the IAM is *not* in the per-request path — that's the design's whole point. It is in the **login path**, the **refresh path**, and the **JWKS-fetch path**. So:
 
 - **Cache JWKS aggressively** in every verifier: hours-long TTL, refresh in the background, and crucially **serve stale on fetch failure** — public keys don't become dangerous when stale, only when *missing*. A verifier that hard-fails on JWKS fetch converts an IAM blip into a fleet-wide 401 storm.
-- **When IAM is down**: existing access tokens keep working everywhere (local verification). No new logins; refreshes fail, so users log out progressively over one access-token TTL ([[Refresh Tokens and Token Rotation]] traces this). Your access TTL is therefore also your *outage grace window* — a 15-minute TTL means a 10-minute IAM outage is nearly invisible.
+- **When IAM is down**: existing access tokens keep working everywhere (local verification). No new logins; refreshes fail, so users log out progressively over one access-token TTL ([[Refresh Tokens and Token Rotation]] traces this). Your access TTL therefore bounds the *worst* case rather than buying a grace period: tokens are minted at staggered times, so a 10-minute outage under a 15-minute TTL logs out roughly two-thirds of active users as their tokens expire one by one — only the ones minted just before it started ride it out untouched.
 - The IAM itself needs boring excellence: multiple replicas (this is the one service where the 1-replica cost decision is indefensible), HA datastore, [[Circuit Breakers]] and [[Timeouts Retries and Exponential Backoff|sane timeouts]] on its dependencies (SMS/email OTP providers are the classic slow dependency that takes login down), and [[Load Shedding and Graceful Degradation|load shedding]] on login endpoints under credential-stuffing storms.
 
 ### Multi-tenant claims design

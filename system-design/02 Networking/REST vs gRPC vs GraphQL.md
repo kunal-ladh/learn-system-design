@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: Three API contract styles — resources, procedure calls, and client-composed queries — their payload and caching economics, and honest guidance on when each wins.
 related: ["[[API Design and Versioning]]", "[[Communication Patterns Between Services]]", "[[HTTP 1.1 vs HTTP 2 vs HTTP 3]]", "[[N+1 Queries and ORM Pitfalls]]"]
 ---
@@ -33,7 +33,7 @@ What disciplined REST actually requires (the part "just JSON over HTTP" skips):
 - **JSON vs protobuf cost**: JSON is text — field names repeated in every message, numbers as digit strings, parsing that walks bytes building maps. Protobuf is binary — fields as numeric tags, varint-encoded numbers, schema known in advance, so messages are typically severalfold smaller and materially cheaper to encode/decode (exact ratios depend on payload shape; the win is biggest on number-heavy, repetitive data). At one call this is noise; at thousands of RPS across a service mesh it is real CPU and bandwidth money.
 - **Contract-first and typed**: the `.proto` *is* the API; mismatches fail at compile time, not in production. Evolution has rules (field numbers are forever, add optional fields, never reuse tags) — see [[Event Schema Evolution]] for the same discipline applied to messages.
 - **Streaming**: four call shapes — unary, **server-streaming** (one request, a stream of responses: live updates, large result sets), **client-streaming** (uploads, telemetry), **bidirectional streaming** (chat-like, realtime sync). This is a genuine capability gap over plain REST, which would need [[WebSockets Server-Sent Events and Long Polling|SSE/WebSockets]] bolted on.
-- **Deadlines and status codes built in**: every gRPC call carries an optional **deadline** that propagates to downstream gRPC hops automatically — the timeout-budget discipline of [[Network Partitions and Timeouts]] as a first-class feature — plus a typed status-code vocabulary (`DEADLINE_EXCEEDED`, `UNAVAILABLE`, `ALREADY_EXISTS`) that makes retry policy decidable per code instead of per regex-on-error-message.
+- **Deadlines and status codes built in**: every gRPC call carries an optional **deadline**, sent on the wire as `grpc-timeout`, which flows on to downstream gRPC hops as long as each server passes its request context along (near-automatic in Go and Java, easy to silently drop elsewhere) — the timeout-budget discipline of [[Network Partitions and Timeouts]] as a first-class feature — plus a typed status-code vocabulary (`DEADLINE_EXCEEDED`, `UNAVAILABLE`, `ALREADY_EXISTS`) that makes retry policy decidable per code instead of per regex-on-error-message.
 - Costs: browsers can't speak native gRPC (needs gRPC-Web + proxy), payloads aren't human-readable, L7 infrastructure must understand h2 trailers, and HTTP caching machinery doesn't apply.
 
 **GraphQL** — Facebook (2012 internal, 2015 public). The server exposes one endpoint and a **typed schema**; the client sends a **query** naming exactly the fields it wants, arbitrarily nested; the server returns exactly that shape. Built for the problem of *many clients with different data needs* hitting the same backend: the mobile app wants 5 fields, the web dashboard wants 40, and without GraphQL you either **over-fetch** (one fat endpoint) or **under-fetch** (N calls to compose a screen) or sprout bespoke backend-for-frontend endpoints endlessly.
@@ -41,13 +41,13 @@ What disciplined REST actually requires (the part "just JSON over HTTP" skips):
 - **The N+1 problem**: GraphQL resolvers execute per-field. A query for 100 posts and each post's author naively triggers 1 query for posts + 100 for authors — the server-side twin of [[N+1 Queries and ORM Pitfalls]]. The standard fix is **DataLoader**-style batching (collect the 100 author IDs within one tick, issue one `WHERE id IN (...)`), which works but is *mandatory operational knowledge*, not an optional optimization.
 - **Caching difficulty**: queries go by **POST to a single endpoint**, so URL-keyed HTTP caching — the entire CDN/proxy ecosystem REST gets free — doesn't apply. Caching moves into the GraphQL layer: normalized client caches (Apollo), persisted queries (whitelisted query hashes, GET-able), per-resolver server caches. All workable, none free.
 - Other sharp edges: clients can compose pathologically expensive queries (you need depth limits, complexity budgets, timeouts — an availability concern, not a nicety), and "one endpoint" makes per-endpoint rate limiting and authz coarser by default.
-- **At organization scale**: multiple teams contributing to one schema leads to **federation** (Apollo Federation-style) — each service owns a subgraph, a gateway composes them into one graph. Powerful, and a whole operational platform of its own; Netflix and Shopify have written candidly about the investment it takes. Don't adopt federation ambitions with a two-team backend.
+- **At organization scale**: multiple teams contributing to one schema leads to **federation** (Apollo Federation-style) — each service owns a subgraph, a gateway composes them into one graph. Powerful, and a whole operational platform of its own; Netflix has written candidly about what running a federated graph costs, and Shopify about operating one large public GraphQL API. Don't adopt federation ambitions with a two-team backend.
 
 How the three handle the same everyday concerns:
 
 | Concern | REST | gRPC | GraphQL |
 |---|---|---|---|
-| Errors | status codes + error body | typed status codes per call | 200 + `errors` array in body (partial success possible — clients must check both) |
+| Errors | status codes + error body | typed status codes per call | by convention 200 + an `errors` array in the body (partial success possible — clients must check both) |
 | Timeouts/deadlines | per-client config, manual propagation | deadline propagation built in | per-request config; resolver-level budgets manual |
 | Pagination | query params, `Link` headers | request fields + repeated responses or streaming | cursor connections (Relay spec) |
 | Auth granularity | per endpoint/verb — gateway-friendly | per method via interceptors | per field via resolvers — powerful, easy to get wrong |
@@ -144,7 +144,7 @@ Classic follow-ups: *How does GraphQL get N+1 and how do you fix it?* (Per-field
 
 - Roy Fielding, *Architectural Styles and the Design of Network-based Software Architectures* (2000), Ch. 5 — REST
 - gRPC documentation (grpc.io) — concepts, streaming modes, "gRPC on HTTP/2"; Protocol Buffers encoding docs for the payload-cost claims
-- GraphQL specification (graphql.org) and Apollo/graphql.org docs on DataLoader-style batching and persisted queries
+- GraphQL specification and the GraphQL-over-HTTP spec (graphql.org); Apollo docs on DataLoader-style batching and persisted queries
 - Netflix and Shopify engineering blog posts on running GraphQL at scale (query cost limiting, federation experience)
 - RFC 9457 — *Problem Details for HTTP APIs* (2023) — the standardized REST error-body shape referenced above
 - *API Design Patterns* (JJ Geewax, Manning) — resource modeling and contract evolution

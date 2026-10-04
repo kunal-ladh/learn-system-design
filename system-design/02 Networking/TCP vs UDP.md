@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: What TCP's reliability actually costs — handshakes, ordering, head-of-line blocking — and the cases where UDP's "unreliability" is the right trade.
 related: ["[[HTTP 1.1 vs HTTP 2 vs HTTP 3]]", "[[How DNS Works]]", "[[Latency vs Throughput vs Bandwidth]]"]
 ---
@@ -43,7 +43,7 @@ That is **one full round trip before the first byte of data** — the reason con
 | | Protects | Mechanism (concept) |
 |---|---|---|
 | **Flow control** | the *receiver* from being overwhelmed | receiver advertises a window: "I have buffer for N more bytes"; sender never exceeds it |
-| **Congestion control** | the *network* from being overwhelmed | sender probes capacity: start slow, grow the sending window until loss/delay signals congestion, then back off (slow start, AIMD; modern variants like CUBIC and BBR refine the probing) |
+| **Congestion control** | the *network* from being overwhelmed | sender probes capacity: start slow, grow the sending window until loss/delay signals congestion, then back off (slow start, AIMD). Know the two names you will actually meet: **CUBIC**, the Linux default since kernel 2.6.19 in 2006, which grows the window on a cubic curve after loss; and **BBR** (Google, 2016), which models bottleneck bandwidth and RTT instead of treating loss as the only congestion signal |
 
 The effective send rate is bounded by the smaller of the two windows. Congestion control is why a single TCP connection takes time to reach full throughput on a fat pipe (slow start), and why loss doesn't collapse the internet.
 
@@ -53,11 +53,11 @@ The effective send rate is bounded by the smaller of the two windows. Congestion
 - **SYN floods**: because the server allocates state on receiving a SYN (before the handshake completes), an attacker can send SYNs from spoofed addresses and fill the server's half-open connection table. **SYN cookies** — encoding the state into the sequence number itself so nothing is stored until the final ACK — are the standard kernel defense.
 - **Half-dead connections**: if a peer vanishes silently (power loss, NAT entry expired), TCP notices only on the next *write* (retransmissions fail) — a reader can block forever. This is why application-level heartbeats exist even over "reliable" TCP; see [[WebSockets Server-Sent Events and Long Polling]].
 
-Two small latency gotchas worth recognizing by name: **Nagle's algorithm** (batch tiny writes until the previous packet is ACKed) interacting with **delayed ACKs** (receiver waits up to ~40ms to ACK) can add ~40ms stalls to chatty request/response protocols — the reason latency-sensitive servers set `TCP_NODELAY`, and most modern RPC stacks and Redis clients do so by default.
+Two small latency gotchas worth recognizing by name: **Nagle's algorithm** (batch tiny writes until the previous packet is ACKed) interacting with **delayed ACKs** (the receiver sits on the ACK hoping to piggyback it — about 40ms on Linux, and RFC 1122 permits up to 500ms) can add ~40ms stalls to chatty request/response protocols — the reason latency-sensitive servers set `TCP_NODELAY`, and most modern RPC stacks and Redis clients do so by default.
 
 **Head-of-line (HOL) blocking** — the cost of ordering. If segment N is lost, segments N+1…N+k may already be sitting in the receiver's kernel buffer, but the application sees *nothing* until N is retransmitted and arrives. One lost packet stalls the entire stream behind it. This is a per-connection, kernel-level stall — no userspace protocol trick can bypass it, which is why HTTP/2's multiplexing over one TCP connection backfired on lossy links and why HTTP/3 left TCP entirely (see [[HTTP 1.1 vs HTTP 2 vs HTTP 3]]).
 
-**UDP (User Datagram Protocol)** adds almost nothing to IP: source/destination ports, length, and an optional checksum. No connection, no handshake, no ordering, no retransmission, no flow or congestion control. Each **datagram** is independent and either arrives whole or not at all. That absence is the feature:
+**UDP (User Datagram Protocol)** adds almost nothing to IP: source/destination ports, length, and a checksum — optional over IPv4, mandatory over IPv6. No connection, no handshake, no ordering, no retransmission, no flow or congestion control. Each **datagram** is independent and either arrives whole or not at all. That absence is the feature:
 
 - **No handshake** → first byte of data in the first packet. DNS resolves in one round trip because of this ([[How DNS Works]]).
 - **No ordering** → no HOL blocking; a lost packet affects only itself.
@@ -147,6 +147,6 @@ Classic follow-ups: *Why does HTTP/3 use UDP — isn't that unreliable?* (QUIC a
 
 - RFC 9293 — *Transmission Control Protocol* (2022 roll-up of RFC 793 and errata)
 - RFC 768 — *User Datagram Protocol* (1980)
-- RFC 5681 — *TCP Congestion Control*; BBR: Cardwell et al., "BBR: Congestion-Based Congestion Control," ACM Queue (2016)
+- RFC 5681 — *TCP Congestion Control* (2009); RFC 9438 — *CUBIC for Fast and Long-Distance Networks* (2023, documenting the Linux default); BBR: Cardwell et al., "BBR: Congestion-Based Congestion Control," ACM Queue (2016)
 - *Computer Networking: A Top-Down Approach* (Kurose & Ross), transport layer chapter
 - RFC 9000 — *QUIC: A UDP-Based Multiplexed and Secure Transport* (2021), for the "rebuild on UDP" rationale

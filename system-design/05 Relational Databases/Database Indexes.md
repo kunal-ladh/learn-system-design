@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How B+-tree indexes work, how to design composite and covering indexes, why every index taxes writes, and when the optimizer will ignore your index anyway.
 related: ["[[How Databases Store Data]]", "[[B-Tree vs LSM-Tree]]", "[[Secondary Indexes on Sharded Data]]"]
 ---
@@ -68,7 +68,7 @@ The habit: for the handful of truly hot queries, look at the `SELECT` list, not 
 
 An index is a redundant sorted copy that must be maintained *synchronously, inside the writing transaction*:
 
-- Every `INSERT` and `DELETE` touches **every index** on the table.
+- Every `INSERT` writes an entry into **every index** on the table. `DELETE` is engine-specific: InnoDB delete-marks the matching record in each index straight away, while PostgreSQL only marks the heap tuple dead and leaves the index entries for vacuum to reclaim later — cheap at the time, paid for afterwards.
 - An `UPDATE` touches every index whose columns changed — and in PostgreSQL, a non-HOT update (any update where an indexed column changed, or the page is full) inserts a new entry into *all* indexes, changed or not.
 - More indexes → more pages dirtied per write → more WAL, more buffer-pool pressure, slower writes, bigger storage, longer vacuum/maintenance.
 
@@ -81,7 +81,7 @@ The optimizer compares estimated costs; your index loses when:
 - **Low selectivity** — predicted to match a large fraction of the table, so a sequential scan is genuinely cheaper. The optimizer is usually right about this.
 - **A function or expression wraps the column**: `WHERE lower(email) = ?` or `WHERE DATE(created_at) = ?` cannot use a plain index on the column. Fix: index the expression (Postgres expression index, MySQL functional index) or rewrite the predicate as a range.
 - **Type mismatch / implicit cast**: comparing a `VARCHAR` column to a number (or mismatched collations in joins) forces a cast on the column side — same effect as a function.
-- **Leading wildcard**: `LIKE '%gmail.com'` can't seek a B+-tree (no sorted prefix to descend by). `LIKE 'abc%'` can.
+- **Leading wildcard**: `LIKE '%gmail.com'` can't seek a B+-tree (no sorted prefix to descend by). `LIKE 'abc%'` can — though in PostgreSQL only when the database runs the `C` locale or the index was built with `text_pattern_ops`/`varchar_pattern_ops`, because any other collation's sort order is not byte-prefix order.
 - **Leftmost prefix violated** — filtering only on a non-leading column of a composite index.
 - **Stale statistics** after a bulk load or mass delete — the optimizer is costing a table that no longer exists. `ANALYZE` it.
 - **Tiny tables** — a one-page table is cheapest to scan; that's fine.

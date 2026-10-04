@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How a hostname becomes an IP address — recursive resolution, record types, TTL trade-offs, and why DNS is also a load balancing and failover tool.
 related: ["[[Anatomy of a Web Request]]", "[[Load Balancers]]", "[[CDN]]", "[[Failover]]"]
 ---
@@ -15,7 +15,7 @@ DNS (**Domain Name System**) is the distributed, hierarchical directory that tra
 
 ## The problem that created it
 
-In the early ARPANET, every machine kept a local file (`HOSTS.TXT`, maintained at Stanford) mapping every known hostname to an address. Each site periodically downloaded the whole file. As the network grew this broke in every dimension: the file grew without bound, updates took days to propagate, name collisions had to be arbitrated by one organization, and a single FTP server was the distribution bottleneck. DNS (1983, RFC 882/883, later RFC 1034/1035) replaced the flat file with a **delegated hierarchy**: the namespace is a tree (`.` → `com.` → `goniyo.com.`), and each zone's owner runs (or rents) the authoritative servers for their own subtree. Nobody holds the whole map; everybody can be found.
+In the early ARPANET, every machine kept a local file (`HOSTS.TXT`, maintained by the Network Information Center at SRI) mapping every known hostname to an address. Each site periodically downloaded the whole file. As the network grew this broke in every dimension: the file grew without bound, updates took days to propagate, name collisions had to be arbitrated by one organization, and a single FTP server was the distribution bottleneck. DNS (1983, RFC 882/883, later RFC 1034/1035) replaced the flat file with a **delegated hierarchy**: the namespace is a tree (`.` → `com.` → `goniyo.com.`), and each zone's owner runs (or rents) the authoritative servers for their own subtree. Nobody holds the whole map; everybody can be found.
 
 ## What it solves
 
@@ -29,7 +29,7 @@ In the early ARPANET, every machine kept a local file (`HOSTS.TXT`, maintained a
 Two roles matter:
 
 - A **recursive resolver** (e.g. your ISP's resolver, `8.8.8.8`, or the VPC resolver in AWS) does the full lookup on the client's behalf and caches results.
-- **Authoritative servers** hold the actual records for a zone and answer only for what they own: the 13 root server *identities* (hundreds of anycast instances), the TLD servers (`.com`), and the zone's own name servers.
+- **Authoritative servers** hold the actual records for a zone and answer only for what they own: the 13 root server *identities* (one identity is many machines — well over a thousand anycast instances worldwide by the mid-2020s), the TLD servers (`.com`), and the zone's own name servers.
 
 **Recursive vs iterative resolution**: the client-to-resolver query is *recursive* ("get me the final answer"); the resolver-to-authoritative queries are *iterative* ("tell me the answer or who to ask next"). Each iterative response is a **referral** down the tree until an authoritative answer arrives.
 
@@ -70,7 +70,7 @@ Two more pieces of the modern picture: lookups are classically plain UDP on port
 |---|---|---|
 | **A** | name → IPv4 address | the workhorse |
 | **AAAA** | name → IPv6 address | "quad-A" |
-| **CNAME** | name → another name | alias; the resolver then resolves the target. Cannot coexist with other records at the same name, so not allowed at a zone apex (why Route 53 invented ALIAS records) |
+| **CNAME** | name → another name | alias; the resolver then resolves the target. Cannot coexist with other records at the same name, so not allowed at a zone apex (why Route 53 offers ALIAS records, and other providers ANAME or CNAME flattening) |
 | **NS** | zone → its authoritative name servers | the delegation glue of the hierarchy |
 | **TXT** | name → arbitrary text | domain-ownership proofs (ACME/cert issuance), SPF/DKIM email policy |
 | MX, SRV, CAA | mail routing, service discovery, cert-issuance policy | worth recognizing |
@@ -84,7 +84,7 @@ Two more pieces of the modern picture: lookups are classically plain UDP on port
 
 **DNS as load balancer, failover, and geo-router.** Because the authoritative server composes each response, managed DNS (AWS **Route 53** is the canonical example) offers routing policies:
 
-- **Simple / multivalue** — return several A records; clients pick one (crude round-robin spread).
+- **Simple and multivalue answer** — return several A records; clients pick one (crude round-robin spread). The two are not the same policy: simple routing just returns all values in random order, while *multivalue answer* returns up to eight records per response and omits the ones failing their health checks.
 - **Weighted** — e.g. 90/10 split across targets: canary releases, gradual migrations.
 - **Latency-based** — answer with the region historically lowest-latency for the asking resolver.
 - **Geolocation / geoproximity** — route by where the query comes from: data-residency rules, localized content.

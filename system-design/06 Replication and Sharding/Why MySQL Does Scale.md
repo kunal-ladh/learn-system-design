@@ -4,14 +4,14 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-03
 summary: Kills the "MySQL doesn't scale" myth — Facebook, YouTube, and Shopify run some of the largest OLTP footprints on earth on sharded MySQL, with scaling layered on top by infrastructure, not inside the database.
 related: ["[[Sharding]]", "[[How Facebook Scales MySQL]]", "[[Replication]]", "[[Database Scaling Patterns]]"]
 ---
 
 # Why MySQL Does Scale
 
-"MySQL doesn't scale" is one of the most repeated and most wrong lines in backend engineering. Facebook serves billions of users off (tens of) thousands of MySQL servers; YouTube grew through its hyper-growth years on MySQL behind Vitess; Shopify processes Black Friday on sharded MySQL "pods". The claim was never really about MySQL — it was about **any single database machine**, and it stopped being an argument against MySQL the moment teams learned to layer [[Sharding]], [[Replication]], and caching *around* a database instead of demanding the database do everything itself. This note is the myth-killer: what the giants actually run, the pattern they share, and what the myth was originally (half-)true about.
+"MySQL doesn't scale" is one of the most repeated and most wrong lines in backend engineering. Facebook serves billions of users off thousands of MySQL servers; YouTube grew through its hyper-growth years on MySQL behind Vitess; Shopify processes Black Friday on sharded MySQL "pods". The claim was never really about MySQL — it was about **any single database machine**, and it stopped being an argument against MySQL the moment teams learned to layer [[Sharding]], [[Replication]], and caching *around* a database instead of demanding the database do everything itself. This note is the myth-killer: what the giants actually run, the pattern they share, and what the myth was originally (half-)true about.
 
 ## Why this matters
 
@@ -32,7 +32,7 @@ A small, boring, battle-tested core (MySQL/InnoDB) used as a **reliable storage 
 
 ### Facebook: sharded MySQL + TAO
 
-Facebook's social graph lives in MySQL sharded by ID across thousands of instances — but almost no application code talks to MySQL. Reads hit **TAO** (The Associations and Objects — their 2013 paper), a write-through graph-aware cache layered over memcached-style infrastructure that serves the overwhelming majority of reads; MySQL is the durable system of record underneath. Facebook also invested heavily in the brick itself (their own MySQL branch; **MyRocks**, an LSM-based storage engine ([[B-Tree vs LSM-Tree]]) that roughly halved storage vs InnoDB for their workload) and in failover tooling. The division of labour is total: MySQL does per-shard durability and transactions; distribution, caching, and graph semantics are infrastructure. Full story: [[How Facebook Scales MySQL]].
+Facebook's social graph lives in MySQL sharded by ID across thousands of instances — but almost no application code talks to MySQL. Reads hit **TAO** (The Associations and Objects — their 2013 paper), a write-through graph-aware cache layered over memcached-style infrastructure that serves the overwhelming majority of reads; MySQL is the durable system of record underneath. Facebook also invested heavily in the brick itself (their own MySQL branch; **MyRocks**, an LSM-based storage engine ([[B-Tree vs LSM-Tree]]) that roughly halved storage vs compressed InnoDB for their workload) and in failover tooling. The division of labour is total: MySQL does per-shard durability and transactions; distribution, caching, and graph semantics are infrastructure. Full story: [[How Facebook Scales MySQL]].
 
 ### YouTube: Vitess — the sharding middleware that became infrastructure
 

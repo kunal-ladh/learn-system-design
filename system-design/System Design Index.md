@@ -12,12 +12,12 @@ related: ["[[Practice Drills]]"]
 
 # System Design — Master Index
 
-> **Start here.** This is the home MOC for the entire curriculum. Every topic below is a note (or will become one). Unresolved links are topics not yet written — they are the roadmap, not errors.
+> **Start here.** This is the home MOC for the entire curriculum. Every topic below is a written note — all links resolve, so you can click straight through from here.
 
 ## How to use this vault
 
 1. **Go in order the first time.** Modules build on each other: you can't reason about Kafka partitioning (Module 9) without sharding (Module 6), and you can't reason about sharding without replication and latency basics (Modules 1, 6).
-2. **Every component note follows the same skeleton** — *the problem that created it → what it solves → how it works → trade-offs → failure modes → when NOT to use it → in your stack → interview angle*. If you remember nothing else from a note, remember the problem it was invented to solve; everything else re-derives from that.
+2. **Every component note follows the same skeleton** — *the problem that created it → what it solves → how it works → trade-offs → failure modes → when NOT to use it → in your stack → interview angle → check yourself → sources*. If you remember nothing else from a note, remember the problem it was invented to solve; everything else re-derives from that.
 3. **Draw it yourself.** Mermaid diagrams are embedded where precision matters; for intuition, redraw the architecture in Excalidraw from memory after reading. If you can't redraw it, you haven't learned it.
 4. **Link as you learn.** When a note reminds you of something at work (a Niyo incident, a config you've seen), add your own line under *In your stack*. Notes you've annotated are notes you'll remember.
 
@@ -25,6 +25,7 @@ related: ["[[Practice Drills]]"]
 
 - **Work track** (event-driven systems, Redis, auth): Modules 1 → 4 → 8 → 9 → 11 → 12
 - **Interview track** (8–10 weeks): all modules in order, then drill Module 15 problems twice
+- **Night before an interview**: [[Numbers and Formulas]] — the one-page recall sheet
 - **"I have one weekend"**: [[Back of the Envelope Estimation]], [[Latency Numbers Every Engineer Should Know]], [[Replication]], [[Sharding]], [[Caching Strategies]], [[Message Queues vs Event Logs]], [[The System Design Interview Framework]]
 
 ---
@@ -288,7 +289,7 @@ All 16 modules are written. Use the **Read** column to track your own progress �
 | 15. Interview Playbook | 16 | ✅ | ⬜ |
 | 16. AI Infrastructure | 3 | ✅ | ⬜ |
 
-**151 notes.** Practice drills live in [[Practice Drills]].
+**152 notes.** Practice drills live in [[Practice Drills]]; the one-page recall sheet is [[Numbers and Formulas]]. `Vault Dashboard.base` gives filterable tables over every note.
 
 ## Primary sources this curriculum draws from
 

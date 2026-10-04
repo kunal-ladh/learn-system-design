@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How content delivery networks move content next to users — edge PoPs, cache hierarchies, push vs pull, TTL and purging, origin shield, dynamic acceleration, and signed URLs.
 related: ["[[Reverse Proxy vs Forward Proxy]]", "[[Caching Strategies]]", "[[Cache Invalidation]]", "[[How DNS Works]]"]
 ---
@@ -113,7 +113,7 @@ Cached content is served by edge nodes that never consult your application — s
 - **Fintech caution dominates**: responses carrying account data, KYC status, or anything personalized must be explicitly non-cacheable — one wrong `Cache-Control` on an authenticated route is a data-leak incident, not a perf bug. Correctness beats latency, per the house rule.
 - **Signed URLs fit document delivery**: statements or KYC documents in S3, delivered via CloudFront signed URLs with short expiry — the app authorizes (authn + authz + ownership check, as always), the edge enforces, the object never becomes a shareable public link.
 - Cost shape to name in any proposal: CDN spend scales with *egress GB + requests + invalidation paths*, and origin-shield/miss traffic still bills origin egress. Offload ratio is the lever that moves the bill.
-- Your `x-correlation-id` convention starts at the CDN only if injected there; otherwise the ALB/Kong is the first stamping point — relevant when tracing a request that may have been an edge hit (it never reached Kong at all).
+- Your `x-correlation-id` convention starts at the CDN only if injected there; otherwise Kong is the first stamping point, since the ALB injects only its own `X-Amzn-Trace-Id` and will not mint your correlation header for you — relevant when tracing a request that may have been an edge hit (it never reached Kong at all).
 
 ## Interview angle
 

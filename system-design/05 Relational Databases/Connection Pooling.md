@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: Why opening a database connection per request doesn't survive production, how to size a pool (small is usually faster), HikariCP defaults, PgBouncer/ProxySQL, and pool exhaustion as a classic outage shape.
 related: ["[[How Databases Store Data]]", "[[Timeouts Retries and Exponential Backoff]]", "[[Load Shedding and Graceful Degradation]]"]
 ---
@@ -40,7 +40,7 @@ Mechanics in one paragraph: at startup the pool opens its connections. A request
 
 The counterintuitive core: **the correct pool size is small — usually around ten per instance, not hundreds.**
 
-Throughput is bounded by what the database can *actively do in parallel*: roughly its core count while queries are CPU-bound, plus some allowance for time spent waiting on disk or network. HikariCP's "About Pool Sizing" wiki gives the classic starting formula:
+Throughput is bounded by what the database can *actively do in parallel*: roughly its core count while queries are CPU-bound, plus some allowance for time spent waiting on disk or network. HikariCP's "About Pool Sizing" wiki gives the classic starting formula, which it credits to the PostgreSQL wiki's "Number of Database Connections":
 
 ```
 pool_size ≈ cores × 2 + effective_spindle_count
@@ -58,7 +58,7 @@ The fleet-level trap: pool size is **per instance**. 30 microservices × 3 repli
 |---|---|---|
 | `maximumPoolSize` | **10** | total connections — the deliberate, small cap |
 | `minimumIdle` | = max | i.e., a **fixed-size pool** by default (recommended) |
-| `connectionTimeout` | 30 000 ms | max wait to borrow before `SQLTimeoutException` |
+| `connectionTimeout` | 30 000 ms | max wait to borrow before Hikari throws `SQLTransientConnectionException` |
 | `idleTimeout` | 600 000 ms | idle retirement (only when minimumIdle < max) |
 | `maxLifetime` | 1 800 000 ms | retire every connection after 30 min |
 | `leakDetectionThreshold` | 0 (off) | log a warning if a borrow is held longer than this — **turn this on** |
@@ -146,7 +146,7 @@ Classic probes: "why does a small pool outperform a big one?" (fixed parallel ca
 
 ## Sources
 
-- HikariCP wiki: "About Pool Sizing" (the formula, the Oracle Real World Performance demonstration) and "Configuration" (defaults quoted above).
+- HikariCP wiki: "About Pool Sizing" (the formula — credited there to the PostgreSQL wiki's "Number of Database Connections" — and the Oracle Real World Performance demonstration) and "Configuration" (defaults quoted above).
 - PostgreSQL documentation: "Connections and Authentication" (`max_connections`, per-backend process model).
 - PgBouncer documentation: pooling modes and feature matrix; release notes for v1.21 prepared-statement support.
 - ProxySQL documentation: multiplexing and query routing.

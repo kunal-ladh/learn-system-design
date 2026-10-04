@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How systems know which instances exist and which are safe to send traffic to — liveness/readiness/startup probes, shallow vs deep checks, registries, and Kubernetes Services as discovery.
 related: ["[[Load Balancers]]", "[[Graceful Shutdown and Deployment Safety]]", "[[Failure Modes in Distributed Systems]]", "[[How DNS Works]]"]
 ---
@@ -41,11 +41,11 @@ Kubernetes made precise a distinction older systems blurred. Each probe answers 
 |---|---|---|---|
 | **Liveness** | "Is this process beyond saving?" | **Restart the container** | Restart loops that destroy working pods |
 | **Readiness** | "Can it serve traffic *right now*?" | **Remove from Service endpoints** (no restart) | Traffic to broken pods, or zero endpoints |
-| **Startup** | "Has it finished booting yet?" | Keep waiting (holds the other probes off) | Slow-starting apps killed before they ever come up |
+| **Startup** | "Has it finished booting yet?" | While it runs, liveness and readiness are held off entirely — but once its own budget is exhausted the kubelet **kills the container**, restarted per `restartPolicy` | Slow-starting apps killed before they ever come up |
 
-Key semantics: readiness is *continuous*, not just for boot — a pod can become unready mid-life (overloaded, dependency lost) and later recover; it's taken out of rotation and put back, never restarted for it. Liveness should test only "is the process fundamentally stuck" — the classic correct implementation is a trivial handler that proves the event loop/thread pool responds. Startup exists because one timeout can't fit both "boots in 3 minutes once" and "should answer probes in 1 second forever after": the startup probe covers boot, then hands off.
+Key semantics: readiness is *continuous*, not just for boot — a pod can become unready mid-life (overloaded, dependency lost) and later recover; it's taken out of rotation and put back, never restarted for it. Liveness should test only "is the process fundamentally stuck" — the classic correct implementation is a trivial handler that proves the event loop/thread pool responds. Startup exists because one timeout can't fit both "boots in 3 minutes once" and "should answer probes in 1 second forever after": the startup probe covers boot, then hands off. Note what it is *not*: an infinitely patient waiter. While it runs, liveness and readiness never fire — but if it exhausts `periodSeconds × failureThreshold`, the kubelet kills the container exactly as a failed liveness probe would. Sizing that budget above the real worst-case boot is the whole job.
 
-A failure budget is `period × failureThreshold` — a readiness probe every 5 s with threshold 3 means ~15 s worst-case detection. Know *both* numbers; platforms differ on defaults (Kubernetes defaults `failureThreshold` to 3 — but managed platforms can hardcode other values; yours hardcodes 10, see below).
+A failure budget is `period × failureThreshold` — a readiness probe every 5 s with threshold 3 means ~15 s worst-case detection. Know *both* numbers, and know that platforms differ on them. Kubernetes' own defaults are `periodSeconds: 10`, `failureThreshold: 3`, `successThreshold: 1`, and `timeoutSeconds: 1` — that last one catches people, because a probe handler that occasionally takes 1.2 s behind a GC pause is already recording failures. Managed platforms can hardcode their own values; yours hardcodes `failureThreshold: 10`, see below.
 
 ### Shallow vs deep checks — and the cascading-ejection trap
 
@@ -57,7 +57,7 @@ Design rules that survive production:
 
 - **Liveness: always shallow.** Only "is this process stuck beyond recovery." Never a dependency in it.
 - **Readiness: mostly shallow**, plus at most *hard* dependencies without which literally every request fails — and even then prefer serving 503s from a live endpoint over vanishing from the endpoint list (an HTTP 503 is debuggable; connection-refused is a mystery).
-- **Deep health belongs in monitoring**, not in routing: expose a rich `/health/detail` for dashboards and alerts, wire only the shallow one into probes. Envoy's **panic threshold** (route anyway if >50% of hosts look unhealthy) exists precisely because mass ejection is usually a lying signal.
+- **Deep health belongs in monitoring**, not in routing: expose a rich `/health/detail` for dashboards and alerts, wire only the shallow one into probes. Envoy's **panic threshold** (when the *healthy* share of a cluster's hosts falls below the threshold — default 50% — Envoy disregards health status and routes across all hosts anyway) exists precisely because mass ejection is usually a lying signal.
 
 ### Service registries — Eureka and Consul concepts
 
@@ -69,7 +69,7 @@ Outside Kubernetes, discovery is a **registry**: a database of `service name →
 
 ### DNS-based vs client-side discovery
 
-- **DNS-based**: the registry publishes instances as DNS records; callers resolve a name per [[How DNS Works]]. Universal (every language speaks DNS) — but client-side DNS caching means ejected instances keep receiving traffic until caches expire (JVMs historically cached lookups indefinitely unless configured), and plain DNS carries no port/health metadata (SRV records help; few clients use them).
+- **DNS-based**: the registry publishes instances as DNS records; callers resolve a name per [[How DNS Works]]. Universal (every language speaks DNS) — but client-side DNS caching means ejected instances keep receiving traffic until caches expire (the JVM caches successful lookups for `networkaddress.cache.ttl` — historically *forever* when a SecurityManager was installed, 30 s otherwise, and both outlive a fast ejection), and plain DNS carries no port/health metadata (SRV records help; few clients use them).
 - **Server-side discovery**: callers hit a stable VIP/[[Load Balancers|load balancer]] that does discovery for them. Simplest clients, one more hop, LB must stay current.
 - **Client-side discovery**: the caller fetches the instance list and picks an instance itself (Eureka + Ribbon-style, gRPC client-side LB, mesh sidecars). No extra hop, per-caller balancing choice, instant reaction to pushed updates — at the cost of discovery logic in every client (or a sidecar to hold it).
 
@@ -81,14 +81,14 @@ Kubernetes bundles the whole stack into the platform:
 graph TD
     D["Deployment creates pods"] --> P1["Pod A ready"]
     D --> P2["Pod B not ready"]
-    S["Service label selector"] --> EP["EndpointSlice lists ready pod IPs only"]
+    S["Service label selector"] --> EP["EndpointSlice marks only ready pod IPs routable"]
     P1 --> EP
     P2 -. excluded until ready .-> EP
     C["Caller resolves service DNS name"] --> S
     EP --> KP["kube-proxy routes connection to a ready pod"]
 ```
 
-- A **Service** selects pods by label; the control plane maintains **EndpointSlices** = current IPs of pods that are **ready** (readiness probes feed discovery directly — this is the integration's elegance).
+- A **Service** selects pods by label; the control plane maintains **EndpointSlices** listing each matching pod IP alongside a `ready` condition, and only ready endpoints receive traffic (readiness probes feed discovery directly — this is the integration's elegance). Note the mechanism precisely: a not-ready pod stays *listed* and flagged rather than vanishing, which is what lets controllers tell "unready" from "gone".
 - **Discovery** = DNS: `payments.prod.svc.cluster.local` resolves to the Service's stable ClusterIP; **kube-proxy** (iptables/IPVS) routes connections to a ready endpoint. Registration, health, reaping: all automatic via the kubelet and controllers.
 - Honest limits: kube-proxy balances per-*connection* (L4) — long-lived HTTP/2 or gRPC connections pin to one pod and skew load ([[Load Balancers|see L4 vs L7]]); headless Services (`clusterIP: None`) return pod IPs directly for client-side discovery; DNS caching inside the app can still serve stale answers.
 
@@ -105,7 +105,7 @@ graph TD
 ## Failure modes
 
 - **Mass ejection via deep readiness** — shared dependency blip ejects the fleet; see above. Detect: endpoint count alongside error rates; alert on "endpoints < minimum", not only on probe failures. Mitigate: shallow checks, panic-threshold-style routing, serve-503-rather-than-vanish.
-- **Liveness restart loops** — an overloaded app answers probes slowly → killed → restarts with cold caches → slower → killed again. The platform turns overload into permanent death. Mitigate: generous `timeoutSeconds`, startup probes, liveness that doesn't share the request thread pool.
+- **Liveness restart loops** — an overloaded app answers probes slowly → killed → restarts with cold caches → slower → killed again. The platform turns overload into permanent death. Mitigate: raise `timeoutSeconds` off its 1-second default, use a startup probe for boot, and keep the liveness handler off the request thread pool.
 - **Zombie instances** — process up, port open, shallow check green, app useless (wedged pool, bad config). Passes every probe, fails every user. Detect via symptom-based alerting (error rate, latency) — never via probes alone.
 - **Stale discovery data** — DNS/client caches serve ejected IPs; callers see connection-refused from instances the platform already replaced. Mitigate: low TTLs, cache-respecting clients, retries-on-connect targeting a different endpoint.
 - **Registry outage** — Eureka down: clients run on cached lists (degraded but alive — the AP choice paying off); Consul losing Raft quorum: no updates until quorum returns. Know which behavior your stack has *before* the incident.
@@ -142,7 +142,7 @@ Interviewers probe:
 **Q1 (explain it):** Explain liveness vs readiness vs startup probes — the question each asks, the action each triggers, and one concrete bug caused by conflating liveness with readiness.
 
 > [!question]- Q: The three probes, and a conflation bug?
-> Liveness asks "is this process permanently stuck?" — failure restarts the container. Readiness asks "can it serve right now?" — failure removes it from Service endpoints, no restart, and it returns when the probe passes. Startup asks "has boot finished?" — it holds the other probes off so slow boots aren't killed. Conflation bug: putting a readiness-style condition (e.g., "database reachable") into liveness means a 30-second DB blip doesn't just pause traffic — it *restarts every pod simultaneously*, cold caches and reconnect stampede included, turning a blip into a prolonged outage.
+> Liveness asks "is this process permanently stuck?" — failure restarts the container. Readiness asks "can it serve right now?" — failure removes it from Service endpoints, no restart, and it returns when the probe passes. Startup asks "has boot finished?" — it holds the other probes off so slow boots aren't killed, though it kills the container itself if boot overruns its own `periodSeconds × failureThreshold`. Conflation bug: putting a readiness-style condition (e.g., "database reachable") into liveness means a 30-second DB blip doesn't just pause traffic — it *restarts every pod simultaneously*, cold caches and reconnect stampede included, turning a blip into a prolonged outage.
 
 **Q2 (scenario):** Mongo has a 15-second election. Your service's readiness probe pings Mongo. Walk through what happens at 1 replica, and what the caller experience is versus a shallow probe.
 

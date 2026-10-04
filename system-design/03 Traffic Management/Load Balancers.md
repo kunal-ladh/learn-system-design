@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How load balancers distribute traffic across servers — L4 vs L7, the major algorithms, health checks, and who balances the balancer itself.
 related: ["[[API Gateway]]", "[[Health Checks and Service Discovery]]", "[[Consistent Hashing]]", "[[Reverse Proxy vs Forward Proxy]]"]
 ---
@@ -56,7 +56,7 @@ An L4 balancer is essentially a very fast connection router: it picks a backend 
 - **IP hash** — `hash(client IP) mod N` picks the server. Gives **session affinity** (the same client lands on the same server) without cookies — useful for [[Stateless vs Stateful Services|stateful]] servers holding per-client data. Breaks badly when N changes: adding one server remaps almost every client.
 - **Consistent hashing** — hashing on a ring so that adding/removing a server remaps only ~1/N of keys instead of nearly all of them. The right choice when backends hold per-key state or cache (affinity preserves cache hit rates). Full treatment in [[Consistent Hashing]].
 
-A practical note on least-connections at scale: when *many independent LB instances* each pick the globally least-loaded backend, they can all pick the *same* one and dogpile it. Mitigations include **power of two choices** (pick two backends at random, send to the less loaded — nearly as good as global least-connections with none of the herding) — used by Envoy and NGINX Plus.
+A practical note on least-connections at scale: when *many independent LB instances* each pick the globally least-loaded backend, they can all pick the *same* one and dogpile it. Mitigations include **power of two choices** (pick two backends at random, send to the less loaded — nearly as good as global least-connections with none of the herding). It is how Envoy's `LEAST_REQUEST` policy picks hosts by default, and what NGINX's `random two least_conn` method does — available in open-source NGINX since 1.15.1 (2018), not a Plus-only feature.
 
 ### Health checks and ejection
 
@@ -105,7 +105,7 @@ Real architectures stack these: DNS → anycast L4 tier → L7 tier → services
 
 - **The LB itself dies** — total outage if not redundant. Detected trivially (everything is down); mitigated by the layering above.
 - **Health-check false positives** — checks pass while the app is actually broken (shallow check hits a static handler; app can't reach its DB). Traffic flows into a black hole. Mitigation: make the check exercise minimal real functionality, and alert on backend error rates, not just check status.
-- **Health-check false negatives / mass ejection** — a slow dependency makes *all* backends fail a deep check; the LB ejects everything and serves nothing. Many LBs have a **panic threshold** (Envoy: if >50% of hosts are unhealthy, ignore health and route anyway) precisely for this. See [[Health Checks and Service Discovery]].
+- **Health-check false negatives / mass ejection** — a slow dependency makes *all* backends fail a deep check; the LB ejects everything and serves nothing. Some LBs have a **panic threshold** (Envoy: when the *healthy* share of a cluster's hosts falls below the threshold — default 50% — Envoy disregards health status and balances across all hosts anyway) precisely for this. See [[Health Checks and Service Discovery]].
 - **Uneven load despite balancing** — long-lived connections (gRPC, WebSockets) pinned by an L4 LB concentrate on old backends after a scale-out; new backends idle. Mitigation: L7 balancing, connection age limits, or client-side rebalancing.
 - **Retry amplification through the LB** — LB-level retries on top of client retries multiply load during a partial outage. Budget retries; see [[Timeouts Retries and Exponential Backoff]].
 - **Sticky-session loss** — affinity by cookie/IP hash means a backend death loses its users' sessions. If sessions live on the server, this is an architecture smell; push state out ([[Stateless vs Stateful Services]]).
@@ -155,7 +155,7 @@ Interviewers probe:
 **Q4 (mini design):** Design the balancing tier for an API serving two regions, each with 20 backends, requiring region failover under 1 minute. Sketch the layers.
 
 > [!question]- Q: Two-region balancing tier with sub-minute failover?
-> DNS layer (health-checked, low TTL ~30–60 s, e.g. Route 53 failover or latency routing) chooses the region — or anycast if you control BGP, for faster failover. Inside each region: a managed L7 LB fleet (ALB-style, itself multi-node across AZs) terminates TLS, health-checks the 20 backends (active checks + outlier detection), uses least-connections or power-of-two-choices, and drains on deploy. Cross-region failover = DNS stops advertising the dead region; intra-region failover = LB ejection in seconds. Note the honest gap: DNS failover is bounded below by client TTL caching, so "under 1 minute" needs TTL ≤ 30 s and accepts stragglers.
+> DNS layer (health-checked, low TTL ~30–60 s, e.g. Route 53 failover or latency routing) chooses the region — or anycast if you control BGP, for faster failover. Inside each region: a managed L7 LB fleet (ALB-style, itself multi-node across AZs) terminates TLS, health-checks the 20 backends (active checks + outlier detection), uses least-connections or power-of-two-choices, and drains on deploy. Cross-region failover = DNS stops advertising the dead region; intra-region failover = LB ejection in seconds. Note the honest gap: DNS failover costs *detection plus propagation*, and people only ever budget the second. Detection is the health checker's own `interval × failure threshold` — Route 53 standard health checks poll every 30 s with a default failure threshold of 3, so roughly 90 s before it stops advertising the dead region, unless you pay for 10-second fast checks. Propagation is then bounded below by client TTL caching, and some resolvers ignore TTLs outright. "Under 1 minute" therefore needs fast health checks *and* TTL ≤ 30 s, and still accepts stragglers.
 
 ## Sources
 

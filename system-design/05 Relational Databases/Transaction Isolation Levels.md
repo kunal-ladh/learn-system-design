@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The four isolation levels, the exact anomaly each one readmits — dirty reads, non-repeatable reads, phantoms, lost updates, write skew — plus MVCC, SELECT FOR UPDATE, and what Postgres and MySQL actually default to.
 related: ["[[ACID Transactions]]", "[[How Databases Store Data]]", "[[Consistency Models]]"]
 ---
@@ -15,7 +15,7 @@ Isolation — the I of [[ACID Transactions]] — is not a boolean. It's a dial w
 
 ## Why this matters
 
-Two concurrent requests read a balance of 100, each deducts 70, both commit, and the account sits at −40 — at the *default* settings of PostgreSQL and MySQL, with every statement wrapped in a transaction, with zero bugs in your SQL. Isolation anomalies are the most common way "correct" code loses money under concurrency, and they don't show up in tests because tests rarely race. The vocabulary here — dirty read, lost update, write skew — is also a reliable interview discriminator between people who have used transactions and people who understand them.
+Two concurrent requests read a balance of 100, each decides a 70 deduction is affordable, and both commit — at the *default* settings of PostgreSQL and MySQL, with every statement wrapped in a transaction, with zero bugs in your SQL. How wrong the account ends up depends on how you wrote the `UPDATE`: write back an app-computed absolute (`SET balance = 30`) and one deduction vanishes, leaving 30 on an account that paid out 140; write a relative decrement (`SET balance = balance - 70`) and nothing is lost, but the stale check lets the balance reach −40. One race, two different wrong answers. Isolation anomalies are the most common way "correct" code loses money under concurrency, and they don't show up in tests because tests rarely race. The vocabulary here — dirty read, lost update, write skew — is also a reliable interview discriminator between people who have used transactions and people who understand them.
 
 ## How it works
 
@@ -50,7 +50,7 @@ The lost update, drawn as a timeline — this exact interleaving runs fine at Po
 | t5 | `UPDATE balance = 30; COMMIT` | | 30 |
 | t6 | | `UPDATE balance = 30; COMMIT` | **30** |
 
-Two successful 70-unit deductions; the account paid out 140 and shows 30 instead of −40 — one update is simply gone. Nothing errored, every statement was individually correct, and both commits were acknowledged. Every fix in this note (FOR UPDATE, atomic conditional update, optimistic version check, Postgres RR's abort, serializable) is a different way of making t5/t6 collide instead of silently stacking.
+Two successful 70-unit deductions; the account paid out 140 and shows 30 — one update is simply gone. Nothing errored, every statement was individually correct, and both commits were acknowledged. Note the shape: the new value was computed in application code and written back as an absolute. Write the deduction as `UPDATE ... SET balance = balance - 70` instead and no update is lost — B's statement reads the row A just committed and decrements from 30 — but the affordability check both transactions passed was already stale, so the account lands at −40 instead. Lost update and stale-premise overdraft are two different failures of the same race, and every fix in this note (FOR UPDATE, atomic conditional update, optimistic version check, Postgres RR's abort, serializable) is a different way of making t5/t6 collide instead of silently stacking.
 
 ### What the big two actually do
 
@@ -62,8 +62,8 @@ Two successful 70-unit deductions; the account paid out 140 and shows 30 instead
 - *Serializable*: repeatable read plus **Serializable Snapshot Isolation (SSI)** — the database tracks read/write dependencies between concurrent transactions and aborts one whenever a cycle (a potential write-skew outcome) appears. Optimistic: no extra blocking, but a retry loop is mandatory.
 
 **MySQL InnoDB**
-- *Repeatable read* (default): plain `SELECT`s read from a **consistent snapshot** taken at the first read — so non-repeatable reads and (for plain reads) phantoms don't appear. But plain snapshot reads take no locks, so **lost updates are NOT prevented**: read-modify-write in app code still races. Locking reads (`SELECT ... FOR UPDATE`) read the *latest* committed data and take **next-key locks** (row + gap), which block other transactions from inserting into the scanned range — preventing phantoms for locking reads.
-- *Serializable*: implicitly converts plain `SELECT`s into shared locking reads — pessimistic, deadlock-prone under contention, rarely used in OLTP practice.
+- *Repeatable read* (default): plain `SELECT`s read from a **consistent snapshot** taken at the first read — so non-repeatable reads and (for plain reads) phantoms don't appear. But plain snapshot reads take no locks, so **lost updates are NOT prevented**: read-modify-write in app code still races. Locking reads (`SELECT ... FOR UPDATE`) read the *latest* committed data and take **next-key locks** (the matched record plus the gap before it), which block other transactions from inserting into the scanned range — preventing phantoms for locking reads. The exception worth knowing: an equality match on a *unique* index degenerates to a plain record lock with no gap, because no new row can appear in that slot.
+- *Serializable*: with autocommit disabled — i.e. inside an explicit transaction — InnoDB implicitly converts plain `SELECT`s into `SELECT ... FOR SHARE` locking reads: pessimistic, deadlock-prone under contention, rarely used in OLTP practice. (With autocommit on, a standalone `SELECT` is still a nonlocking consistent read.)
 
 ### MVCC: why readers don't block writers
 
@@ -106,7 +106,7 @@ COMMIT;
 ```java
 // Spring: per method, with retries for the abort-on-conflict levels
 @Transactional(isolation = Isolation.SERIALIZABLE)
-@Retryable(retryFor = CannotSerializeTransactionException.class, maxAttempts = 3)
+@Retryable(retryFor = ConcurrencyFailureException.class, maxAttempts = 3)  // SQLState 40001 lands here
 public void closeRota(...) { ... }
 ```
 
@@ -119,10 +119,11 @@ A session/global default also exists (`default_transaction_isolation` in Postgre
 - **"MVCC means no locks anywhere."** Writers still lock the rows they write; `FOR UPDATE` exists precisely because snapshots don't arbitrate conflicts.
 - **"Serializable = the standard lock-everything mode."** Postgres SSI is optimistic — it aborts instead of blocking. The practical contract of serializable in modern engines is "be ready to retry", not "wait in line".
 - **"Isolation levels protect invariants across services."** Nothing here crosses a database boundary. Cross-service invariants live in [[Saga Pattern]] / [[The Outbox Pattern]] territory, and cross-replica read anomalies are a different topic again — [[Read Your Own Writes and Replica Lag Anomalies]].
+- **"Serializable is just the distributed-systems kind of consistency, turned up."** The word *consistency* does different work on each side of that boundary, and conflating them is how design docs end up meaningless. Isolation levels govern how concurrent transactions interleave over one node's data; distributed consistency models govern how recent an answer from *a* replica is allowed to be. Serializability and linearizability are different axes rather than different strengths — a serializable database can still serve you a stale replica, and a linearizable store gives you nothing about multi-row invariants. The distributed half of the vocabulary is [[Consistency Models]].
 
 ## In your stack
 
-- MongoDB's defaults sit roughly near read-committed behaviour (reads see committed data; snapshot read concern exists for stronger views) — the lost-update and write-skew reasoning transfers intact to any read-modify-write against Mongo documents. Single-document atomic operators (`$inc`, conditional `findAndModify`) are Mongo's version of the atomic-UPDATE fix.
+- MongoDB never shows you another operation's half-written document, but its default read concern `local` is weaker than read committed in one specific way: it can return a write that has not yet reached a majority and is therefore still rollback-able at [[Failover]] — `majority` or `snapshot` read concern is what buys the stronger view. The lost-update and write-skew reasoning transfers intact to any read-modify-write against Mongo documents, and single-document atomic operators (`$inc`, conditional `findAndModify`) are Mongo's version of the atomic-UPDATE fix.
 - JPA/Hibernate: `@Version` optimistic locking for low-contention entities; `@Lock(PESSIMISTIC_WRITE)` → `SELECT ... FOR UPDATE` where money moves. Audit which of your money-mutating paths are "read entity, mutate in Java, flush" — each one is a lost-update candidate.
 - Where MySQL exists: remember your level is repeatable read by default, your Postgres-habituated intuitions about read committed don't apply, and gap locks at RR are a real deadlock source under concurrent inserts.
 - Balance checks before debits ("does the user have enough?") are check-then-act races at default isolation — the RBI-auditable answer is an atomic conditional update or `FOR UPDATE`, plus a database constraint as backstop, plus [[Idempotency]] on retries.

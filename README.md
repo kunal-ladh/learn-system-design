@@ -1,6 +1,6 @@
 # learn-system-design
 
-A system design curriculum written as an Obsidian vault — 151 notes across 16 modules, from
+A system design curriculum written as an Obsidian vault — 152 notes across 16 modules, from
 foundations through planet-scale case studies and interview problems.
 
 ## Start here
@@ -8,6 +8,7 @@ foundations through planet-scale case studies and interview problems.
 Open the `system-design/` folder as an Obsidian vault, then open:
 
 - **`System Design Index.md`** — the master map of content: all 16 modules, study tracks, progress tracker.
+- **`Numbers and Formulas.md`** — one-page recall sheet: latency tiers, availability math, estimation and quorum formulas.
 - **`Practice Drills.md`** — retrieval questions per module, design problems by tier, a 10-week schedule.
 
 ## How the notes are structured

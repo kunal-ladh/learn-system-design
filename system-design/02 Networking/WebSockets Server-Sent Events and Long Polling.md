@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The three ways a server pushes data to clients, what a million open connections costs, and why push infrastructure is stateful in a world built for stateless.
 related: ["[[Stateless vs Stateful Services]]", "[[Load Balancers]]", "[[Design a Chat System]]", "[[Design a Notification Service]]"]
 ---
@@ -63,7 +63,7 @@ sequenceDiagram
     Note over C,S: WebSocket upgrade then frames flow both ways
 ```
 
-**Connection cost at scale.** A million connected clients means a million open sockets *somewhere*. Per connection: a file descriptor, kernel socket buffers, TLS session state, heartbeat timers, and your application's per-connection object. Mostly-idle connections are cheap individually (tens of KB each; the C10k problem of 1999 became routine with epoll/event loops — WhatsApp famously ran millions of connections per Erlang server), so the real limits are: **memory × connections**, file-descriptor and conntrack/NAT table limits on every box *and middlebox* on the path, and — critically — **threading model**. A thread-per-connection servlet stack dies at thousands; event-loop stacks (Netty, Node, Go) are built for this. Push tiers are therefore usually a **separate gateway fleet** — small, event-loop-based, holding sockets and forwarding events — so the stateless request fleet stays stateless.
+**Connection cost at scale.** A million connected clients means a million open sockets *somewhere*. Per connection: a file descriptor, kernel socket buffers, TLS session state, heartbeat timers, and your application's per-connection object. Mostly-idle connections are cheap individually (tens of KB each; the C10k problem of 1999 became routine with epoll/event loops — WhatsApp famously reported more than 2 million concurrent connections on a single tuned FreeBSD/Erlang box back in 2012), so the real limits are: **memory × connections**, file-descriptor and conntrack/NAT table limits on every box *and middlebox* on the path, and — critically — **threading model**. A classic thread-per-connection servlet stack on platform threads dies at a few thousand; event-loop stacks (Netty, Node, Go) are built for this. Era note: Java 21's virtual threads (2023) raise that ceiling a lot, but they do not remove the per-connection memory cost or the problem of routing an event to the one box holding the socket. Push tiers are therefore usually a **separate gateway fleet** — small, event-loop-based, holding sockets and forwarding events — so the stateless request fleet stays stateless.
 
 Back-of-envelope sizing for a push tier (the arithmetic interviewers want to see):
 
@@ -75,7 +75,7 @@ Back-of-envelope sizing for a push tier (the arithmetic interviewers want to see
 **Load balancer implications.** This is where push architectures bite:
 
 - The LB must **support** the technique (WebSocket Upgrade pass-through; not buffering SSE). ALB does; classic setups and some proxies don't by default.
-- **Idle timeouts**: ALB historically defaults to 60s idle timeout — any quiet connection is silently cut. Hence **heartbeats** (ping/pong frames, SSE comments) at an interval below the *lowest* timeout on the path, which also detect half-dead connections (TCP won't tell you a peer vanished until you try writing).
+- **Idle timeouts**: an ALB's default idle timeout is 60s — any connection quieter than that is silently cut. Hence **heartbeats** (ping/pong frames, SSE comments) at an interval below the *lowest* timeout on the path, which also detect half-dead connections (TCP won't tell you a peer vanished until you try writing).
 - **Statefulness**: once a client's socket lives on gateway G3, every event for that client must reach G3. Two standard shapes: a **pub/sub backplane** (each gateway subscribes to Redis pub/sub / Kafka topics for its connected users — the common choice) or a **connection registry** (userId→gateway map in Redis, events routed directly). Sticky sessions at the LB help the *handshake* phase but don't solve event routing.
 - **Draining**: deploys can't just kill a gateway — it holds 50k live conversations. You need connection draining, graceful close frames, and clients that resume; see [[Graceful Shutdown and Deployment Safety]].
 - **Reconnect storms**: when a gateway (or the LB, or a region) blips, *every* connected client reconnects at once — a thundering herd of TLS handshakes and auth checks that can flatten the auth service and the gateways in a retry loop ([[Cache Stampede and Thundering Herd]] is the same shape). Mitigations: **jittered exponential backoff in every client**, cheap reconnect auth (token validation, not DB hits), LB-level connection-rate limiting, and resume protocols (`Last-Event-ID`, message cursors) so reconnects don't also trigger full state refetches.
@@ -151,6 +151,6 @@ Classic follow-ups: *Why heartbeats if TCP is "reliable"?* (Silent middlebox cut
 
 - RFC 6455 — *The WebSocket Protocol* (2011); WHATWG HTML spec — Server-Sent Events / `EventSource`
 - *High Performance Browser Networking* (Grigorik) — chapters on XHR/long-polling, SSE, and WebSocket
-- AWS documentation — SQS long polling (`WaitTimeSeconds`); ALB idle timeout and WebSocket support
+- AWS documentation — SQS long polling (`WaitTimeSeconds`, max 20s); ALB idle timeout default and WebSocket support
 - The C10k problem (Dan Kegel, 1999); WhatsApp engineering talks on millions of connections per server (Erlang)
 - Slack engineering blog — "Real-time Messaging" architecture posts (gateway fleets, reconnect handling)

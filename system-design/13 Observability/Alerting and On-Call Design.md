@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How to design alerts that page humans only for real, actionable, user-facing problems — symptom-based alerting, SLO burn rates, and the on-call practices that keep the system honest.
 related: ["[[SLA SLO SLI and Error Budgets]]", "[[Logs Metrics and Traces]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -40,15 +40,15 @@ A **symptom** is what the user experiences: error rate up, latency over target, 
 
 The modern form of symptom alerting is built on [[SLA SLO SLI and Error Budgets]]. Given an SLO — say 99.9% of requests succeed over 30 days — the **error budget** is the allowed 0.1% of failures. **Burn rate** is how fast you're consuming that budget relative to the sustainable pace: burn rate 1 means exactly on budget; burn rate 14.4 means the whole month's budget gone in ~2 days.
 
-Static thresholds ("error rate > 1% for 5 min") force one number to be both sensitive and quiet; burn-rate alerting uses *multiple windows* instead. The SRE Workbook's recommended configuration for a 30-day SLO:
+Static thresholds ("error rate > 1% for 5 min") force one number to be both sensitive and quiet; burn-rate alerting uses *multiple windows* instead. The SRE Workbook's recommended starting configuration, stated there for a 99.9% / 30-day SLO:
 
-| Budget consumed | Window | Burn rate | Response |
-|---|---|---|---|
-| 2% of monthly budget | 1 hour | 14.4× | **Page** |
-| 5% of monthly budget | 6 hours | 6× | **Page** |
-| 10% of monthly budget | 3 days | 1× | **Ticket** |
+| Budget consumed | Long window | Short window | Burn rate | Response |
+|---|---|---|---|---|
+| 2% of monthly budget | 1 hour | 5 min | 14.4× | **Page** |
+| 5% of monthly budget | 6 hours | 30 min | 6× | **Page** |
+| 10% of monthly budget | 3 days | 6 hours | 1× | **Ticket** |
 
-Each long window is paired with a short window (typically 1/12th: 5 min, 30 min) that must *also* be burning, so the alert resets quickly once the problem stops instead of paging on stale history. The effect: a fast, severe outage pages within minutes; a slow bleed that would quietly eat the month's budget becomes a ticket; a brief blip that costs 0.01% of budget pages no one. The alert threshold now derives from a *business commitment* rather than a guess.
+Every long window is paired with a short window of one-twelfth its length, which must *also* be burning, so the alert resets quickly once the problem stops instead of paging on stale history. One detail the table hides: **detection time depends on how far past the threshold you are**, because the long window is a trailing average. At *exactly* 14.4× the hour's average only crosses the threshold as the hour completes; at a 100% error rate it crosses in under a minute. The table sets the sensitivity, not the speed. The effect: a fast, severe outage pages within minutes; a slow bleed that would quietly eat the month's budget becomes a ticket; a brief blip that costs 0.01% of budget pages no one. The alert threshold now derives from a *business commitment* rather than a guess.
 
 ### Page vs ticket: the severity split
 
@@ -88,11 +88,11 @@ The severity ladder matters because it pre-authorizes behavior: a SEV1 declarati
 Every alerting rule should survive this audit quarterly:
 
 1. **Did it fire in the last quarter?** Never fired in a year → does the condition still exist?
-2. **When it fired, was it true?** Precision below ~50% trains responders to dismiss.
+2. **When it fired, was it true?** There is no published constant here, but the working rule of thumb is that once roughly half the firings are false, responders start dismissing on sight.
 3. **When true, did a human act?** No action ever → ticket, dashboard, or deletion.
 4. **Was the action automatable?** Then automate it and delete the alert.
 
-The cultural rule that makes this work: *every page is either actionable or it is deleted.* Teams that track "pages per on-call shift" as a health metric (Google's guideline: a shift should see at most a couple of incidents) catch fatigue before it becomes an outage. Noise is not a cosmetic problem — it is the mechanism by which real outages go unanswered.
+The cultural rule that makes this work: *every page is either actionable or it is deleted.* Teams that track "pages per on-call shift" as a health metric (the SRE book's guideline is a maximum of **two incidents per 12-hour shift**, on the reasoning that fewer gives too little practice and more gives no time to handle each properly) catch fatigue before it becomes an outage. Noise is not a cosmetic problem — it is the mechanism by which real outages go unanswered.
 
 ### Runbooks attached to alerts
 
@@ -149,7 +149,7 @@ Classic follow-ups: "Why not page on CPU?" (cause, not symptom; fires without pa
 > A symptom is user-visible degradation (errors, latency, staleness); a cause is an internal condition that might produce it (CPU, disk, lag). Causes map unreliably to user pain: they fire when nothing is wrong and stay silent when something is (bad deploys keep infrastructure green). Symptom alerts track the thing you actually promised users, and they survive re-architecture. Causes remain valuable as diagnostics after a symptom page and as tickets when genuinely predictive.
 
 > [!question]- Q: Your 30-day SLO is 99.9%. Error rate jumps to 1.44% at 01:00 and stays there. What happens under the Workbook's burn-rate rules, and when?
-> Burn rate = 1.44% / 0.1% = 14.4×. The fast-burn rule (14.4× over 1 h, with its 5-min short window confirming) pages within roughly the first hour — by 02:00 the on-call is awake. At that rate the entire month's budget would be gone in about 2 days, which is exactly why this tier pages rather than tickets. If instead the error rate were 0.2% (burn 2×), no page fires; the 3-day 1× window accumulates and a ticket is filed — the budget is eroding but a human in working hours is the right response.
+> Burn rate = 1.44% / 0.1% = 14.4×. The 5-minute short window is satisfied almost at once, but the 1-hour long window is a trailing average that only reaches 14.4× as that hour completes — so at *exactly* this rate the page lands near 02:00, and a worse rate would page proportionally sooner. At 14.4× the entire month's budget would be gone in about 2 days (30 ÷ 14.4 ≈ 2.1), which is exactly why this tier pages rather than tickets. If instead the error rate were 0.2% (burn 2×), no page fires; the 3-day 1× window accumulates and a ticket is filed — the budget is eroding but a human in working hours is the right response.
 
 > [!question]- Q: A teammate proposes an alert: "WARN logs > 100/min on payment-service — page." Critique it.
 > It pages on a cause-shaped proxy with no demonstrated link to user pain: WARN volume rises with traffic, with one chatty retry loop, with a dependency blip that self-heals. Its precision will be terrible, it will fire at peak hours by construction, and the responder has no defined action — the start of alert fatigue. Counter-proposal: page on payment *success-rate* SLO burn; keep WARN patterns on a diagnostic dashboard; if a specific WARN genuinely predicts failure, make it a ticket with a runbook, and revisit its precision quarterly.

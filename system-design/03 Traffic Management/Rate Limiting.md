@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The five rate-limiting algorithms and their burst/accuracy trade-offs, local vs distributed enforcement, and how to reject traffic well (429, Retry-After, limit dimensions).
 related: ["[[API Gateway]]", "[[Load Shedding and Graceful Degradation]]", "[[Design a Rate Limiter]]", "[[Redis Internals]]"]
 ---
@@ -67,7 +67,7 @@ Store a timestamp per request (per key); on each request, drop timestamps older 
 
 The engineering compromise: keep fixed-window counters, but estimate the rolling count as `current_window_count + previous_window_count × overlap_fraction`. Example: limit 100/min, 20 requests in 0:00–1:00, now at 1:15 — estimate = current + 20 × 0.75.
 
-- Near-fixed-window cost, kills the boundary-burst problem.
+- Near-fixed-window cost, and it removes the 2N boundary artifact. It does *not* smooth traffic: after a quiet previous window the estimate starts near zero, so a caller can still fire the full N in one instant. It bounds the rolling *total*, not burstiness — if burstiness is what you care about, you want token bucket with a small B.
 - Accuracy: an approximation — it assumes the previous window's requests were evenly spread. Cloudflare (who popularized it) reported the error is small in practice on real traffic. Slightly off is fine for capacity limits; prefer the log for strict security counts.
 
 ### Choosing between them
@@ -78,7 +78,7 @@ The engineering compromise: keep fixed-window counters, but estimate the rolling
 | Leaky bucket | Smoothed away | Exact output rate | O(B) queue | Protecting burst-intolerant backends |
 | Fixed window | 2N at boundaries | Weak at edges | O(1) | Coarse quotas (per-day) |
 | Sliding log | Exact rolling budget | Perfect | O(N) | Security limits with small N |
-| Sliding counter | Mostly controlled | Approximate | O(1) | High-traffic rolling limits at scale |
+| Sliding counter | No 2N edge, but still N instantly | Approximate | O(1) | High-traffic rolling limits at scale |
 
 ### Local vs distributed limiters
 
@@ -114,9 +114,9 @@ Failure policy must be chosen explicitly: Redis down → **fail open** (admit ev
 
 Rejecting well is part of the design:
 
-- **Status 429 Too Many Requests** (RFC 6585). Use **403** instead when you don't want to reveal a limit exists to a suspected attacker.
-- **`Retry-After` header** — seconds until the caller should retry. This actively *prevents* retry storms by synchronizing well-behaved clients to your recovery, instead of letting them hammer-and-guess.
-- **Rate-limit headers** — the emerging-standard trio `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` (long deployed as `X-RateLimit-*`, e.g. by GitHub and Stripe) lets clients self-regulate before hitting the wall.
+- **Status 429 Too Many Requests** (RFC 6585, 2012 — 429 was never folded into RFC 9110, so 6585 is still its defining document). Use **403** instead when you don't want to reveal a limit exists to a suspected attacker.
+- **`Retry-After` header** (defined in RFC 9110 §10.2.3; RFC 6585 says a 429 *may* carry it). Its value is either a delay in seconds or an absolute HTTP-date — not seconds only. It stops well-behaved clients from hammering and guessing, but send a **per-client jittered** value: handing every blocked caller the identical number synchronizes the whole population into one retry spike at the same instant, which is precisely the thundering herd you were avoiding.
+- **Rate-limit headers** let clients self-regulate before hitting the wall. The thing actually deployed in the wild is the de-facto `X-RateLimit-Limit` / `-Remaining` / `-Reset` trio (GitHub among many). The IETF work to standardise this is still an Internet-Draft, not an RFC, and it has changed shape: early revisions mirrored that trio as `RateLimit-Limit` / `-Remaining` / `-Reset`, while revisions from 2023 onward collapse it into two structured fields, `RateLimit` and `RateLimit-Policy`. Emit the `X-` trio today and don't call the `RateLimit-*` trio a standard.
 - A body with a machine-readable error code, so SDKs can branch on it.
 
 ### Dimensions: per-what?
@@ -145,7 +145,7 @@ The **key** you count by defines the policy:
 - **Limiter dependency outage** — Redis down takes limiting (or, if fail-closed, *the API*) with it. Decide fail-open/closed per endpoint class ahead of time; add a local fallback.
 - **Hot limiter keys** — a single global counter, or one abusive key, concentrates load on one Redis shard — the limiter's own [[Hot Key Problem]]. Mitigations: shard the counter, or local pre-filters in front of Redis.
 - **NAT lockout** — per-IP limits throttle an entire office/carrier; looks like "your app is down" for one company. Mitigation: per-user keys where possible, allowlists, and composite keys (IP + device fingerprint).
-- **Retry amplification on 429** — clients without backoff treat 429 as "try again immediately," doubling traffic exactly when you asked for less. `Retry-After` + documented client behavior + jittered backoff in SDKs; see [[Timeouts Retries and Exponential Backoff]].
+- **Retry amplification on 429** — clients without backoff treat 429 as "try again immediately," doubling traffic exactly when you asked for less. Jittered `Retry-After` values + documented client behavior + jittered backoff in SDKs; see [[Timeouts Retries and Exponential Backoff]].
 
 ## When NOT to use it
 
@@ -197,7 +197,7 @@ Interviewers probe:
 
 ## Sources
 
-- RFC 6585 (429 Too Many Requests); IETF draft "RateLimit header fields for HTTP" (`RateLimit-Limit` / `-Remaining` / `-Reset`).
+- RFC 6585 (2012) — 429 Too Many Requests. RFC 9110 §10.2.3 — `Retry-After` (delay-seconds or HTTP-date). IETF Internet-Draft `draft-ietf-httpapi-ratelimit-headers`, "RateLimit header fields for HTTP" — now the `RateLimit` / `RateLimit-Policy` structured fields; still a draft as of 2026.
 - Stripe engineering blog: "Scaling your API with rate limiters" (token bucket in Redis, limiter/shedder layering).
 - Cloudflare blog: "How we built rate limiting capable of scaling to millions of domains" (sliding window counter and its accuracy).
 - Alex Xu, *System Design Interview* Vol. 1, ch. 4 "Design a Rate Limiter" — the five algorithms.

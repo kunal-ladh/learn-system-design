@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The three HTTP generations as three attacks on the same enemy — head-of-line blocking — and what to actually run browser-facing vs inside the cluster.
 related: ["[[TCP vs UDP]]", "[[TLS and HTTPS]]", "[[REST vs gRPC vs GraphQL]]", "[[CDN]]"]
 ---
@@ -26,17 +26,17 @@ First, fix the mental model: **semantics vs framing**. The semantics layer — `
 | Semantics | methods, status codes, headers, caching rules | no — RFC 9110 defines them version-independently |
 | Framing/transport | text lines vs binary frames, streams, loss recovery | yes — this is the whole story below |
 
-**HTTP/1.1 (1997): keep-alive, and the pipelining dead end.** HTTP/1.0 opened a TCP connection per request — handshake, slow start, teardown, repeat. 1.1's big win was **persistent connections** (keep-alive): reuse one connection for many sequential requests. But *sequential* is the operative word: one outstanding request per connection; the next response cannot begin until the current one finishes. That is application-level HOL blocking. **Pipelining** — sending several requests without waiting — was specified, but responses still had to return *in order* (a slow first response blocks all others), and broken proxy support made browsers disable it. The workaround everyone actually used: **open 6 parallel TCP connections per origin** (the de facto browser limit), plus hacks like domain sharding, image sprites, and JS/CSS bundling — all contortions to smuggle parallelism through a serial protocol.
+**HTTP/1.1 (RFC 2068, 1997; revised as RFC 2616 in 1999 and re-issued as RFC 9112 in 2022): keep-alive, and the pipelining dead end.** HTTP/1.0 opened a TCP connection per request — handshake, slow start, teardown, repeat. 1.1's big win was **persistent connections** (keep-alive): reuse one connection for many sequential requests. But *sequential* is the operative word: one outstanding request per connection; the next response cannot begin until the current one finishes. That is application-level HOL blocking. **Pipelining** — sending several requests without waiting — was specified, but responses still had to return *in order* (a slow first response blocks all others), and broken proxy support made browsers disable it. The workaround everyone actually used: **open 6 parallel TCP connections per origin** (the de facto browser limit), plus hacks like domain sharding, image sprites, and JS/CSS bundling — all contortions to smuggle parallelism through a serial protocol.
 
-**HTTP/2 (RFC 7540, 2015): multiplexing over one connection.** h2 keeps HTTP semantics but replaces the text framing with binary **frames** belonging to **streams** — many concurrent request/response streams interleaved over *one* TCP connection, with stream prioritization. Application-level HOL blocking: gone. Added:
+**HTTP/2 (RFC 7540, 2015; re-issued as RFC 9113 in 2022): multiplexing over one connection.** h2 keeps HTTP semantics but replaces the text framing with binary **frames** belonging to **streams** — many concurrent request/response streams interleaved over *one* TCP connection, with stream prioritization. Application-level HOL blocking: gone. Added:
 
 - **HPACK header compression** — HTTP headers are repetitive (same cookies, same user-agent every request); HPACK keeps a shared dynamic table on both ends so repeated headers cost a few bytes. (Why a *special* compressor: the CRIME attack showed naive gzip over headers leaks secrets via compression ratios.)
-- **Server push** — the server could preemptively send resources ("you asked for index.html, here's style.css too"). **Push died**: servers guessed wrong, pushed bytes the browser already had cached, wasted bandwidth, and measurable wins never materialized. Chrome removed support in 2022; the ecosystem settled on `103 Early Hints` + preload instead. Lesson worth quoting: speculative optimization that ignores client state tends to lose.
+- **Server push** — the server could preemptively send resources ("you asked for index.html, here's style.css too"). **Push died**: servers guessed wrong, pushed bytes the browser already had cached, wasted bandwidth, and measurable wins never materialized. Chrome disabled it by default in Chrome 106 (2022) and other browsers followed; the ecosystem settled on `103 Early Hints` + preload instead. Push is still *in* the spec — it is dead by deployment, not by deletion, which is the more interesting kind of dead. Lesson worth quoting: speculative optimization that ignores client state tends to lose.
 
 Two h2 details that matter operationally:
 
 - **h2 has its own flow control** — per-stream and per-connection windows on top of TCP's, so one greedy stream can't starve the connection. Misconfigured small windows are an occasional cause of mysteriously capped throughput on proxied h2 paths.
-- **Version negotiation is invisible**: browsers pick h2 via **ALPN** during the TLS handshake (there is no plaintext h2 on the open web, which is one reason the "HTTPS everywhere" and h2 eras arrived together); servers advertise h3 via the `Alt-Svc` header or DNS HTTPS records, and clients race/upgrade on later connections. The practical consequence: whether you're "on h3" is a per-connection negotiation outcome — measure it from real clients, don't assume it from config.
+- **Version negotiation is invisible**: browsers pick h2 via **ALPN** during the TLS handshake (h2c — cleartext h2 — exists in the spec but no browser implements it, which is one reason the "HTTPS everywhere" and h2 eras arrived together); servers advertise h3 via the `Alt-Svc` header or DNS HTTPS records, and clients race/upgrade on later connections. The practical consequence: whether you're "on h3" is a per-connection negotiation outcome — measure it from real clients, don't assume it from config.
 
 h2's own flaw: **TCP HOL blocking remains.** TCP delivers one ordered byte stream and knows nothing of h2's streams; one lost packet halts delivery of *every* stream until retransmission ([[TCP vs UDP]]). On a clean network this is theoretical; on a lossy mobile link, h2 (one connection, all eggs in one basket) can underperform h1.1's six independent connections.
 
@@ -62,7 +62,7 @@ graph TD
 |---|---|---|
 | Browser → edge (CDN/ALB) | **h2 baseline, h3 where offered** | high-latency, lossy last mile is exactly what h2/h3 were built for; CDNs/ALBs make it a checkbox |
 | Edge → services, service → service | **h1.1 over pooled keep-alive connections — still common and fine; h2 where it earns its keep** | datacenter links are fast and nearly loss-free, so HOL blocking rarely bites; a connection *pool* already provides parallelism; h1.1 is trivially debuggable (`curl`, tcpdump, readable wire format) |
-| gRPC between services | **h2 — required** | gRPC is built on h2 streams and trailers ([[REST vs gRPC vs GraphQL]]); note ALBs historically mishandled gRPC/trailers — check your LB's gRPC support explicitly |
+| gRPC between services | **h2 — required** | gRPC is built on h2 streams and trailers ([[REST vs gRPC vs GraphQL]]); AWS ALB only gained native gRPC support in 2020 and simpler L7 proxies still mishandle trailers — check each hop's gRPC support explicitly |
 | Inside cluster, h3 | rarely, as of ~2024–2026 | QUIC's wins (lossy links, migration, handshake RTTs) mostly don't apply between pods; its costs (CPU, tooling) do |
 
 The index's phrasing is exactly right: **HTTP/2 to the browser, often 1.1 inside the cluster** — asymmetry by design, because the two environments have opposite loss and latency profiles.
@@ -94,7 +94,7 @@ A capsule history of why each transition took the shape it did:
 ## Common misconceptions
 
 - **"h2 is always faster than h1.1."** On lossy links, one h2 connection can lose to six h1.1 connections — TCP HOL blocking is shared fate.
-- **"Server push makes h2 faster."** It's dead; Chrome removed it. Say `Early Hints`/preload instead.
+- **"Server push makes h2 faster."** It's dead in practice; Chrome disabled it by default in 2022 and the others followed. Say `Early Hints`/preload instead.
 - **"h3 is HTTP over raw UDP, so it's unreliable."** QUIC reimplements reliability and congestion control per stream; nothing user-visible is lost — see [[TCP vs UDP]].
 - **"We should upgrade everything to h3."** Inside a datacenter the problems h3 solves barely exist; the operational cost is real. Upgrade the browser edge; leave the cluster to evidence.
 - **"h2 means I can stop pooling connections."** You still pool for *redundancy and load spreading* across backends — one connection multiplexed to one pod is also one basket for [[Load Balancers|load balancing]] to misjudge (see below).
@@ -111,7 +111,7 @@ A capsule history of why each transition took the shape it did:
 A quick operational checklist if you flip h2 on for an internal hop:
 
 - Confirm every proxy in the path speaks h2 end-to-end or translates cleanly (mixed h2-front/h1.1-back is normal and fine — just know which you have).
-- Re-examine load balancing: per-connection balancers skew badly under multiplexing (see the gotcha below).
+- Re-examine load balancing: per-connection balancers skew badly under multiplexing (see the h2 load-balancing gotcha above).
 - Re-examine timeouts: one connection now carries many requests, so connection-level idle timeouts and resets have a larger blast radius.
 - Keep `curl --http2 -v` and `nghttp` in your debugging kit; readable-wire-format debugging is gone.
 

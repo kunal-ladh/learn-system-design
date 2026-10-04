@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: Why nearest-neighbor search over embeddings needs special indexes (HNSW, IVF), how the recall-vs-latency knob works, and when pgvector-in-your-existing-DB beats a dedicated vector engine.
 related: ["[[RAG Architecture]]", "[[LLM Serving Infrastructure]]", "[[Database Indexes]]", "[[Choosing a Database]]"]
 ---
@@ -19,7 +19,7 @@ Start with a product need that predates LLMs: "find things *like* this thing." S
 
 Embedding models fixed the representation problem. An embedding model maps content to a point in a high-dimensional space (typically 384–3072 dimensions) such that **semantically similar content lands close together**. "Card blocked" and "debit freeze" become nearby points. Similarity is now geometry: compute the distance (usually **cosine similarity** or dot product) between two vectors, and closer means more related. You don't need to know how the model does this — treat it as a deterministic function `embed(text) -> float[1536]` and design around its output.
 
-That created a new database problem. The query is **k-nearest-neighbor (kNN)**: given a query vector, return the k closest stored vectors. The naive implementation compares the query against *every* stored vector — a full scan. At 10,000 vectors that's fine. At 100 million vectors × 1536 dimensions, every query is hundreds of gigabytes of floating-point math; latency is seconds and the CPU bill is absurd. And the trusty B-tree can't help: B-trees index *one ordered dimension*, and there is no single ordering of points in 1536-dimensional space that preserves "closeness" (this is the **curse of dimensionality** — in very high dimensions, classic spatial indexes like R-trees degrade toward full scans too).
+That created a new database problem. The query is **k-nearest-neighbor (kNN)**: given a query vector, return the k closest stored vectors. The naive implementation compares the query against *every* stored vector — a full scan. At 10,000 vectors that's fine. At 100 million vectors × 1536 dimensions, every query has to stream ~600 GB of float32 through the CPU (100M × 1536 × 4 bytes); latency is seconds and the CPU bill is absurd. And the trusty B-tree can't help: B-trees index *one ordered dimension*, and there is no single ordering of points in 1536-dimensional space that preserves "closeness" (this is the **curse of dimensionality** — in very high dimensions, classic spatial indexes like R-trees degrade toward full scans too).
 
 So a new index family was needed: one that answers "what's near this point?" in sublinear time, by giving up a little correctness.
 
@@ -43,14 +43,14 @@ Two index families dominate; both are worth knowing at concept level only.
 **HNSW (Hierarchical Navigable Small World)** builds a graph where each vector is a node connected to its near neighbors, organized in layers like a skip list: the top layer has few nodes with long-range links, lower layers get denser and more local. A query enters at the top, greedily hops toward the target ("which of my neighbors is closest to the query?"), and drops a layer each time it can't improve — coarse navigation first, fine navigation last. Search cost grows roughly logarithmically with collection size.
 
 - **Knob**: `efSearch` — how many candidate nodes to explore during a query. Higher = better recall, more latency. This is the recall-vs-latency dial, settable *per query*.
-- **Character**: excellent recall/latency; the index lives in RAM (graph + vectors), so memory is the cost driver; inserts are supported but deletes/updates degrade the graph over time and may need periodic rebuilds.
+- **Character**: excellent recall/latency; graph *and* vectors must be memory-resident to hit those latencies (dedicated engines hold the index in RAM outright; pgvector keeps index pages in the buffer pool and falls off a cliff once they stop fitting), so memory is the cost driver; inserts are supported but deletes/updates degrade the graph over time and may need periodic rebuilds.
 
 ### IVF — the clustering approach
 
 **IVF (Inverted File index)** partitions vectors into clusters up front (k-means over the dataset), each cluster owning a centroid. A query finds the few nearest centroids and scans only those clusters' members — like [[Sharding|sharding]] the vector space by region and querying only the relevant shards.
 
 - **Knob**: `nprobe` — how many clusters to scan. More clusters = better recall, more latency. Same dial, different mechanism.
-- **Character**: smaller memory footprint, pairs well with compression (**product quantization**, which shrinks vectors lossily to fit billion-scale datasets in RAM or on disk); recall is more sensitive to data distribution, and the clustering must be retrained if the data drifts.
+- **Character**: far cheaper and faster to build, and there is no neighbour graph to store — but be precise about the memory claim: plain IVFFlat keeps the *same* full vectors, so it saves the graph overhead, not the data. The real memory win comes from pairing it with compression (**product quantization**, which shrinks each vector lossily to fit billion-scale datasets in RAM or on disk); recall is more sensitive to data distribution, and the clustering must be retrained if the data drifts.
 
 ```mermaid
 graph TD
@@ -91,7 +91,7 @@ Dedicated engines invest heavily here (filter-aware HNSW traversal, per-tenant s
 
 The honest market take, as of ~2026:
 
-- **Modest scale (≤ a few million vectors, moderate QPS): use an extension of the database you already run.** **pgvector** (Postgres), MongoDB's vector search (an Atlas feature), Redis's vector search, OpenSearch/Elasticsearch kNN — all give you HNSW inside an engine your team already operates, with real transactions, backups, and filtering via normal predicates. One fewer system, one fewer consistency boundary.
+- **Modest scale (≤ a few million vectors, moderate QPS): use an extension of the database you already run.** **pgvector** (Postgres), MongoDB's `$vectorSearch`, Redis's vector search (the Redis Query Engine), OpenSearch/Elasticsearch kNN — all give you HNSW inside an engine your team already operates, with its existing backups, access control and on-call rota. One fewer system, one fewer consistency boundary. Two caveats people state too loosely: transactional guarantees vary enormously across that list (Postgres gives you real ACID; a search engine does not), and filtering is still the pre-/post-filter problem above rather than a free `WHERE` clause.
 - **Large scale (tens of millions to billions, high QPS, heavy filtering, multi-tenant): dedicated engines earn their keep** — the Pinecone / Milvus / Qdrant / Weaviate class. They offer segment-based scaling, filter-aware indexes, quantization options, and separation of index building from serving.
 - The failure pattern interviewers like to hear named: teams adopt a dedicated vector DB at 50K vectors "for the future", inheriting a second datastore, a second [[Replication|replication]] story, and a dual-write consistency problem ([[The Outbox Pattern]] territory) that pgvector would have made a non-issue.
 
@@ -107,13 +107,13 @@ The honest market take, as of ~2026:
 ## When NOT to use it
 
 - **Exact or keyword lookup suffices.** "Find invoice by number" or "filter transactions by status" is B-tree work. Don't embed what an exact index answers.
-- **Tiny corpora.** Under ~100K vectors, brute-force exact kNN is single-digit milliseconds on one CPU core — skip the ANN index and its recall complications entirely.
+- **Tiny corpora.** Under ~100K vectors, brute-force exact kNN is cheap enough to skip the ANN index and its recall complications entirely — though do the arithmetic rather than repeating the folklore: 100K × 1536 dims is ~0.6 GB scanned per query, so *tens* of milliseconds on a single core, dropping to a few with SIMD across a multi-core node or at smaller dimensions.
 - **Hard correctness requirements.** If missing a true match is unacceptable (compliance screening, sanctions matching), approximate retrieval alone is the wrong tool — use it as a *candidate generator* in front of an exact verification step, never as the authority. In a fintech context this is a fail-closed rule.
 - **As your primary datastore.** Vector engines are retrieval indexes, not systems of record: weak or absent transactions, limited query languages. Keep the source of truth in a real database and treat the vector index as derived data (rebuildable from the source).
 
 ## In your stack
 
-- **Start with what you run.** You operate MongoDB and Redis heavily; both have vector search offerings (MongoDB's is an Atlas feature — self-managed Mongo doesn't ship it, so for your clusters Redis or pgvector is the realistic first step). A dedicated engine is a new stateful system on EKS or a new SaaS vendor — justify it with scale numbers, not fashion.
+- **Start with what you run — but check your versions first.** Both MongoDB and Redis moved vector search out of their managed-only products in 2025: MongoDB Search and Vector Search went GA for self-managed Community and Enterprise at **server 8.2**, and **Redis 8** folded the Query Engine (formerly the separate RediSearch module) into core open source. Both capabilities are therefore version-gated — an older `mongod`, or a plain Redis 6/7 without the module, has nothing — so confirm what your clusters actually run before designing around it; otherwise pgvector is the realistic first step. A dedicated engine is a new stateful system on EKS or a new SaaS vendor — justify it with scale numbers, not fashion.
 - **Fintech similarity use cases** are mostly candidate generation: similar support tickets for agents, near-duplicate KYC document detection, transaction-description clustering. Each one tolerates approximate recall because a human or a deterministic rule verifies downstream — which is exactly where ANN belongs under an RBI-regulated correctness bar.
 - **Treat the vector index as derived data.** Source of truth stays in MongoDB; the index rebuilds from it. That one decision defuses the scariest failure modes (drift, version skew) into "rerun the pipeline" instead of "restore the database".
 - **Cost shape**: HNSW cost scales with *corpus size × dimensions* (RAM), query cost with *QPS × efSearch*; re-embedding cost scales with *corpus size × model price* and recurs on every model upgrade. Name all three in any proposal.
@@ -121,9 +121,9 @@ The honest market take, as of ~2026:
 ## Interview angle
 
 - Interviewers probe whether you know **why kNN needs a special index** (no total ordering in high dimensions — B-trees don't apply) and whether you say the word **recall** unprompted. "ANN trades recall for latency, tunable per query" is the sentence that signals understanding.
-- **60-second version**: "Embeddings turn content into points where distance means semantic similarity. Exact nearest-neighbor is a full scan, so at scale we use approximate indexes: HNSW navigates a layered neighbor graph — the default, great recall, RAM-hungry; IVF clusters the space and scans only nearby clusters — cheaper memory, pairs with quantization for billion scale. Both expose a recall-vs-latency knob. Metadata filtering is the awkward part — pre-filter degrades the index, post-filter starves selective queries. At modest scale I'd use pgvector or an existing-DB extension; dedicated engines earn their complexity at tens of millions of vectors or heavy filtered multi-tenant load. The hidden trap is embedding versioning: a model upgrade means re-embedding the entire corpus."
+- **60-second version**: "Embeddings turn content into points where distance means semantic similarity. Exact nearest-neighbor is a full scan, so at scale we use approximate indexes: HNSW navigates a layered neighbor graph — the default, great recall, RAM-hungry; IVF clusters the space and scans only nearby clusters — far faster to build, and pairs with quantization to reach billion scale. Both expose a recall-vs-latency knob. Metadata filtering is the awkward part — pre-filter degrades the index, post-filter starves selective queries. At modest scale I'd use pgvector or an existing-DB extension; dedicated engines earn their complexity at tens of millions of vectors or heavy filtered multi-tenant load. The hidden trap is embedding versioning: a model upgrade means re-embedding the entire corpus."
 - Classic follow-ups: "Why not a B-tree?" (one-dimensional ordering); "What happens when you change embedding models?" (full reindex — have a migration plan); "How do you filter by tenant?" (pre vs post, filter-aware indexes); "How do you *measure* retrieval quality?" (recall@k against a golden set).
-- A sizing follow-up worth pre-computing: "How much RAM for N vectors?" — `N × dims × 4 bytes` plus graph overhead; doing the arithmetic aloud (the [[Back of the Envelope Estimation]] habit) is the strongest signal you've operated one rather than read about one.
+- A sizing follow-up worth pre-computing: "How much RAM for N vectors?" — `N × dims × 4 bytes` for float32 vectors, plus roughly `2 × M × 4 bytes` per vector of neighbour ids at the base graph layer (~128 B at the common default M = 16, which is noise next to a 1536-dim vector but ~8% on top of a 384-dim one); doing the arithmetic aloud (the [[Back of the Envelope Estimation]] habit) is the strongest signal you've operated one rather than read about one.
 
 ## Check yourself
 
@@ -137,14 +137,14 @@ The honest market take, as of ~2026:
 > Post-filter: ANN returns the global top-k, of which ~0.5% survive the filter — top-100 yields ~0 results, forcing huge-k re-queries. Pre-filter: restricting an HNSW traversal to 250K scattered nodes breaks graph connectivity and degrades toward brute force. Engines solve it structurally: filter-aware traversal (skip-but-route-through excluded nodes), or partitioning/segmenting the index by tenant so each tenant searches its own small index — the [[Sharding]] instinct applied to vector space.
 
 > [!question]- Q: Mini design prompt — semantic search over 2M support tickets, 50 QPS, must filter by product line, team already runs Postgres and MongoDB. Pick the storage and justify.
-> pgvector in the existing Postgres: 2M vectors × ~1536 dims fits comfortably in RAM on one node, HNSW gives millisecond ANN at 50 QPS, and product-line filtering is a plain WHERE clause the planner can combine with the vector index. A dedicated engine adds a second stateful system, a dual-write consistency problem, and new ops burden for zero capability the workload needs. Revisit only if the corpus grows ~50×, QPS grows an order of magnitude, or filtered recall measurably degrades. Plan the re-embed path (model version column, rebuildable from source of truth) from day one.
+> pgvector in the existing Postgres: 2M vectors × ~1536 dims is ~12 GB of raw vectors plus graph overhead — one well-specced node — and HNSW gives millisecond ANN at 50 QPS. Be precise about the filter, though, because this is where people overclaim: Postgres does **not** fuse a B-tree and a vector index into one plan. It either scans the HNSW index and applies `product_line` afterwards (which can return fewer rows than your `LIMIT`) or falls back to an exact scan of the filtered rows. pgvector **0.8.0** (2024) added *iterative index scans*, which keep pulling candidates until the filter is satisfied, and that — along with `hnsw.ef_search` and, for a low-cardinality column like product line, partial indexes — is the knob you actually tune. A dedicated engine still adds a second stateful system, a dual-write consistency problem, and new ops burden for zero capability the workload needs. Revisit only if the corpus grows ~50×, QPS grows an order of magnitude, or filtered recall measurably degrades. Plan the re-embed path (model version column, rebuildable from source of truth) from day one.
 
 ## Sources
 
-- Malkov & Yashunin, "Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs" (the HNSW paper, arXiv ~2016, IEEE TPAMI 2018).
+- Malkov & Yashunin, "Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs" (the HNSW paper — arXiv:1603.09320, 2016; published in IEEE TPAMI vol. 42 no. 4, April 2020. The DOI carries a misleading `2018`, which is its early-access date, not the publication year).
 - FAISS documentation (Meta AI) — IVF, product quantization, and the practical index-selection guidelines.
 - Subramanya et al., "DiskANN: Fast Accurate Billion-point Nearest Neighbor Search on a Single Node" (NeurIPS 2019) — the disk-resident ANN approach.
-- pgvector project documentation — HNSW and IVFFlat index options inside Postgres.
+- pgvector project documentation — HNSW and IVFFlat index options inside Postgres. Read the CHANGELOG, not just the README: filtered-query behaviour changed materially at 0.8.0 (2024).
 - Pinecone learning center — accessible HNSW and ANN explainers (vendor, but technically solid).
 - Qdrant and Milvus official documentation — filterable HNSW and segment-based architecture; useful for seeing how dedicated engines attack the pre-filter problem.
 - *Designing Data-Intensive Applications*, Kleppmann — ch. 3 (indexing fundamentals this note contrasts against) and ch. 12 (derived data — the right mental bucket for a vector index).

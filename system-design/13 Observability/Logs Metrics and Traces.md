@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The three pillars of observability — what question each answers, how to emit each one well, and why logs dominate your observability bill.
 related: ["[[Distributed Tracing]]", "[[Alerting and On-Call Design]]", "[[SLA SLO SLI and Error Budgets]]"]
 ---
@@ -46,15 +46,18 @@ Rules that separate useful logs from noise:
 
 ### Metrics — how much, how fast
 
-A **metric** is a named numeric time series, e.g. `http_requests_total{service="payment", status="500"}`. Metrics are cheap because they are aggregated at write time: one counter per label combination, not one record per event. Three core types (Prometheus vocabulary, but universal):
+A **metric** is a named numeric time series, e.g. `http_requests_total{service="payment", status="500"}`. Metrics are cheap because they are aggregated at write time: one counter per label combination, not one record per event. Prometheus defines **four** types; the first three are universal vocabulary, the fourth is the one people misuse:
 
 | Type | What it is | Example | Query pattern |
 |---|---|---|---|
 | **Counter** | Monotonically increasing total; resets only on restart | `http_requests_total`, `payments_failed_total` | `rate()` over a window → requests/sec |
 | **Gauge** | Point-in-time value that goes up and down | queue depth, JVM heap used, pods ready | current value, min/max over window |
-| **Histogram** | Counts of observations in predefined buckets, plus sum and count | request latency buckets | approximate percentiles (p99) across time and instances |
+| **Histogram** | Counts of observations in predefined buckets, plus sum and count | request latency buckets | approximate percentiles (p99) across time *and* instances |
+| **Summary** | Quantiles computed **inside the client process**, over a sliding time window, plus sum and count | one instance's p99 | read the quantile straight off — but you may not aggregate it |
 
 Histograms exist because you cannot average percentiles: to get a fleet-wide p99 you need the raw distribution, and buckets are the cheap approximation of it ([[Latency vs Throughput vs Bandwidth]] explains why percentiles, not averages, are the numbers that matter).
+
+**Histogram vs summary is the trap worth knowing cold.** A summary's quantiles are computed *in the process*, so what you scrape is already a finished p99 — of that one pod, over that pod's own sliding window. There is no mathematically valid way to combine one pod's p99 with another's; averaging them, maxing them, or `avg()`-ing the series all produce a number that means nothing. A histogram instead ships raw per-bucket counters, and counters *are* additive: sum the buckets across every pod, then estimate the quantile at query time with `histogram_quantile()`. You trade aggregation error (fatal) for bucket-boundary interpolation error (bounded, and shrinkable by choosing buckets around your SLO threshold). Reach for a summary only when you want one instance's view and will never need a fleet number. Prometheus *native* histograms — automatic, exponentially spaced buckets at far finer resolution — were experimental from v2.40 (2022) and became a stable feature in v3.8.0, still opt-in per scrape config.
 
 **Cardinality is the loaded gun.** A metric's cost is the number of unique label combinations — each is a separate time series held in memory by the metrics system. `http_requests_total{service, status, method}` is maybe a few hundred series. Add `user_id` as a label and it becomes millions. The classic self-inflicted observability outage is a **cardinality explosion**: someone adds a high-cardinality label (user ID, correlation ID, full URL path with IDs in it), the metrics backend's memory balloons, and monitoring dies — usually during the incident you needed it for. Rule: labels are for *dimensions you will group by*, never for *identifiers*. Identifiers belong in logs and traces.
 
@@ -93,7 +96,7 @@ Logs are the expensive pillar. Metrics cost is proportional to *cardinality* (nu
 
 One school of thought — **wide events / canonical log lines** (Honeycomb's model, Stripe's "canonical log line") — argues for collapsing the pillars: emit one rich, structured event per request per service with dozens of fields, and derive metrics and trace-like views from it at query time; it trades higher ingest cost for the ability to ask arbitrary high-cardinality questions.
 
-## Trade-offs
+### What each pillar costs you
 
 | You gain | You pay |
 |---|---|

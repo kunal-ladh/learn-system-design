@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How trace context propagates across services to show where a slow request actually spent its time — spans, W3C traceparent, OpenTelemetry, and head vs tail sampling.
 related: ["[[Logs Metrics and Traces]]", "[[Anatomy of a Web Request]]", "[[Communication Patterns Between Services]]"]
 ---
@@ -43,15 +43,15 @@ The visual rendering is the familiar waterfall/flame view: parent spans on top, 
 
 The hard part of tracing is not recording spans — it's making sure the IDs *travel with the request* across process boundaries. This is **context propagation**: on every outbound call, the current trace context is written into headers; on every inbound call, it is extracted and continued.
 
-The standard is **W3C Trace Context**, a `traceparent` HTTP header:
+The standard is **W3C Trace Context** — a W3C Recommendation since February 2020 — whose `traceparent` HTTP header is four dash-separated hex fields:
 
 ```
 traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
-             |  |                                |                |
-          version          trace-id (32 hex)   parent-span-id   flags (01 = sampled)
+             ^^ ^------------------------------^ ^--------------^ ^^
+          version          trace-id, 32 hex       parent-id, 16 hex  trace-flags
 ```
 
-A companion `tracestate` header carries vendor-specific data. Older systems used Zipkin's B3 headers (`X-B3-TraceId` etc.); OpenTelemetry can speak both. For async hops, the same context is stuffed into message attributes/headers (Kafka headers, SQS message attributes) so the consumer's spans join the producer's trace.
+Name them the way the spec does, because interview answers get marked on it: `version` (1 byte), `trace-id` (16 bytes / 32 hex), `parent-id` (8 bytes / 16 hex — the *caller's* span id, which is what makes the receiver's span a child), and `trace-flags` (1 byte) whose lowest bit is `sampled`, so the trailing `01` means "this one is being recorded". A companion `tracestate` header carries vendor-specific key-value state. Older systems used Zipkin's B3 headers (`X-B3-TraceId` etc.); OpenTelemetry can speak both. For async hops, the same context is stuffed into message attributes/headers (Kafka headers, SQS message attributes) so the consumer's spans join the producer's trace.
 
 ```mermaid
 sequenceDiagram
@@ -72,7 +72,7 @@ sequenceDiagram
     O-->>K: 200 OK
     K-->>C: 200 OK
     Q->>N: consume message
-    Note over N: Span E child of B<br/>same trace T1, async leg
+    Note over N: Span E continues from the publish span<br/>same trace T1, async leg
 ```
 
 ### Correlation IDs vs full tracing — an honest comparison
@@ -92,7 +92,7 @@ The honest verdict: a well-enforced correlation ID answers a surprising fraction
 
 ### Instrumentation: auto vs manual
 
-**OpenTelemetry (OTel)** is the vendor-neutral standard: one SDK, one wire protocol (OTLP), exporters to any backend (Jaeger, Tempo, vendor SaaS).
+**OpenTelemetry (OTel)** is the vendor-neutral standard: one SDK, one wire protocol (OTLP), exporters to any backend (Jaeger, Tempo, vendor SaaS). Status matters when you plan a migration, and it is signal-by-signal, not project-wide: as of 2026, **traces and metrics are stable** in the specification and in every major language SDK; **logs are stable in the spec and OTLP** but SDK maturity still varies by language (Java is stable, several others are not); **profiles** are the newest signal and remain **alpha**. Treat "OTel supports X" as a claim to check against the spec's status page for your language, not a given.
 
 - **Auto-instrumentation**: for JVM services, the OTel Java agent (`-javaagent:opentelemetry-javaagent.jar`) instruments known libraries — Spring MVC/WebFlux, HTTP clients, JDBC, Mongo driver, Kafka clients — with zero code changes. It creates server/client spans and propagates context automatically. This gets you 80% of the value in an afternoon.
 - **Manual instrumentation**: adding spans around business logic ("risk-check", "ledger-write") and attributes that matter to *you* (amount bucket, bank, retry count). Auto-instrumentation shows *that* payment-service took 1.8 s; a manual span shows it was the signature verification inside it.

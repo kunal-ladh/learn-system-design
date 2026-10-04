@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: Retrieval-augmented generation as a system design problem — the async ingestion pipeline, the query path, freshness via CDC, evaluation, and the failure modes that actually bite in production.
 related: ["[[Vector Databases and Similarity Search]]", "[[LLM Serving Infrastructure]]", "[[Change Data Capture]]", "[[Why Async Messaging Exists]]"]
 ---
@@ -19,7 +19,7 @@ An LLM only "knows" what was in its training data — frozen at a cutoff date, p
 
 The first instinct — fine-tune the model on company data — is slow, expensive, must be repeated whenever data changes, and still doesn't reliably stop hallucination or let you *cite* where an answer came from. It also can't do per-user access control: a fine-tuned model can't "forget" a document for users who shouldn't see it.
 
-The working fix came from an older idea: open-book beats closed-book. Retrieve the relevant documents at query time, hand them to the model in the prompt, and instruct it to answer *from the provided context*. Data changes propagate by updating an index, not retraining a model; answers carry citations; access control happens at retrieval time with ordinary filters. The term comes from the RAG paper (Lewis et al., ~2020); the production pattern took off alongside chat LLMs around 2023 and is now a standard 2026 interview topic — precisely because the hard parts are classic infrastructure.
+The working fix came from an older idea: open-book beats closed-book. Retrieve the relevant documents at query time, hand them to the model in the prompt, and instruct it to answer *from the provided context*. Data changes propagate by updating an index, not retraining a model; answers carry citations; access control happens at retrieval time with ordinary filters. The term comes from the RAG paper (Lewis et al., NeurIPS 2020); the production pattern took off alongside chat LLMs around 2023 and is now a standard 2026 interview topic — precisely because the hard parts are classic infrastructure.
 
 ## What it solves
 
@@ -74,9 +74,9 @@ sequenceDiagram
     L-->>U: streamed answer with citations
 ```
 
-**Hybrid search**, one line: run keyword search (BM25) *and* vector search in parallel, then merge with **reciprocal rank fusion** (score each doc by summed inverse ranks across both lists) — lexical search catches exact identifiers and rare terms that embeddings blur, vector search catches paraphrases; together they beat either alone.
+**Hybrid search**, one line: run keyword search (BM25) *and* vector search in parallel, then merge with **reciprocal rank fusion** — score each document as the sum of `1 / (k + rank)` over every list it appears in, where the constant `k` (60 in the original paper) is the actual trick: it damps the pull of any one list's top hit, and because the formula consumes only *ranks*, you never have to reconcile a BM25 score with a cosine distance — lexical search catches exact identifiers and rare terms that embeddings blur, vector search catches paraphrases; together they beat either alone.
 
-Two numbers dominate the read path's latency budget: retrieval (tens of milliseconds) and the LLM call (seconds). That asymmetry is why adding a rerank stage — tens of milliseconds for noticeably better context — is almost always worth it, and why optimizing the vector query below ~50 ms is effort spent on the wrong term of the sum.
+Two numbers dominate the read path's latency budget: retrieval (tens of milliseconds) and the LLM call (seconds). That asymmetry is why adding a rerank stage — tens of milliseconds for a small local cross-encoder, a couple of hundred for a hosted rerank API, in exchange for noticeably better context — is usually worth it against an LLM call measured in seconds, and why optimizing the vector query below ~50 ms is effort spent on the wrong term of the sum.
 
 ### Freshness
 
@@ -116,7 +116,7 @@ A RAG index is **derived data**; the question is how it learns the source change
 ## In your stack
 
 - The ingestion pipeline is your home turf: SQS (or Redis Streams, post-migration) between sources and embedding workers, idempotent upserts keyed on chunk ID, DLQ for poison documents — the same patterns as every async flow you run, plus an `x-correlation-id` from source event to index write so a stale answer is traceable to the event that should have fixed it.
-- MongoDB as source of truth fits the derived-index model: CDC from Mongo change streams drives re-embedding; the vector index stays rebuildable, never authoritative.
+- MongoDB as source of truth fits the derived-index model: CDC from Mongo change streams drives re-embedding — noting that change streams require a replica set or sharded cluster (they do not exist on a standalone `mongod`) and that a `delete` event carries only the `_id`, so the pipeline must map document id to chunk ids itself; the vector index stays rebuildable, never authoritative.
 - Redis covers two layers: embedding/retrieval cache (plain cache-aside) and, if adopted, the semantic cache — keep the similarity threshold conservative; in fintech, serving user A's cached answer shape to user B's "similar" question must never leak tenant data, so scope cache keys per tenant.
 - An internal support-agent assistant over policy documents is the realistic first RAG system at a fintech: human-in-the-loop by construction, citations mandatory, revoked-policy deletion treated as a compliance event.
 - **Cost shape**: ingestion cost scales with *corpus churn × embedding price* (recurring, not one-time); query cost scales with *QPS × (retrieval + LLM tokens)* — and the LLM term dominates, which is why rerank-then-trim and caching pay for themselves.
@@ -143,8 +143,8 @@ A RAG index is **derived data**; the question is how it learns the source change
 
 ## Sources
 
-- Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (the RAG paper, ~2020).
-- Cormack, Clarke & Buettcher, "Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods" (SIGIR 2009) — the RRF method; widely implemented in OpenSearch/Elasticsearch hybrid search.
-- Robertson & Zaragoza, "The Probabilistic Relevance Framework: BM25 and Beyond" — the lexical half of hybrid search.
+- Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (the RAG paper — arXiv May 2020, published NeurIPS 2020).
+- Cormack, Clarke & Buettcher, "Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods" (SIGIR 2009) — the RRF method and the k = 60 default every implementation inherited; shipped in OpenSearch/Elasticsearch hybrid search.
+- Robertson & Zaragoza, "The Probabilistic Relevance Framework: BM25 and Beyond" (Foundations and Trends in Information Retrieval, 2009) — the lexical half of hybrid search.
 - Anthropic and OpenAI official RAG/embeddings guides — current practical defaults for chunking and retrieval (vendor docs, updated frequently; check current versions).
 - *Designing Data-Intensive Applications*, Kleppmann — ch. 11–12 (stream processing and derived data: the correct frame for the entire ingestion half).

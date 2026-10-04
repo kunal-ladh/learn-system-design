@@ -24,6 +24,8 @@ The loop that works, per topic:
 4. **Come here** and answer this module's rapid-fire questions cold, a day or more later. Spacing is what moves it to long-term memory.
 5. **Once per week**, do one full design problem from the tiers below on a blank page, timed.
 
+For the numeric questions, [[Numbers and Formulas]] is the recall sheet those answers come from — use it to check yourself, not to study from first.
+
 Say answers *out loud*. The gap between "I know this" and "I can say this" is exactly the gap that shows up in an interview and in a design review.
 
 ---

@@ -1,0 +1,37 @@
+filters:
+  and:
+    - file.hasTag("system-design")
+views:
+  - type: table
+    name: All notes
+    order:
+      - file.name
+      - status
+      - summary
+    sort:
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Messaging
+    filters:
+      and:
+        - file.hasTag("messaging")
+    order:
+      - file.name
+      - summary
+  - type: table
+    name: Interview problems
+    filters:
+      and:
+        - file.hasTag("interview")
+    order:
+      - file.name
+      - summary
+  - type: table
+    name: Still reading
+    filters:
+      and:
+        - status != "read"
+    order:
+      - file.name
+      - status

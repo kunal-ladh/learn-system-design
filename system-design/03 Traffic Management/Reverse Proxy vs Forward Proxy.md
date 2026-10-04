@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: The two proxy directions — who each one represents, what each is used for, and why CDNs and API gateways are just specialized reverse proxies.
 related: ["[[API Gateway]]", "[[CDN]]", "[[Load Balancers]]", "[[TLS and HTTPS]]"]
 ---
@@ -85,7 +85,7 @@ These aren't analogies; they are literally the same request-forwarding machinery
 | Apps shielded from slow clients and malformed requests | Config in a separate system from app code — drift and ownership questions |
 | Swap backends invisibly | **Lost client identity**: backends see the proxy's IP unless headers forward it |
 
-That last cost deserves emphasis because it bites everyone once: behind a reverse proxy, the app's "remote address" is the proxy. Conventions like `X-Forwarded-For` (client IP chain), `X-Forwarded-Proto`, and the standardized `Forwarded` header exist to pass the truth along — and the app must trust them *only* from its own proxy, since clients can send fake ones. Getting this wrong corrupts [[Rate Limiting|per-IP rate limiting]], audit logs, and geo logic.
+That last cost deserves emphasis because it bites everyone once: behind a reverse proxy, the app's "remote address" is the proxy. Conventions like `X-Forwarded-For` (client IP chain), `X-Forwarded-Proto`, and the standardized `Forwarded` header (RFC 7239, 2014) exist to pass the truth along — and the app must trust them *only* from its own proxy, since clients can send fake ones. Getting this wrong corrupts [[Rate Limiting|per-IP rate limiting]], audit logs, and geo logic.
 
 ## Failure modes
 
@@ -93,7 +93,7 @@ That last cost deserves emphasis because it bites everyone once: behind a revers
 - **Connection exhaustion** — the reverse proxy holds every client connection; file-descriptor or memory limits hit at the proxy before backends feel anything. Detected via proxy-level connection metrics; mitigated by tuning limits, timeouts on idle clients.
 - **Buffering surprises** — proxies often buffer whole requests/responses (to shield backends from slow clients). Large uploads/downloads spike proxy memory or disk; streaming/SSE endpoints break or stall if buffering isn't disabled for them (a classic NGINX + [[WebSockets Server-Sent Events and Long Polling|SSE]] gotcha).
 - **Timeout mismatch in the chain** — proxy timeout < backend processing time ⇒ client gets 502/504 while the backend finishes anyway, work done but reported failed; see [[Timeouts Retries and Exponential Backoff]]. Every hop in CDN → LB → gateway → app needs coherent, increasing-inward timeouts.
-- **Header spoofing** — trusting `X-Forwarded-For` from the open internet lets clients forge their IP; auth or limits keyed on it are bypassable. Mitigation: the first trusted proxy overwrites rather than appends, apps trust only the rightmost trusted entry.
+- **Header spoofing** — trusting `X-Forwarded-For` from the open internet lets clients forge their IP; auth or limits keyed on it are bypassable. Mitigation: have your outermost trusted proxy *overwrite* the header with the real peer address rather than append to it. If you must append, count from the **right**: strip the entries your own proxies added and take the next value — the leftmost entry is entirely client-supplied and must never be trusted.
 - **Forward-proxy TLS interception breakage** — corporate MITM proxies break certificate pinning and confuse CLI tools (the familiar "works at home, SSL error in office" bug; `HTTPS_PROXY` env vars and corporate CA bundles are the fix).
 
 ## When NOT to use it

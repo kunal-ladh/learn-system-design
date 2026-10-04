@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: Why the network's failure modes — loss, partitions, asymmetry, gray failures — make "slow" harder than "down", and how timeout budgets keep one sick dependency from consuming a whole request path.
 related: ["[[The Fallacies of Distributed Computing]]", "[[Timeouts Retries and Exponential Backoff]]", "[[CAP Theorem]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -45,7 +45,7 @@ Where partitions actually come from, so they feel concrete rather than theoretic
 - capacity: congestion that drops or delays enough packets to be indistinguishable from a partial cut;
 - cloud specifics: cross-AZ link degradation, a sick node's kubelet/VPC agent isolating its pods.
 
-The OSDI 2018 study of network-partition failures in popular distributed systems found a large share of partition-triggered failures were caused by *partial* partitions, led to silent data loss or stale reads rather than crashes, and manifested even though the systems had passed their own fault-injection tests — i.e., the nasty cases are precisely the under-tested ones.
+The OSDI 2018 study of network-partition failures in popular distributed systems found that a large share of partition-triggered failures involved *partial* or one-directional partitions rather than clean cuts, that most caused silent damage — data loss, stale reads, broken locks — rather than visible crashes, and that most were reachable by small, easily reproducible scenarios involving only a handful of nodes. In other words: the nastiest cases are not exotic, they are simply the ones nobody tested.
 
 **How systems decide someone is dead: failure detectors.** There is no way to *know* a remote node is down — only to stop hearing from it. Practical systems use heartbeats plus a threshold: miss N beats in T seconds and the node is declared dead. The threshold is a trade: too aggressive and transient congestion triggers false deaths (and a false death triggers [[Failover]] — the operation that *causes* many outages); too lenient and real failures go unhandled for minutes. Two refinements worth knowing by name:
 
@@ -109,7 +109,7 @@ Two tactics refine the basic timeout, both borrowed from Google's "The Tail at S
 - **Fail-closed is your friend**: in money movement, the correct response to timeout-ambiguity is *hold and reconcile*, never *assume success* — a stuck transfer is recoverable, a duplicated one is an incident with a regulator. Pair every ambiguous external call (bank/partner APIs) with idempotency keys and a reconciliation job.
 - At **1 replica**, "slow vs down" sharpens: there is no healthy peer for the LB to shift to, so a slow pod means *every* request suffers for the full timeout. Readiness probes that would deregister the only pod on a datastore blip make it worse — connection-refused instead of an interpretable 5xx (a lesson already learned in your fleet's probe configuration).
 - You already propagate `x-correlation-id` on every hop; a propagated deadline header is the same plumbing and turns static timeout nesting into real budget enforcement.
-- Mongo driver timeouts deserve special respect: `socketTimeoutMS` unset means a gray-failing node can hold your request threads indefinitely while the pod stays "healthy".
+- Mongo driver timeouts deserve special respect: `socketTimeoutMS` unset means a gray-failing node can hold your request threads indefinitely while the pod stays "healthy". Recent driver versions consolidate the per-stage knobs behind a single client-side operation timeout (`timeoutMS`) — check what your driver version actually supports before writing the config.
 
 ## Interview angle
 
@@ -143,7 +143,7 @@ Classic follow-ups: *What can you conclude when a call times out?* (Nothing abou
 
 - *Designing Data-Intensive Applications* (Kleppmann), **Ch. 8 — The Trouble with Distributed Systems** (unreliable networks, timeouts, detecting faults)
 - Huang et al., *Gray Failure: The Achilles' Heel of Cloud-Scale Systems*, HotOS 2017 (differential observability)
-- Peter Deutsch et al. — the Eight Fallacies of Distributed Computing; see [[The Fallacies of Distributed Computing]]
+- L. Peter Deutsch — the original seven Fallacies of Distributed Computing (c. 1994 at Sun); James Gosling added the eighth, "the network is homogeneous" (c. 1997); see [[The Fallacies of Distributed Computing]]
 - Alquraan, Takruri, Alfatafta & Al-Kiswany, *An Analysis of Network-Partitioning Failures in Cloud Systems*, OSDI 2018 (partial partitions in real systems)
 - AWS Builders' Library — "Timeouts, retries, and backoff with jitter" (Marc Brooker); gRPC documentation on deadlines and deadline propagation
 - Dean & Barroso, *The Tail at Scale*, CACM 2013 (hedged requests, tail-latency tactics)

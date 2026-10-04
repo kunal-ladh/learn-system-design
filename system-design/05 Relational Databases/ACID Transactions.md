@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: What atomicity, consistency, isolation and durability each precisely guarantee, what they don't, and why none of it extends across service boundaries.
 related: ["[[Transaction Isolation Levels]]", "[[How Databases Store Data]]", "[[Two-Phase Commit and Distributed Transactions]]", "[[The Outbox Pattern]]"]
 ---
@@ -103,7 +103,7 @@ The design instinct to build: **find the one database write that is the system o
 - **"Atomicity means other transactions see all my writes at once."** Atomicity is about failure (all-or-nothing); visibility is isolation.
 - **"Committed data can't be lost."** It survives a *crash*. Whether it survives a dead machine depends on replication mode; async replication + failover can lose acknowledged commits.
 - **"We use ACID databases, so our microservices are consistent."** Each service's transactions are locally ACID; the system as a whole is eventually consistent at best, and only if you engineered it to be ([[The Outbox Pattern]], [[Saga Pattern]]).
-- **"BASE databases have no transactions."** Blurry in practice: MongoDB has had multi-document ACID transactions since 4.0 (with real costs — see [[MongoDB Architecture]]), and single-document updates were always atomic.
+- **"BASE databases have no transactions."** Blurry in practice: MongoDB has had multi-document ACID transactions since 4.0 (2018), extended to sharded clusters in 4.2 (2019), with real costs — see [[MongoDB Architecture]] — and single-document updates were always atomic.
 
 ## In your stack
 
@@ -140,7 +140,7 @@ Classic probes:
 > Constraints take everything they can express: `NOT NULL`, uniqueness (e.g. one row per idempotency key), foreign keys, `CHECK (balance >= 0)` style range rules. They matter because they hold against *every* code path — including the buggy one someone ships next quarter and the manual fix-up script run during an incident. Application code owns the invariants SQL can't state ("debits equal credits across these two rows", "KYC must be verified before first transaction"), which therefore need tests and, in money systems, reconciliation jobs that re-verify them after the fact. The layering is deliberate defence in depth: app code is the enforcement you intend; constraints are the enforcement that survives your mistakes.
 
 > [!question]- Q: Why can't you rely on a `SELECT` balance check followed by an `UPDATE` deduction inside a transaction to prevent overdrafts at default isolation?
-> At read committed (and for plain reads at repeatable read), two concurrent transactions can both read balance 100, both decide a 70 deduction is fine, and both commit — balance ends at −40. The check-then-act race is a lost-update/write-skew anomaly that default isolation permits. Fixes: `SELECT ... FOR UPDATE` to lock the row, a single atomic conditional `UPDATE ... WHERE balance >= 70` checking affected rows, a `CHECK (balance >= 0)` constraint as backstop, or serializable isolation — see [[Transaction Isolation Levels]].
+> At read committed (and for plain reads at InnoDB repeatable read), two concurrent transactions can both read balance 100 and both decide a 70 deduction is fine, because a snapshot is a view and not a reservation. What breaks depends on the `UPDATE` you write: an app-computed `SET balance = 30` loses one deduction outright — the account paid out 140 and shows 30 — while `SET balance = balance - 70` applies both decrements and lands at −40, nothing lost but the overdraft check decided on stale data. Fixes: `SELECT ... FOR UPDATE` to lock the row, a single atomic conditional `UPDATE ... WHERE balance >= 70` checking affected rows, a `CHECK (balance >= 0)` constraint as backstop, or serializable isolation — see [[Transaction Isolation Levels]].
 
 ## Sources
 

@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-03
 summary: How autoscaling actually works — HPA mechanics, why CPU is often the wrong signal for IO-bound Java services, custom metrics, cluster-level scaling, and why headroom is still required.
 related: ["[[Capacity Planning]]", "[[Backpressure and Flow Control]]", "[[Vertical vs Horizontal Scaling]]"]
 ---
@@ -36,7 +36,13 @@ Kubernetes' **Horizontal Pod Autoscaler (HPA)** is the canonical reactive autosc
 desiredReplicas = ceil( currentReplicas × currentMetric / targetMetric )
 ```
 
-Example: 4 pods at 80% average CPU with a 50% target → `ceil(4 × 80/50)` = 7 pods. Scale-down is deliberately damped (a stabilization window, default 5 minutes, takes the *highest* recent desired count) so brief lulls don't trigger flapping. CPU/memory targets are expressed relative to each pod's *resource request*, which means a wrong request silently rescales every percentage.
+Example: 4 pods at 80% average CPU with a 50% target → `ceil(4 × 80/50)` = 7 pods.
+
+Three defaults that the formula alone hides, and that decide how the loop actually feels:
+
+- **A 10% dead band.** If `currentMetric / targetMetric` falls between 0.9 and 1.1, the HPA does nothing at all — that is the `--horizontal-pod-autoscaler-tolerance` default of `0.1`, and it exists so a fleet hovering near target doesn't twitch every 15 seconds.
+- **Up and down are asymmetric on purpose.** The default `behavior` allows scale-*up* with a 0-second stabilization window and a policy of +100% or +4 pods per 15 s, whichever is larger; scale-*down* gets a **300-second stabilization window** during which the controller takes the *highest* desired count it computed, so brief lulls can't tear capacity out.
+- **CPU/memory targets are a fraction of each pod's `resources.requests`**, not of the node or the limit — so a wrong request silently rescales every percentage you reason about.
 
 ### Why CPU is often the wrong signal
 
@@ -58,7 +64,7 @@ CPU is the *right* signal for genuinely CPU-bound work (encoding, crypto, serial
 
 ### The other two autoscalers
 
-- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, historically awkward alongside HPA-on-CPU since both react to the same signal.
+- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, and still awkward alongside HPA-on-CPU since both react to the same signal. Its other historic cost, a pod restart to apply new requests, is era-specific: in-place pod resize graduated to beta in Kubernetes v1.33 (2025) and VPA 1.4+ can use it.
 - **Cluster Autoscaler**: pods are scheduled onto nodes, and when new pods don't fit, they sit `Pending` until the cluster autoscaler provisions a node — adding **minutes** to scale-up latency on top of pod startup. **Pod priority and preemption** decide who waits when capacity is tight: give user-facing services higher `priorityClass` so a scale-up evicts batch/cron pods instead of queueing behind them. A common trick is a low-priority "balloon" deployment of placeholder pods that reserve warm node capacity and get evicted the instant real workloads need it.
 
 ### Scaling lag vs bursts: why headroom survives
@@ -121,7 +127,7 @@ Scale-to-zero (Knative, Lambda, Cloud Run) removes the last idle instance, makin
 
 - Much of your fleet is **pinned at 1 replica as a cost decision** — meaning no HPA, and the honest consequences: a deploy or pod loss is a brief outage, and a surge is absorbed entirely by that one pod's headroom. Where autoscaling matters most for you is the *consumers*: SQS queue depth (and later Redis Streams pending-entries lag) via KEDA is the natural, low-risk place to start — backlogs are tolerant of scaling lag in a way user-facing requests aren't.
 - Your Java/Spring services are the textbook IO-bound case: time goes to MongoDB, Redis, and bank/partner HTTP calls. If you enable HPA with a CPU target, expect it to sleep through your real saturation (thread/connection pools). Measure per-pod RPS capacity with a load test first ([[Capacity Planning]]), then scale on RPS per pod.
-- JVM warmup makes aggressive reactive scale-up less effective for you specifically: a Spring Boot pod that takes 60–90 s to start and minutes to JIT-warm contributes nothing during a 2-minute burst. Pre-scale for known events (festival days, salary-day loads); keep startup probes honest so cold pods don't receive full traffic ([[Health Checks and Service Discovery]], [[Graceful Shutdown and Deployment Safety]]).
+- JVM warmup makes aggressive reactive scale-up less effective for you specifically: a Spring Boot pod that takes tens of seconds to start and minutes to JIT-warm contributes nothing during a 2-minute burst — measure your own number rather than trusting mine. Pre-scale for known events (festival days, salary-day loads); keep startup probes honest so cold pods don't receive full traffic ([[Health Checks and Service Discovery]], [[Graceful Shutdown and Deployment Safety]]).
 - Mind the fixed tiers: MongoDB and partner-bank rate limits don't autoscale. Cap `maxReplicas` against downstream connection budgets, and pair scaling with [[Rate Limiting]] and [[Load Shedding and Graceful Degradation]] at the edge for the load you *choose* not to serve.
 - Cost shape for the auditor-minded: HPA on EKS scales pods (free beyond the nodes), but pods force nodes via the cluster autoscaler — your real cost scales with *node-hours*, and the lever is utilization target × warmup-driven headroom.
 
