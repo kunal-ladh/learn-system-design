@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: The single most important distinction in messaging — destructive-consume queues (RabbitMQ, SQS) versus append-only replayable logs (Kafka, Redis Streams) — what each makes easy and hard, and why it drives broker choice.
 related: ["[[Choosing a Message Broker]]", "[[Kafka Architecture]]", "[[Consumer Groups and Rebalancing]]", "[[Delivery Semantics]]"]
 ---
@@ -15,7 +15,7 @@ Almost every confusion about message brokers dissolves once you see that there a
 
 ## Why this matters
 
-Teams routinely pick a broker by popularity, then fight its model: they try to get replay out of RabbitMQ (it cannot), or try to use Kafka as a work queue with per-message retries and selective acknowledgment (it resists — offsets are positional, not per-message). Understanding the two models tells you *in advance* which fights you will lose. It also explains most of [[Choosing a Message Broker]], why [[Consumer Groups and Rebalancing]] works so differently across brokers, and why "can I reprocess last Tuesday's events?" is trivial in one world and impossible in the other.
+Teams routinely pick a broker by popularity, then fight its model: they try to get replay out of RabbitMQ classic or quorum queues (they cannot; RabbitMQ Streams, added in 3.9 in 2021, are a log), or try to use Kafka consumer groups as a work queue with per-message retries and selective acknowledgment (they resist — offsets are positional, not per-message; Kafka 4.2's share groups, 2026, are Kafka's own queue-model answer). Understanding the two models tells you *in advance* which fights you will lose. It also explains most of [[Choosing a Message Broker]], why [[Consumer Groups and Rebalancing]] works so differently across brokers, and why "can I reprocess last Tuesday's events?" is trivial in one world and impossible in the other.
 
 ## How it works
 
@@ -100,7 +100,7 @@ Take **50 million events/day at ~1 KB each = 50 GB/day**. On a log with 7-day re
 50 GB/day × 7 days × 3 replicas  =  1,050 GB  ≈  1.05 TB of standing broker storage
 ```
 
-That cost is paid whether zero consumers or twenty read it — and adding the twentieth consumer group adds only read bandwidth, not storage. On a queue, nothing is stored after acknowledgment, so storage is near-free; the cost is **operations**: each message needs at least a send, a receive, and a delete, so 50M messages/day is ~150M billable operations/day. Crucially, a second independent reader is not free on a queue — you must physically duplicate the message into a second queue (SNS fan-out), so the message count, and therefore the bill, multiplies by the number of readers.
+That cost is paid whether zero consumers or twenty read it — and adding the twentieth consumer group adds only read bandwidth, not storage. On a queue, nothing is stored after acknowledgment, so storage is near-free; the cost is **operations**: each message needs at least a send, a receive, and a delete, so 50M messages/day is ~150M billable operations/day unbatched (SQS bills per request, and a batch of up to 10 messages is one request, so batching cuts this by up to tenfold — the shape stays per-message). Crucially, a second independent reader is not free on a queue — you must physically duplicate the message into a second queue (SNS fan-out), so the message count, and therefore the bill, multiplies by the number of readers.
 
 > **Log cost scales with bytes × retention × replication and is indifferent to the number of readers. Queue cost scales with messages × operations and multiplies with every independent reader.**
 
@@ -133,7 +133,7 @@ Note what the fintech framing adds to the task rows: a duplicated push notificat
 - **"Kafka is a faster RabbitMQ."** Different model, not a faster one. Kafka's throughput comes from the log structure (sequential I/O, batching, zero per-message broker state), and you pay for it in partition-bound parallelism and awkward per-message operations.
 - **"SQS retains messages for (up to) 14 days, so I can replay."** Retention there applies to *unconsumed* messages. Once deleted after processing, they are gone. Only a log gives processed-message replay.
 - **"Redis Streams is just Kafka in Redis."** It is log-shaped but single-key (no partitioning across shards), memory-bound in practice, and trimmed with `XTRIM` rather than retained by policy. Honest comparison in [[Redis Streams]].
-- **"A consumer group is the same thing in every broker."** In Kafka it is offset-tracking plus exclusive partition ownership; in Redis Streams it is a PEL plus last-delivered-ID; SQS has no groups at all — every consumer competes for every message. See [[Consumer Groups and Rebalancing]].
+- **"A consumer group is the same thing in every broker."** In Kafka it is offset-tracking plus exclusive partition ownership; in Redis Streams it is a PEL plus last-delivered-ID; SQS has no consumer groups at all — every consumer competes for every message (FIFO *message* groups order messages; they do not track consumers). See [[Consumer Groups and Rebalancing]].
 - **"Queues are legacy, logs are modern."** Queues are the right tool whenever messages are tasks. A DLQ-with-redrive workflow on SQS is still the cleanest per-message failure handling in the industry.
 - **"A growing backlog means the same thing in both."** It does not. On a queue it is the broker's resources being consumed and an alarm it may raise itself; on a log it is free until lag crosses retention, at which point it becomes silent permanent loss. Opposite shapes, opposite alerts.
 - **"We'll just add partitions later if we need more consumers."** Adding partitions to a Kafka topic changes which partition a key hashes to, so messages for one key can land in a different partition than their history — breaking per-key ordering across the boundary, and breaking any consumer that assumed a key's events all arrive in one lane. Partition count is a capacity decision with ordering consequences, not a dial ([[Message Ordering]], [[Rebalancing Partitions]]).
@@ -146,7 +146,7 @@ Note what the fintech framing adds to the task rows: a duplicated push notificat
 - Fintech audit pressure favors logs for money-movement *events*: an append-only record of what happened is close to what an auditor wants anyway (see [[Event Sourcing]] for the full version, and its caveats).
 - For task-shaped work (notifications, document processing, webhook delivery), the queue model remains the better fit — don't let the migration flatten that distinction.
 - Services pinned at 1 replica interact with the two models very differently. On a queue, one consumer is simply slower than two and the broker holds the backlog — the only cost is drain time. On a log, one consumer owning all partitions is the same throughput ceiling *plus* a retention clock: the moment that single pod is down longer than the retention margin, data is gone rather than merely delayed. The log model quietly converts a 1-replica availability decision into a durability decision, which is a different conversation to have with whoever approved the cost saving.
-- Practical reading of the Redis Streams plan: you are moving from a broker where AWS owns the storage cliff to one where your `maxmemory` setting *is* the cliff, shared with cache traffic. Every stream needs an explicit `MAXLEN`, and the trim is applied at write time without consulting consumer positions — so on this model, trimming and consumer lag must be reasoned about together or the trim silently deletes unread entries.
+- Practical reading of the Redis Streams plan: you are moving from a broker where AWS owns the storage cliff to one where your `maxmemory` setting *is* the cliff, shared with cache traffic. Every stream needs an explicit `MAXLEN`, and the trim is applied at write time without consulting consumer positions by default (Redis 8.2 added an `ACKED` trim option that removes only entries every group has acknowledged) — so on this model, trimming and consumer lag must be reasoned about together or the trim silently deletes unread entries.
 
 ## Interview angle
 
@@ -156,7 +156,7 @@ Classic follow-ups:
 
 - "How do you get fan-out in each model?" — queues: broker-side topology (exchange bindings, SNS→multiple SQS); logs: just add another consumer group.
 - "Poison message in each model?" — queue: redeliver count then DLQ, rest of queue unaffected; log: it blocks its partition — skip it, or copy to a retry/DLQ topic and advance the offset ([[Dead Letter Queues and Poison Messages]]).
-- "Why can't Kafka consumers outnumber partitions usefully?" — within a group, a partition has exactly one owner; extra consumers idle. Capacity planning = partition planning.
+- "Why can't Kafka consumers outnumber partitions usefully?" — within a consumer group, a partition has exactly one owner; extra consumers idle. Capacity planning = partition planning. (Kafka 4.2's share groups lift the cap by dropping per-partition ordering — the queue model again; not yet on MSK as of Oct 2026.)
 - "Which model for X?" — reason aloud from the task-vs-fact question; the interviewer is testing the framework, not the brand name.
 
 ## Check yourself

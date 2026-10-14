@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: A multi-channel notification platform — ingest, per-channel queues, provider gateways with failover, dedup, per-user rate limits, retries with DLQs, preference compliance, and delivery tracking.
 related: ["[[Message Queues vs Event Logs]]", "[[Idempotency]]", "[[Dead Letter Queues and Poison Messages]]"]
 ---
@@ -27,7 +27,7 @@ A notification service is the platform component every product team calls instea
 
 - **At-least-once delivery with dedup** — never silently drop an OTP; never send a payment alert twice. "Exactly-once to a phone" is unachievable end-to-end ([[Exactly-Once Delivery Is a Lie]]), so the design goal is at-least-once *attempt* + idempotent suppression of duplicates.
 - **Latency**: critical tier delivered to the provider within ~1–2 seconds; bulk tier is throughput-optimized.
-- **Soft real-time, absorb spikes**: campaign sends create 1000x bursts; the system buffers rather than falls over.
+- **Soft real-time, absorb spikes**: campaign sends create ~70x bursts (see the estimation below); the system buffers rather than falls over.
 - **Provider independence**: any single vendor outage must not stop the channel.
 
 **Out of scope** (say it): the marketing campaign builder UI, content recommendation, client-side rendering of in-app inboxes.
@@ -41,7 +41,7 @@ Assume **10M notifications/day** (a mid-size consumer app), of which 20% critica
 - **Channel mix sets every number after this one.** *Assume* push 70%, email 20%, SMS 8%, in-app 2% — and ask for the real split in the interview, because the channels differ by orders of magnitude in cost and throughput. That gives 7M push, 2M email, **800K SMS**, 200K in-app per day. SMS averages 800,000 ÷ 86,400 ≈ **9/sec**: by far the smallest channel, and still the one that will page you.
 - **Why the smallest channel is the bottleneck**: if the vendor account is capped at, say, 100 messages/sec, a full day's SMS volume needs 800,000 ÷ 100 = 8,000 s ≈ **2.2 hours** of continuous sending. A 1M-message promotional SMS campaign therefore cannot be "sent at 9am" — it drains over 1,000,000 ÷ 100 = 10,000 s ≈ **2.8 hours**. That window is a product fact the campaign tool must surface, not an implementation detail; and it is why the design needs outbound pacing (deep dive 6), not just inbound queues.
 - **Worker sizing — concurrency, not CPU**: *assume* a provider API call takes ~200 ms round trip. One in-flight call therefore completes 1 ÷ 0.2 = **5 sends/sec**, so sustaining 1,000 sends/sec requires 1,000 ÷ 5 = **200 concurrent in-flight calls** — say 4 worker pods × 50 threads, or far fewer threads on a non-blocking client. These workers are I/O-bound: they sit at near-zero CPU while saturated, so autoscaling them on CPU under-provisions them badly. Scale on queue depth or age instead.
-- **Storage**: a status record per notification ≈ 1 KB (ids, channel, state transitions, timestamps, provider receipts) → 10M × 1 KB = **10 GB/day**; keep 90 days hot = **~900 GB** — one sharded collection; archive older to object storage.
+- **Storage**: a status record per notification ≈ 1 KB (ids, channel, state transitions, timestamps, provider receipts) → 10M × 1 KB = **10 GB/day**; keep 90 days hot = **~900 GB** — one collection, with sharding not a day-one need at this size; archive older to object storage.
 - **Status-store write rate — the tier everyone forgets**: each notification *persists* roughly 4 transitions (accepted, queued, sent, delivered — the render and sending steps in the state diagram below need not each be durable), so 10M × 4 = 40M writes/day ÷ 86,400 ≈ **460 writes/sec** average, bursting with the same ~70x factor during a campaign. The status store takes four times the write traffic the ingest API takes, and asynchronous provider receipts arrive on their own schedule rather than yours.
 - **Provider throughput reality-check**: SMS vendors commonly cap throughput per account/sender-id to tens–hundreds of messages/sec; this — not your own infrastructure — is usually the bottleneck, and is why per-provider rate control and multiple vendors exist in the design.
 - **Cost shape** (name it; interviewers and finance both care): push and in-app are effectively free per message, email is cheap per message, SMS is billed per message. So your infrastructure cost barely moves with campaign size while the **vendor bill scales linearly with it** — which reframes per-user caps and preference suppression as cost controls, not only as UX politeness.
@@ -87,7 +87,7 @@ Two consequences fall straight out of the table. First, **"sent" and "delivered"
 Duplicates enter twice: **callers retry** the ingest API (network timeout after a successful enqueue), and **workers redeliver** (crash after provider call, before ack — the at-least-once window).
 
 - **Ingest layer**: require an **idempotency key** per logical notification (e.g. `payment-alert:{txnId}:{userId}`). Store it with a unique constraint (or Redis `SET NX` with TTL); a replayed key returns the original notification ID instead of enqueueing again ([[Idempotency]]).
-- **Worker layer**: before calling the provider, atomically check-and-set the notification's state to `sending` keyed by notification ID + channel; a redelivered message that finds state `sent` is acked and dropped. The small honest gap: a crash *between* provider accept and state write can still double-send — shrink it (write-ahead state, provider-side idempotency keys where supported, e.g. email providers accept them) and accept that true exactly-once to a phone does not exist. Saying this plainly is worth points.
+- **Worker layer**: before calling the provider, atomically check-and-set the notification's state to `sending` keyed by notification ID + channel; a redelivered message that finds state `sent` is acked and dropped. The small honest gap: a crash *between* provider accept and state write can still double-send — shrink it (write-ahead state, provider-side idempotency keys where supported, e.g. some email APIs accept them) and accept that true exactly-once to a phone does not exist. Saying this plainly is worth points.
 
 ### 2. Retries, provider failover, and the DLQ
 

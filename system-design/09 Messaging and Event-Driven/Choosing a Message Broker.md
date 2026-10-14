@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: A decision framework for picking between RabbitMQ, Kafka, SQS/SNS, Redis Streams and friends — the dimensions that matter, cost shapes, and how to migrate safely.
 related: ["[[Message Queues vs Event Logs]]", "[[Kafka Operations]]", "[[SQS and SNS]]", "[[Redis Streams]]", "[[RabbitMQ]]"]
 ---
@@ -49,7 +49,7 @@ Brokers get compared; workloads get forgotten. Answer these about the *workload*
 | Ordering | Per-queue | Per-partition key | Per FIFO group | Per stream |
 | Routing | Rich (exchanges) | By key only | SNS filters | None built in |
 | Durability floor | Quorum queues: strong | acks=all: strong, tunable | Strong by contract | Weakest (async repl, AOF window) |
-| Delays/TTL/DLQ built in | Yes | No | Yes | No |
+| Delays/TTL/DLQ built in | TTL + DLX yes; delays via plugin | No | Yes | No |
 | Ops burden | Medium, self-run | High (or pay MSK/Confluent) | ~Zero | Low *increment* on owned Redis |
 | Cost scales with | Instances + people | Brokers + storage + transfer (+premium) | Requests × fan-out | RAM × retention |
 | Sweet spot | Complex routing, moderate scale | Firehoses, replay, many readers | Default cloud queueing | Ephemeral low-latency pipelines |
@@ -118,7 +118,7 @@ A sane default for a fintech on AWS: SQS/SNS as the default queue, a log (MSK/Co
 
 ## Interview angle
 
-The 60-second version: *"I pick brokers on six dimensions: queue-vs-log first — replay and multiple readers mean a log, jobs mean a queue — then durability floor, throughput and backlog shape, ordering granularity, routing needs, and honestly-staffed ops budget, with cost shape as the tiebreaker: SQS scales with requests, Kafka with brokers and storage, Redis Streams with RAM-hours of retention. Kafka for firehoses and history-as-asset, SQS as the cloud default, RabbitMQ for routing-rich moderate scale, Redis Streams for ephemeral low-latency lanes on infra you already own. And I'd defend the boring answer: most teams' workloads are SQS-shaped."*
+The 60-second version: *"I pick brokers on a handful of dimensions: queue-vs-log first — replay and multiple readers mean a log, jobs mean a queue — then durability floor, throughput and backlog shape, ordering granularity, routing needs, and honestly-staffed ops budget, with cost shape as the tiebreaker: SQS scales with requests, Kafka with brokers and storage, Redis Streams with RAM-hours of retention. Kafka for firehoses and history-as-asset, SQS as the cloud default, RabbitMQ for routing-rich moderate scale, Redis Streams for ephemeral low-latency lanes on infra you already own. And I'd defend the boring answer: most teams' workloads are SQS-shaped."*
 
 Classic probes:
 
@@ -146,5 +146,5 @@ Classic probes:
 - Apache Kafka, RabbitMQ, AWS SQS/SNS, and Redis Streams official documentation (each technology note's sources)
 - Apache Pulsar documentation — segmented storage/BookKeeper architecture; NATS JetStream documentation
 - Confluent blog — Kafka vs traditional brokers comparisons (read as a vendor's honest-but-interested take)
-- AWS Builders' Library — "Avoiding insurmountable queue backlogs" (Marc Brooker) for backlog-shape thinking
+- AWS Builders' Library — "Avoiding insurmountable queue backlogs" (David Yanacek) for backlog-shape thinking
 - Gregor Hohpe & Bobby Woolf, *Enterprise Integration Patterns* — the vocabulary (claim check, dead letter, competing consumers) every broker here implements

@@ -4,14 +4,14 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How MongoDB actually works — documents on WiredTiger, replica sets and elections, read/write concerns as the durability knob, sharded clusters with mongos and the balancer, change streams — and an honest fit assessment.
 related: ["[[Replication]]", "[[Failover]]", "[[Sharding]]", "[[NoSQL Taxonomy]]", "[[Change Data Capture]]"]
 ---
 
 # MongoDB Architecture
 
-MongoDB (2009) is the dominant **document database**: JSON-like documents (BSON) in collections, indexed and queried by any field, replicated via replica sets and scaled out via sharding. It is also your primary datastore at work, which makes this the module's most practically important note: the difference between `w:1` and `w:majority`, or a good and bad shard key, is the difference between an incident and a non-event. MongoDB's history includes an era of unsafe defaults and lost writes; the modern system (multi-document transactions since 4.0, `w:majority` as the default write concern since 5.0) is a much more serious database — *if* you hold the knobs correctly.
+MongoDB (2009; current stable series 9.0, released September 2026) is the dominant **document database**: JSON-like documents (BSON) in collections, indexed and queried by any field, replicated via replica sets and scaled out via sharding. It is also your primary datastore at work, which makes this the module's most practically important note: the difference between `w:1` and `w:majority`, or a good and bad shard key, is the difference between an incident and a non-event. MongoDB's history includes an era of unsafe defaults and lost writes; the modern system (multi-document transactions since 4.0, `w:majority` as the default write concern since 5.0) is a much more serious database — *if* you hold the knobs correctly.
 
 ## The problem that created it
 
@@ -31,7 +31,7 @@ MongoDB came out of the 2000s web-startup world: teams iterating fast on object-
 
 Documents are BSON (binary JSON with types), max 16 MB. The default engine since 3.2 is **WiredTiger** — a **B-tree** engine, not LSM ([[B-Tree vs LSM-Tree]]): document-level concurrency control (MVCC), snapshot reads, compression (snappy/zstd), and a WAL called the **journal** (fsynced roughly every 100 ms by default, immediately for writes requesting `j:true`). Single-document updates are atomic always — the unit of atomicity is the document, which is why good MongoDB modeling embeds what must change together.
 
-WiredTiger keeps hot pages in its own **cache**, sized by default at the larger of 50% of RAM minus 1 GB, or 256 MB. That number is the single best predictor of whether a MongoDB instance feels fast or feels broken: while the **working set** — the indexes and documents your queries actually touch — fits the cache, reads are memory-speed; once it does not, every miss becomes a random disk read and latency degrades in a knee rather than a slope ([[B-Tree vs LSM-Tree]] calls this buffer-pool thrash, and it is the same phenomenon). The practical consequence for schema design: indexes compete with documents for the same cache, so an unused compound index is not free storage — it is evicted working set.
+WiredTiger keeps hot pages in its own **cache**, sized by default at the larger of 50% of (RAM − 1 GB), or 256 MB. That number is the single best predictor of whether a MongoDB instance feels fast or feels broken: while the **working set** — the indexes and documents your queries actually touch — fits the cache, reads are memory-speed; once it does not, every miss becomes a random disk read and latency degrades in a knee rather than a slope ([[B-Tree vs LSM-Tree]] calls this buffer-pool thrash, and it is the same phenomenon). The practical consequence for schema design: indexes compete with documents for the same cache, so an unused compound index is not free storage — it is evicted working set.
 
 ### Replica sets: elections and the oplog
 
@@ -44,7 +44,7 @@ If the primary dies, secondaries hold an **election** — a Raft-influenced prot
 The oplog (`local.oplog.rs`) is a **capped collection** — a fixed-size ring that overwrites its oldest entries. Three properties follow, and all three bite in production:
 
 - **Entries are idempotent by construction.** The primary does not log "increment balance by 100"; it rewrites the operation into a form whose replay is harmless, logging the resulting value rather than the relative change. That is what lets a secondary crash mid-apply and resume without arithmetic drift.
-- **Its size defines a time window, not a count.** The default on WiredTiger is 5% of free disk space, floored at 990 MB and capped at 50 GB — and a write-heavy cluster can burn through 50 GB in hours. The number that actually matters is the **oplog window**: how far back in wall-clock time the oldest surviving entry reaches. Since 4.0 the oplog can be resized online with `replSetResizeOplog`, without restarting the member.
+- **Its size defines a time window, not a count.** The default on WiredTiger is 5% of free disk space, floored at 990 MB and capped at 50 GB — and a write-heavy cluster can burn through 50 GB in hours. The number that actually matters is the **oplog window**: how far back in wall-clock time the oldest surviving entry reaches. Since 3.6 the oplog can be resized online with `replSetResizeOplog`, without restarting the member.
 - **Falling off the oplog is expensive.** A secondary offline longer than the window cannot catch up incrementally; it must perform a full **initial sync** — copy the entire dataset from another member, rebuild indexes, then tail from that point. On a large dataset that is hours of extra load on a healthy member, usually at the worst possible moment. The same window bounds how long a [[Change Data Capture|change stream]] consumer may be down before its resume token is unusable.
 
 Sizing the window is arithmetic, not intuition. A collection absorbing 2,000 writes/sec of ~500-byte documents generates at least 2,000 × 500 B = 1 MB/sec of oplog, so about 3.6 GB/hour — meaning even a maximum-size 50 GB oplog holds under 14 hours of history (50 ÷ 3.6 ≈ 13.9). That is a *lower* bound, since every entry carries its own metadata and an update to an indexed field can log more than the document's own size. Run the calculation against your real write rate and you will usually find the window is shorter than the maintenance you were planning to perform inside it.
@@ -66,7 +66,7 @@ This is the section to internalize for a fintech:
 | Write concern | Ack means | Risk |
 |---|---|---|
 | `w:1` (fast) | Primary applied it in memory | Primary dies before replication → **write rolled back, silently gone** from the application's view |
-| `w:majority` (default since 5.0) | A majority of members have it | Survives any single-node loss and any failover; the election winner must have it |
+| `w:majority` (default since 5.0, except primary-secondary-arbiter sets, which default to `w:1`) | A majority of members have it | Survives any single-node loss and any failover; the election winner must have it |
 | `j:true` | Journaled to disk before ack | Survives process/power crash on the acking node |
 
 `w` and `j` are orthogonal axes: `w` counts *members*, `j` asks whether those members hardened the write to the journal instead of merely applying it in memory. With the default `writeConcernMajorityJournalDefault: true`, `w:majority` already implies journaling on the acknowledging majority, which is why you rarely write `j:true` explicitly.
@@ -107,7 +107,7 @@ graph TD
 - **Config servers** (a replica set): the authoritative map of which **chunk** (contiguous shard-key range) lives where.
 - **mongos**: stateless routers the app talks to; they cache the chunk map and route each query to the owning shard — or **scatter-gather** to all shards when the query lacks the shard key (expensive; see [[Secondary Indexes on Sharded Data]]).
 
-The **balancer** migrates chunks between shards to even out data; since 6.0 it compares *data size* per shard rather than chunk counts, and the separate auto-splitting process was removed in favour of splitting a range as part of migrating it. **Shard key choice is destiny**: it must appear in your hot queries (else scatter-gather), distribute writes (else [[Hot Partition Problem]] — monotonic keys like `ObjectId`/timestamps funnel all inserts to one "max-key" chunk), and have enough cardinality to split. Hashed shard keys fix write distribution but turn range queries into scatter-gather. Since 5.0 you can reshard a live collection — possible, but a heavyweight operation you'd rather avoid by choosing well.
+The **balancer** migrates chunks between shards to even out data; since 6.0 it compares *data size* per shard rather than chunk counts, and from 6.0.3 the separate auto-splitting process was removed in favour of splitting a range as part of migrating it. **Shard key choice is destiny**: it must appear in your hot queries (else scatter-gather), distribute writes (else [[Hot Partition Problem]] — monotonic keys like `ObjectId`/timestamps funnel all inserts to one "max-key" chunk), and have enough cardinality to split. Hashed shard keys fix write distribution but turn range queries into scatter-gather. Since 5.0 you can reshard a live collection — possible, but a heavyweight operation you'd rather avoid by choosing well.
 
 #### Shard-key decisions you cannot cheaply undo
 
@@ -207,6 +207,6 @@ Classic follow-ups: *what exactly happens to a `w:1` write when the primary dies
 
 - MongoDB official documentation — Replication (elections, oplog, rollbacks), Read/Write Concern, Sharding (shard keys, balancer, mongos), Change Streams, WiredTiger.
 - Kleppmann, *Designing Data-Intensive Applications* — ch. 5 (leader-based replication, failover, rollback semantics), ch. 6 (partitioning/rebalancing), ch. 2 (document model).
-- MongoDB Engineering blog — on replication protocol version 1's Raft lineage ("Consensus in MongoDB").
+- Zhou and Mu — "Fault-Tolerant Replication with Pull-Based Consensus in MongoDB", NSDI 2021 (protocol version 1's Raft lineage and pull-based oplog sync).
 - Jepsen analyses of MongoDB (Kyle Kingsbury, 2013–2020) — the primary-source history of why write/read concern defaults matter; the 4.2.6 report is the most instructive.
-- Alex DeBrie / MongoDB docs — schema design patterns (bucket, outlier, computed) for the modeling sections.
+- MongoDB docs and the MongoDB "Building with Patterns" blog series — schema design patterns (bucket, outlier, computed) for the modeling sections.

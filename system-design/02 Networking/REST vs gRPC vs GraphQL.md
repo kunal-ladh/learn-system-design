@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: Three API contract styles — resources, procedure calls, and client-composed queries — their payload and caching economics, and honest guidance on when each wins.
 related: ["[[API Design and Versioning]]", "[[Communication Patterns Between Services]]", "[[HTTP 1.1 vs HTTP 2 vs HTTP 3]]", "[[N+1 Queries and ORM Pitfalls]]"]
 ---
@@ -100,7 +100,7 @@ What adopting each one commits your organization to — the hidden line items:
 - **Mixing is normal**: GraphQL or REST at the edge for clients, gRPC inside the cluster, REST for partners. The styles compose; dogmatic uniformity is the anti-pattern.
 - **Also real options, briefly**: plain JSON-RPC-over-HTTP (RPC semantics without the gRPC toolchain — underrated for small internal estates), and async messaging — many "API" interactions are better modeled as events on a queue or log ([[Why Async Messaging Exists]]); the sync-API-vs-event decision usually matters more than which sync style you pick ([[Communication Patterns Between Services]]).
 
-And a worked payload-cost intuition, since "protobuf is smaller" deserves numbers-shaped reasoning: a JSON risk event like `{"userId":"u-19284","score":0.82,"factors":[4,9,23],"ts":1759276800000}` spends most of its bytes on field names, quotes, and digit characters repeated in *every* message. The protobuf equivalent sends each field as a 1-byte tag plus a compact value (varint/fixed), omits absent fields entirely, and never repeats names — the schema on both ends is the dictionary. The same logic explains the decode cost: a JSON parser discovers structure byte-by-byte at runtime; generated protobuf code already knows the structure and mostly copies values. Multiply a few hundred saved bytes and a few hundred saved microseconds by every message on a hot internal path to see where the "gRPC for service-to-service at volume" guidance comes from — and why it's irrelevant at ten requests per second.
+And a worked payload-cost intuition, since "protobuf is smaller" deserves numbers-shaped reasoning: a JSON risk event like `{"userId":"u-19284","score":0.82,"factors":[4,9,23],"ts":1759276800000}` spends most of its bytes on field names, quotes, and digit characters repeated in *every* message. The protobuf equivalent sends each field as a 1-byte tag plus a compact value (varint/fixed), omits absent fields entirely, and never repeats names — the schema on both ends is the dictionary. The same logic explains the decode cost: a JSON parser discovers structure byte-by-byte at runtime; generated protobuf code already knows the structure and mostly copies values. This 71-byte JSON message is roughly 30 bytes as protobuf — about 40 bytes saved per message plus the decode CPU, more on larger nested payloads. Multiply that by every message on a hot internal path to see where the "gRPC for service-to-service at volume" guidance comes from — and why it's irrelevant at ten requests per second.
 
 ## In your stack
 

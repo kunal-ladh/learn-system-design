@@ -1,5 +1,6 @@
 ---
 title: Database Scaling Patterns
+aliases: [Database Scaling, Scaling Databases, Scaling Reads and Writes]
 tags: [system-design, databases]
 type: note
 status: evergreen

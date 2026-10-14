@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: How to find your system's real ceiling with load testing, size headroom with N+1 and safety-factor math, apply the USE method, and decide how much overprovisioning an outage is worth.
 related: ["[[Autoscaling]]", "[[Back of the Envelope Estimation]]", "[[Scalability]]"]
 ---
@@ -133,7 +133,7 @@ Classic follow-ups: "Utilization vs saturation?" (busy vs queued; queues are whe
 > For every resource — CPU, memory, disk, network, plus logical resources like thread pools, connection pools, and queues — check Utilization (how busy), Saturation (how much work is queued waiting), and Errors (outright failures). Utilization dashboards miss two things: logical resources (a thread pool can be saturated while every infrastructure graph is green), and the difference between busy and queued — a resource can be far from 100% utilized while a queue builds against it, which is exactly when latency starts climbing. Saturation is the leading indicator; utilization alone is neither necessary nor sufficient for pain.
 
 > [!question]- Q: What happens if you run your payment fleet at 85% utilization to save cost, and traffic steps up 1.5× for ten minutes?
-> The step takes you to ~127% of capacity instantly. Requests queue; latency goes nonlinear and p99 breaches first; thread pools and connection pools saturate; timeouts begin, and upstream retries amplify the overload. Autoscaling reacts within a minute but new JVM pods need minutes to schedule and warm — most of the ten-minute window is served by a fleet 27% past its ceiling, likely in a degraded spiral unless load shedding caps intake. The 15% "saved" bought a guaranteed SLO breach on any 1.2×+ surprise; headroom was the insurance you cancelled.
+> The step takes you to ~127% of capacity instantly. Requests queue; latency goes nonlinear and p99 breaches first; thread pools and connection pools saturate; timeouts begin, and upstream retries amplify the overload. Autoscaling reacts within a minute but new JVM pods need minutes to schedule and warm — most of the ten-minute window is served by a fleet 27% past its ceiling, likely in a degraded spiral unless load shedding caps intake. The capacity "saved" bought a guaranteed SLO breach on any 1.2×+ surprise; headroom was the insurance you cancelled.
 
 > [!question]- Q: Your soak test passes at 4 hours but production degrades every ~3 days. What class of problem is this, and how do you hunt it?
 > A slow leak — the soak was too short to express it. Candidates: heap growth (old-gen creep → GC pressure → latency), connection or file-handle leaks, unbounded caches, log-volume filling disk, or fragmentation. Hunt: extend the soak (run over a weekend), plot the USE saturation metrics over days, compare heap/GC/connection-count/fd trends between hour 1 and hour 48 — a leak is a trend, not a threshold. In production, the tell is the sawtooth that resets on every deploy: if restarts "fix" it, you're leaking something.

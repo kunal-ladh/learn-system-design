@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: How a partition or a paused process produces two nodes that both believe they are leader, and how quorum elections, fencing tokens, and STONITH contain the damage.
 related: ["[[Failover]]", "[[Consensus and Raft]]", "[[Distributed Locking]]", "[[Network Partitions and Timeouts]]"]
 ---
@@ -17,7 +17,7 @@ related: ["[[Failover]]", "[[Consensus and Raft]]", "[[Distributed Locking]]", "
 
 Your system grew a high-availability pair: primary database, standby watching it, automatic [[Failover]]. One day a switch hiccups for 20 seconds ([[Network Partitions and Timeouts]]). The standby, hearing no heartbeats, concludes the primary is dead and promotes itself. But the primary never died — it's serving clients on its side of the partition. Now two primaries accept writes: account 42 is debited ₹5,000 on one and ₹3,000 on the other. When the partition heals, you don't have a database, you have two contradictory histories and a manual reconciliation project — some updates must be discarded (this is exactly how real incidents like GitHub's 2012 split-brain failover played out, and the class of incident MySQL/Redis async-failover setups are prone to; DDIA ch. 5 and 8 document the pattern).
 
-The root cause is epistemic, not mechanical: **a timeout cannot distinguish a dead node from a slow or partitioned one** (fallacy 1, [[The Fallacies of Distributed Computing]]). Any failover triggered by silence is a *guess*. Worse, the same wrong-belief arises with no partition at all — a long GC pause can freeze a leader mid-flight; it wakes up and continues *believing it is still leader*, because from its perspective no time passed. Kleppmann's canonical example (DDIA ch. 8, and his 2016 Redlock analysis): a client acquires a lock with a 30-second lease, pauses for a stop-the-world GC longer than the lease, and then — lease expired, lock granted to someone else — wakes and writes to the protected resource anyway. Two writers, no partition, pure pause.
+The root cause is epistemic, not mechanical: **a timeout cannot distinguish a dead node from a slow or partitioned one** (fallacy 1, [[The Fallacies of Distributed Computing]]). Any failover triggered by silence is a *guess*. Worse, the same wrong-belief arises with no partition at all — a long GC pause can freeze a leader mid-flight; it wakes up and continues *believing it is still leader*, because from its perspective no time passed. Kleppmann's canonical example (DDIA ch. 8, and his 2016 Redlock analysis): a client acquires a lock with a lease (say 30 seconds — the post itself gives no duration), pauses for a stop-the-world GC longer than the lease, and then — lease expired, lock granted to someone else — wakes and writes to the protected resource anyway. Two writers, no partition, pure pause.
 
 ## What it solves
 
@@ -38,7 +38,7 @@ Election prevents two *current* leaders. It cannot prevent a *stale* one acting 
 
 ### Layer 2 — fencing tokens (containment)
 
-Attach a **monotonically increasing number** to every grant of the role — Raft's term, ZooKeeper's zxid-derived epoch, etcd's lease/revision, an incrementing `epoch` column. Every request the leader makes to a protected resource (storage, database, partner API wrapper) carries its token. **The resource remembers the highest token it has seen and rejects anything lower.**
+Attach a **monotonically increasing number** to every grant of the role — Raft's term, ZooKeeper's zxid-derived epoch, the revision etcd assigns the lock key, an incrementing `epoch` column. Every request the leader makes to a protected resource (storage, database, partner API wrapper) carries its token. **The resource remembers the highest token it has seen and rejects anything lower.**
 
 ```mermaid
 sequenceDiagram
@@ -62,7 +62,7 @@ The design's crucial property: correctness no longer depends on the old leader *
 
 | Source | Monotonic because | Good when | Watch out for |
 |---|---|---|---|
-| Raft term from etcd or ZooKeeper | Consensus guarantees it | You already run a consensus store | An operational dependency on that store being reachable |
+| A consensus store's counter — etcd key revision, ZooKeeper zxid | Consensus guarantees it | You already run a consensus store | An operational dependency on that store being reachable |
 | A Kubernetes Lease's `leaseTransitions` counter | It increments each time the lease changes holder | Your workloads already talk to the API server | Kubernetes documents `resourceVersion` as opaque, so use the transitions counter rather than comparing versions arithmetically |
 | A counter incremented by a conditional write in your primary datastore | The store serialises the increment | You want no new infrastructure | The increment must be majority-durable, or a failover can reissue a token |
 | A timestamp | **It is not monotonic** | Never, for fencing | Clock steps and skew reissue or reorder tokens ([[Logical Clocks and Ordering]]) |
@@ -144,7 +144,7 @@ Classic follow-ups: "Why does Redlock not give you this?" (no monotonic token ve
 > No, and the reason is precise: the condition checks *state*, not *ownership*. When the old pod resumes, the job is still in `RUNNING` — the new pod put it there — so the predicate matches and the old pod's writes land, interleaved with the new pod's. You now have one job's results composed of two partial runs, which is worse than either run alone because neither is complete and nothing records that. The condition created an appearance of safety that made nobody look harder. The fix is to make the predicate test *who*, not *what*: every write carries the lease epoch, and the document records the highest epoch it has accepted, so the condition is `epoch >= 34` and the old pod's epoch-33 writes are rejected. Three refinements worth stating. The epoch must be re-read, not cached — a pod that fetched its epoch at startup is fencing against other holders but not against its own staleness. The rejection must be *handled*, not swallowed: a write bouncing on a stale epoch means this process no longer owns the job and should stop immediately rather than continue and bounce on every subsequent write. And any side effect outside Mongo — a file written, an event published — is unprotected by this and needs its own determinism, typically a deterministic name plus write-if-absent. The general lesson is that a conditional write is only a fence if the condition encodes identity; conditions on state alone are a correctness illusion that reads convincingly in review.
 
 > [!question]- Q: Mini design prompt — "exactly one instance sends the daily settlement file to the partner bank." Design the full control, including the zombie case and the file side effect.
-> Claim: a Mongo document per (job, date) acquired by `findOneAndUpdate({_id, state: "UNCLAIMED"}, {$set: {state: "CLAIMED", owner, epoch: <monotonic from a counter or term>}})` — unique index makes the claim atomic; majority write concern makes it durable across failover. Fencing: the claim's epoch accompanies every subsequent step; each state transition is a conditional write (`epoch: {$gte: current}` pattern — reject lower), so a paused ex-owner's resumed steps bounce. The file upload itself can't check epochs — so make it idempotent instead: deterministic filename (`settlement-2026-10-01.csv`), upload-if-absent semantics (or partner-side dedup on filename), and record the completed upload in Mongo conditionally before acknowledging. Sweeper for claims stuck in CLAIMED past deadline re-opens them with epoch+1. Every leg is deterministic — no human in the loop except the alert when the sweeper fires ([[Idempotency]], [[Consensus and Raft]]).
+> Claim: a Mongo document per (job, date) acquired by `findOneAndUpdate({_id, state: "UNCLAIMED"}, {$set: {state: "CLAIMED", owner, epoch: <monotonic from a counter or term>}})` — unique index makes the claim atomic; majority write concern makes it durable across failover. Fencing: the claim's epoch accompanies every subsequent step; each state transition is a conditional write (filter `{epoch: {$lte: myEpoch}}`, then `$set` epoch to `myEpoch` — a lower epoch matches nothing), so a paused ex-owner's resumed steps bounce. The file upload itself can't check epochs — so make it idempotent instead: deterministic filename (`settlement-2026-10-01.csv`), upload-if-absent semantics (or partner-side dedup on filename), and record the completed upload in Mongo conditionally before acknowledging. Sweeper for claims stuck in CLAIMED past deadline re-opens them with epoch+1. Every leg is deterministic — no human in the loop except the alert when the sweeper fires ([[Idempotency]], [[Consensus and Raft]]).
 
 ## Sources
 

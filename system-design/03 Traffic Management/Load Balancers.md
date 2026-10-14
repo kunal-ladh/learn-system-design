@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: How load balancers distribute traffic across servers — L4 vs L7, the major algorithms, health checks, and who balances the balancer itself.
 related: ["[[API Gateway]]", "[[Health Checks and Service Discovery]]", "[[Consistent Hashing]]", "[[Reverse Proxy vs Forward Proxy]]"]
 ---
@@ -145,7 +145,7 @@ Interviewers probe:
 **Q2 (scenario):** You scale from 4 to 5 backends under IP-hash balancing. What happens to session affinity, and what algorithm fixes it?
 
 > [!question]- Q: What happens to IP-hash affinity when N changes 4→5?
-> IP hash computes `hash(IP) mod N`. Changing N from 4 to 5 changes the result for roughly 4/5 of all client IPs, so ~80% of clients land on a different server and lose any server-held session/cache affinity. [[Consistent Hashing]] fixes this: servers and clients map onto a ring, and adding a server remaps only ~1/N (~20%) of clients — the ones whose ring segment the new server takes over.
+> IP hash computes `hash(IP) mod N`. Changing N from 4 to 5 changes the result for roughly 4/5 of all client IPs, so ~80% of clients land on a different server and lose any server-held session/cache affinity. [[Consistent Hashing]] fixes this: servers and clients map onto a ring, and adding a server remaps only ~1/(N+1) of clients — here 1/5, ~20% — the ones whose ring segment the new server takes over.
 
 **Q3 (scenario):** During a deploy, users report dropped requests even though you use rolling updates. Name the two timers that are probably mismatched.
 
@@ -159,7 +159,7 @@ Interviewers probe:
 
 ## Sources
 
-- Google SRE Book, ch. 19 "Load Balancing at the Frontend" and ch. 20 "Load Balancing in the Datacenter" (power of two choices, subsetting, health).
+- Google SRE Book, ch. 19 "Load Balancing at the Frontend" and ch. 20 "Load Balancing in the Datacenter" (subsetting, least-loaded and weighted round robin, lame-duck state). It does not cover power of two choices; Mitzenmacher below is that source.
 - *Maglev: A Fast and Reliable Software Network Load Balancer* (Google, NSDI 2016) — anycast + consistent-hashing L4 design.
 - AWS docs: Elastic Load Balancing (ALB vs NLB comparison; deregistration delay).
 - Envoy proxy docs: load balancing algorithms, outlier detection, panic threshold.

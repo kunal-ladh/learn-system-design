@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: How to design a polite, deduplicating, billion-page web crawler — frontier queues, robots.txt, bloom-filter URL dedup, and recrawl scheduling.
 related: ["[[The System Design Interview Framework]]", "[[Consistent Hashing]]", "[[Rate Limiting]]", "[[Message Queues vs Event Logs]]"]
 ---
@@ -26,7 +26,7 @@ A web crawler downloads pages from the web, extracts the links in them, and foll
 - Scale: **1 billion pages per month** (agree this number with the interviewer — all estimation flows from it).
 - Robustness: the web is hostile — malformed HTML, infinite URL spaces ("spider traps"), slow servers, redirect loops. The crawler must survive all of it.
 - Extensibility: adding new content types or per-domain rules later should not require a redesign.
-- Politeness: bounded request rate per domain, honoring `Crawl-delay` where specified.
+- Politeness: bounded request rate per domain, honoring `Crawl-delay` where specified (a non-standard directive — not in RFC 9309; some crawlers honour it, Google ignores it).
 
 ## Back-of-envelope estimation
 
@@ -89,15 +89,15 @@ The classic structure (from the Mercator crawler design) is **two stages of queu
 
 This gives a hard guarantee: at most one in-flight request per domain, spaced by the politeness delay — regardless of how many workers exist.
 
-**robots.txt**: fetch and cache it per domain (cache for ~24 h), evaluate every candidate URL against it *before* enqueueing. Treat a failed robots fetch conservatively (don't crawl, retry later) — fail closed.
+**robots.txt**: fetch and cache it per domain (cache for ~24 h), evaluate every candidate URL against it *before* enqueueing. Treat an *unreachable* robots.txt (5xx or network error) conservatively — don't crawl, retry later, fail closed, as RFC 9309 requires; a 4xx such as 404 means no rules exist and the site may be crawled.
 
 ### 2. URL dedup at billions scale — and bloom filter honesty
 
 Every extracted link must be checked against "have I seen this URL before?" At ~385 pages/s with say 50 outlinks per page, that is ~20K lookups/s against a set of billions of URLs.
 
 - **Exact set** (hash of each URL in a sharded key-value store): 10⁹ × 16-byte hash ≈ 16 GB plus overhead — actually feasible in a sharded Redis or RocksDB tier, at the cost of a network hop per check.
-- **Bloom filter**: a 10⁹-element bloom filter at 1% false-positive rate needs ~10 bits/element ≈ **1.2 GB** — fits in RAM on every worker. But be honest about the semantics: a bloom filter's **false positive means the crawler believes it has already seen a URL it has not — that page is silently never crawled**. There are no false negatives (no double-crawls), so correctness of politeness is safe; *coverage* is what you sacrifice. At 1% FP rate across billions of candidate URLs, you are knowingly dropping millions of pages.
-- **Production answer**: bloom filter as a cheap first-pass filter, with "probably seen" results verified against the exact store. That makes the common case (genuinely new URL — bloom says no) a pure in-memory check, and only bloom hits pay the network lookup. Also note bloom filters don't support deletion, which collides with recrawling — recrawl is driven by the scheduler from the metadata store, not by re-entering the frontier through the dedup check.
+- **Bloom filter**: a 10⁹-element bloom filter at 1% false-positive rate needs ~10 bits/element ≈ **1.2 GB** — fits in RAM on every worker. But be honest about the semantics: a bloom filter's **false positive means the crawler believes it has already seen a URL it has not — that page is silently never crawled**. There are no false negatives, so the filter never causes a double-crawl; *coverage* is what you sacrifice. At 1% FP rate across billions of candidate URLs, you are knowingly dropping millions of pages.
+- **Production answer**: bloom filter as a cheap first-pass filter, with "probably seen" results verified against the exact store. That makes a genuinely new URL (bloom says no) a pure in-memory check, and only bloom hits pay the network lookup — be honest that in a mature crawl most extracted links point at pages already seen, so the exact store still absorbs most of the ~20K/s; the bloom filter's job is to keep coverage loss at zero while sparing new URLs the hop. Also note bloom filters don't support deletion, which collides with recrawling — recrawl is driven by the scheduler from the metadata store, not by re-entering the frontier through the dedup check.
 
 ### 3. URL normalization traps
 

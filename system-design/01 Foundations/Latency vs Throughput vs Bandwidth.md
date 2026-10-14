@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Precise definitions of latency, throughput, and bandwidth; why percentiles (p50/p95/p99) and not averages describe latency; and how fan-out amplifies tail latency.
 related: ["[[Latency Numbers Every Engineer Should Know]]", "[[Scalability]]", "[[SLA SLO SLI and Error Budgets]]"]
 ---
@@ -27,7 +27,7 @@ These three words get used interchangeably in meetings, and they measure three d
 - **Throughput** — completed operations per unit time: requests/sec (RPS), transactions/sec, messages/sec. This is a measured *rate*, a property of the whole system under a given load.
 - **Bandwidth** — the *capacity* of a channel: bytes per second it can carry (e.g. a 10 Gbit/s NIC). Bandwidth is a ceiling; throughput is what you actually achieve. You can have huge bandwidth and low throughput (chatty protocol, tiny payloads, round-trip-bound work).
 
-The truck analogy that actually holds: a truck of disks driven across the country has *enormous* effective bandwidth and *terrible* latency; a fiber ping has superb latency and carries almost no data. (AWS built a product line on exactly this trade-off — the Snow family of physical data-transfer appliances, shipped by road because for petabyte-scale migrations the truck genuinely wins on bytes per second.)
+The truck analogy that actually holds: a truck of disks driven across the country has *enormous* effective bandwidth and *terrible* latency; a fiber ping has superb latency and carries almost no data. (AWS built a product line on exactly this trade-off — the Snow family of physical data-transfer appliances, whose 100 PB Snowmobile truck ran until AWS retired it in 2024 — the whole family is now closed to new customers, with Snowball support ending 31 Dec 2026 — because for petabyte-scale migrations the shipped box genuinely wins on bytes per second.)
 
 **Little's Law** ties latency and throughput together and is worth memorizing: **concurrency = throughput × latency**. A server handling 1,000 RPS at 50 ms average has 50 requests in flight. Corollaries: with a fixed concurrency limit (thread pool, [[Connection Pooling|connection pool]]), rising latency *mechanically* lowers maximum throughput; and a latency spike under constant load inflates in-flight requests until a pool somewhere saturates — which is how one slow dependency stalls a whole service.
 
@@ -138,7 +138,7 @@ A diagnostic habit: given any performance complaint, classify it before touching
 ## Common misconceptions
 
 - **"Our average latency is 40 ms, we're fine."** The mean says nothing about the tail; check p99 and multiply by request volume to count actual bad experiences. SLOs on means are nearly meaningless ([[SLA SLO SLI and Error Budgets]]).
-- **"More bandwidth will fix our latency."** Only if you're transfer-bound (large payloads). Most API latency is round trips and server time; a fatter pipe doesn't shorten a handshake ([[Anatomy of a Web Request]]). Satellite internet has high bandwidth and high latency — they're independent.
+- **"More bandwidth will fix our latency."** Only if you're transfer-bound (large payloads). Most API latency is round trips and server time; a fatter pipe doesn't shorten a handshake ([[Anatomy of a Web Request]]). Geostationary satellite internet has high bandwidth and high latency — they're independent.
 - **"High throughput means the system is fast."** A system can complete 1M ops/sec at 5 s each (huge concurrency). Batch systems are the extreme: throughput is the goal, latency irrelevant.
 - **"p99 only matters to perfectionists — it's 1% of traffic."** With fan-out it contaminates the majority of requests (table above); without fan-out it's still 1% of *every day's* traffic, concentrated on your heaviest users, and it's where [[Timeouts Retries and Exponential Backoff|timeouts and retries]] trigger — the tail is where cascading failures start.
 

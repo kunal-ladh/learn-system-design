@@ -1,10 +1,10 @@
 ---
 title: SQS and SNS
-tags: [system-design, messaging]
+tags: [system-design, messaging, aws]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: AWS's zero-ops queue and pub-sub pair — standard vs FIFO, visibility timeout mechanics and their classic bugs, DLQs and redrive, SNS fan-out, and when zero-ops beats Kafka.
 related: ["[[Message Queues vs Event Logs]]", "[[Delivery Semantics]]", "[[Dead Letter Queues and Poison Messages]]", "[[Choosing a Message Broker]]"]
 ---
@@ -25,7 +25,7 @@ Amazon, early 2000s: hundreds of internal teams each running (or corrupting) the
 - **Decoupled fan-out** (with SNS) — one event, many independent consumers, each with its own queue, retry pace, and failure isolation.
 - **Pay-per-use cost shape** — cost scales with *requests*, so idle costs ~nothing; contrast a Kafka cluster billing 24/7 regardless of traffic.
 
-Worked cost shape (rates are order-of-magnitude — check current pricing): standard SQS runs ~$0.40 per million requests after the free tier. A queue doing a steady 100 msg/s costs roughly: sends 100/s + receives + deletes ≈ 3 request-units per message (long polling keeps empty receives near zero, batching divides this by up to 10) → ~260M messages/month × 3 ≈ 780M requests ≈ **~$300/month**, before data transfer. The same math at 5,000 msg/s is ~$15k/month — now in MSK-cluster territory — while at 1 msg/s it's ~$3. That is the whole story of SQS economics: linear in traffic × fan-out, brilliant at the low end, worth re-deriving at every order of magnitude ([[Choosing a Message Broker]]).
+Worked cost shape (rates from the AWS price list as of Sep 2026, us-east-1 first tier — check current pricing): standard SQS runs ~$0.40 per million requests after the free tier (FIFO ~$0.50). A queue doing a steady 100 msg/s costs roughly: sends 100/s + receives + deletes ≈ 3 request-units per message (long polling keeps empty receives near zero, batching divides this by up to 10) → ~260M messages/month × 3 ≈ 780M requests ≈ **~$300/month**, before data transfer. The same math at 5,000 msg/s is ~$15k/month unbatched — well above the broker bill of a small MSK cluster that could carry it — while at 1 msg/s it's ~$3. That is the whole story of SQS economics: linear in traffic × fan-out, brilliant at the low end, worth re-deriving at every order of magnitude ([[Choosing a Message Broker]]).
 
 ## How it works
 
@@ -35,7 +35,7 @@ Worked cost shape (rates are order-of-magnitude — check current pricing): stan
 |---|---|---|
 | Delivery | At-least-once (duplicates possible) | Exactly-once *processing attempt* via dedup window |
 | Ordering | Best-effort only | Strict within a **message group** |
-| Throughput | Effectively unlimited | Limited: ~300 ops/sec base, ~3,000 msg/sec with batching; high-throughput mode raises this much further (per-region numbers change — check current docs) |
+| Throughput | Effectively unlimited | Limited: ~300 ops/sec base, ~3,000 msg/sec with batching; high-throughput mode raises this much further (2026: up to 70,000 TPS in the largest regions, 9,000 TPS / 90,000 msg/s batched in Mumbai; per-region numbers change — check current docs) |
 | Use | Default | Only when ordering/dedup is worth the ceiling |
 
 FIFO mechanics: each message carries a **MessageGroupId** — ordering is guaranteed only within a group, and groups are processed independently (the same idea as Kafka's partition key, applied per message). A **MessageDeduplicationId** (or content-based hash) suppresses duplicates of the same send for a **5-minute window** — producer-side dedup only; a consumer that processes and fails to delete still causes redelivery. So FIFO removes *producer* duplicates and gives per-group order; consumer [[Idempotency]] is still required.
@@ -60,7 +60,7 @@ sequenceDiagram
 
 The classic bugs, all seen in every SQS shop eventually:
 
-1. **Timeout < processing time → systematic duplicates.** Exactly the diagram above: every slow message is processed twice (or more). Fix: set visibility timeout ≥ p99.9 processing time (AWS suggests ~6× the average as a starting point), or heartbeat with `ChangeMessageVisibility` during long work.
+1. **Timeout < processing time → systematic duplicates.** Exactly the diagram above: every slow message is processed twice (or more). Fix: set visibility timeout ≥ worst-case processing time (for Lambda triggers AWS recommends ≥ 6× the function timeout), or heartbeat with `ChangeMessageVisibility` during long work. Not p99.9: a lease sized at p99.9 still duplicates one message in a thousand ([[Delivery Semantics]] works the arithmetic).
 2. **Crash after work, before delete** — the unavoidable at-least-once duplicate; only consumer idempotency absorbs it.
 3. **Timeout way too long** — a crashed consumer's messages stay invisible for, say, 12 hours (the max); throughput stalls with an empty-looking queue.
 4. **Receive-count inflation from bugs 1–3** silently marching messages toward the DLQ threshold even though nothing is "wrong" with them.
@@ -68,10 +68,10 @@ The classic bugs, all seen in every SQS shop eventually:
 ### Long polling, DLQs, delay queues
 
 - **Long polling** (`WaitTimeSeconds` up to 20): the receive call parks until a message arrives or the wait expires. Always use it — short polling burns money (you pay per request, including empties) and samples only a subset of SQS's distributed storage, so it can return empty while messages exist.
-- **DLQ + redrive**: after `maxReceiveCount` failed receives, SQS moves the message to a dead-letter queue ([[Dead Letter Queues and Poison Messages]]). **Redrive** moves inspected/fixed messages back. DLQs are plain queues — messages there still expire (14-day max retention), so an unwatched DLQ is a slow-motion data deleter. Alarm on DLQ depth > 0.
+- **DLQ + redrive**: after `maxReceiveCount` failed receives, SQS moves the message to a dead-letter queue ([[Dead Letter Queues and Poison Messages]]). **Redrive** moves inspected/fixed messages back. DLQs are plain queues — messages there still expire (14-day max retention; for standard queues the clock runs from the *original* enqueue time, so a DLQ needs a longer retention than its source), so an unwatched DLQ is a slow-motion data deleter. Alarm on DLQ depth > 0.
 - **Delay queues / per-message delay**: postpone first delivery up to 15 minutes — handy for retry backoff and "run this soon, not now" jobs.
-- Limits worth knowing: retention default 4 days, max **14 days**; payload max **256 KB** historically (AWS has been raising this — large payloads belong in S3 with a pointer anyway, the "claim check" pattern).
-- **In-flight caps**: a standard queue allows ~120,000 messages in flight (received, not yet deleted); FIFO allows 20,000. Rarely hit — and when it is, the cause is usually bug #3 above (messages invisible under a huge timeout), not genuine parallelism.
+- Limits worth knowing: retention default 4 days, max **14 days**; payload max **1 MiB** since Aug 2025 (256 KiB before — large payloads belong in S3 with a pointer anyway, the "claim check" pattern).
+- **In-flight caps**: standard and FIFO queues both allow ~120,000 messages in flight (received, not yet deleted; FIFO was 20,000 until Nov 2024). Rarely hit — and when it is, the cause is usually bug #3 above (messages invisible under a huge timeout), not genuine parallelism.
 - **Batching everywhere**: send, receive, and delete all support batches of 10 — the single biggest lever on both throughput and cost, since pricing is per request, not per message.
 
 ### No replay — the deep contrast with Kafka
@@ -88,14 +88,14 @@ SNS is a **topic**: publishers send once; SNS pushes copies to subscribers (SQS 
 |---|---|
 | Zero broker operations, elastic scale | No replay; no history; consumers must exist before events |
 | Per-request pricing, ~zero idle cost | At high sustained volume, per-request cost can exceed a cluster you'd run |
-| Built-in retries, DLQ, delay, dedup (FIFO) | 14-day max retention; 256 KB-class payloads; 15-min max delay |
+| Built-in retries, DLQ, delay, dedup (FIFO) | 14-day max retention; 1 MiB max payload; 15-min max delay |
 | Simple mental model (receive → work → delete) | Best-effort order (standard) or throughput ceiling (FIFO) |
 | IAM-integrated, per-queue isolation | AWS lock-in; no cross-cloud portability of semantics |
 
 ## Failure modes
 
 - **Visibility-timeout duplicates** (above) — detected as "same business event handled twice"; the fix is timeout tuning + idempotency, not blame on SQS.
-- **Silent DLQ expiry** — poison messages dead-letter correctly, nobody watches, 14 days later they're gone. In fintech that's an unprocessed transaction evaporating: alarm on DLQ depth, and treat redrive as an operational runbook, not an improvisation.
+- **Silent DLQ expiry** — poison messages dead-letter correctly, nobody watches, and within the retention window (at most 14 days, counted from the original send on standard queues) they're gone. In fintech that's an unprocessed transaction evaporating: alarm on DLQ depth, and treat redrive as an operational runbook, not an improvisation.
 - **Queue backlog with 1-replica consumers** — SQS absorbs any backlog happily (that's the point), but `ApproximateAgeOfOldestMessage` climbing means your consumer fleet, not the queue, is the bottleneck ([[Backpressure and Flow Control]]).
 - **FIFO group stall** — one failing message blocks its whole message group (order must hold), so a poison message freezes every message behind it in that group until it DLQs out.
 - **Accidental competing consumers** — a second service polling the same queue "to also get the events" steals half of them; the fix is SNS fan-out, discovered only after mysterious missing messages.
@@ -113,7 +113,7 @@ SNS is a **topic**: publishers send once; SNS pushes copies to subscribers (SQS 
 - SQS is your *current* broker — the hop after Kafka in the Niyo journey, and the trade was explicit: Kafka's replay and throughput for zero ops and per-request cost ([[Choosing a Message Broker]] maps the whole path).
 - The visibility-timeout-vs-processing-time bug is the one to audit before the [[Redis Streams]] move: any consumer whose p99 processing time approaches its queue's visibility timeout is already double-processing today — the same workload will need the same care with XAUTOCLAIM idle times.
 - With many services at 1 replica, SQS's buffering is doing real resilience work for you: a consumer pod restart loses nothing, it just resumes polling. Whatever replaces SQS must preserve that property.
-- Fintech discipline: every money-touching consumer should be idempotent on a business key (not SQS MessageId — redelivered standard-queue duplicates can carry different receive metadata), and every DLQ needs an alarm and a documented redrive owner, because DLQ expiry is unrecoverable.
+- Fintech discipline: every money-touching consumer should be idempotent on a business key (not SQS MessageId — a producer retry after a timed-out send creates a second message with a new MessageId), and every DLQ needs an alarm and a documented redrive owner, because DLQ expiry is unrecoverable.
 - SNS→SQS fan-out with filter policies is your Kong-era instinct (route at the edge) applied to events: filtering in infrastructure beats filtering in consumer code.
 - Cost hygiene worth keeping until the day you leave SQS: long polling on every consumer (empty receives are billed requests) and batched send/delete — at your request volumes these two settings are the difference between trivial and noticeable monthly spend.
 
@@ -130,7 +130,7 @@ Classic probes:
 ## Check yourself
 
 > [!question]- Q: Walk through the lifecycle of an SQS message that a consumer fails to process twice and then handles successfully.
-> Send → stored redundantly. Receive 1: hidden for the visibility timeout; consumer errors, no delete; timeout lapses, message visible again, receive count 2. Receive 2: same, count 3. Receive 3: processed, `DeleteMessage` removes it. Had `maxReceiveCount` been 3 with a DLQ attached, the third *receive* would have gone to the DLQ instead — so transient-failure retry budgets and DLQ thresholds must be set together.
+> Send → stored redundantly. Receive 1 (receive count 1): hidden for the visibility timeout; consumer errors, no delete; timeout lapses, message visible again. Receive 2 (count 2): same. Receive 3 (count 3): processed, `DeleteMessage` removes it. Had `maxReceiveCount` been 2 with a DLQ attached, the third *receive* would have moved it to the DLQ instead (maxReceiveCount is the number of receives allowed before the move) — so transient-failure retry budgets and DLQ thresholds must be set together.
 
 > [!question]- Q: What happens if a FIFO queue receives a poison message in group "account-123"?
 > Ordering within a group is strict, so SQS will not deliver later "account-123" messages while the poison one is in flight/retrying. The group stalls: every retry cycle (receive → fail → visibility lapse) blocks successors until the message exhausts maxReceiveCount and dead-letters. Other groups continue untouched. Lesson: group IDs define both ordering and blast radius — and the DLQ threshold bounds the stall duration.
@@ -144,7 +144,7 @@ Classic probes:
 ## Sources
 
 - AWS SQS Developer Guide — visibility timeout, long/short polling, DLQs and redrive, FIFO queues and high-throughput mode, quotas
-- AWS SQS and SNS pricing pages (per-request rates, free tier — rates above are order-of-magnitude as of ~2025)
+- AWS SQS and SNS pricing pages (per-request rates, free tier — rates above checked against the Sep 2026 price list)
 - AWS SNS Developer Guide — fan-out to SQS, message filtering (attribute- and payload-based), FIFO topics
-- AWS Architecture Blog — "Avoiding insurmountable queue backlogs" and SNS→SQS fan-out patterns (AWS Builders' Library: "Avoiding insurmountable queue backlogs", Marc Brooker's queueing posts)
+- AWS Builders' Library — "Avoiding insurmountable queue backlogs" (David Yanacek); AWS docs on SNS→SQS fan-out patterns; Marc Brooker's queueing posts
 - Kleppmann, *Designing Data-Intensive Applications*, Ch. 11 (at-least-once delivery, queue semantics)

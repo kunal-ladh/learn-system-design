@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: The JWT mechanics end to end — header.payload.signature structure, HS256 vs RS256/ES256 signing, standard claims, the validation checklist in order, and why asymmetric keys plus JWKS are the right shape for microservices.
 related: ["[[Sessions vs Tokens]]", "[[JWT Pitfalls]]", "[[Designing an IAM Service]]"]
 ---
@@ -34,8 +34,8 @@ A real (HS256, secret `your-256-bit-secret`) token:
 
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
-eyJpc3MiOiJodHRwczovL2lhbS5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItNDIiLCJhdWQiOiJwYXltZW50cy1hcGkiLCJleHAiOjE3NTk5MDY4MDAsImlhdCI6MTc1OTkwNTkwMCwianRpIjoiYTF iMmMzIn0.
-SxZAyyB0VvcDH_dcqXTGHbeW9BK5uyUBMV8NEAF-Ais
+eyJpc3MiOiJodHRwczovL2lhbS5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItNDIiLCJhdWQiOiJwYXltZW50cy1hcGkiLCJleHAiOjE3NTk5MDY4MDAsImlhdCI6MTc1OTkwNTkwMCwianRpIjoiYTFiMmMzIn0.
+vTogCu8XZllAjCz9l1DfdR2WFTi4PtJu9AeEcTwvXaE
 ```
 
 Decoding the first two segments (plain base64url, no key needed):
@@ -67,7 +67,7 @@ The third segment is `HMAC-SHA256(base64url(header) + "." + base64url(payload), 
 | Who can mint tokens | Every party that can verify | Only the issuer |
 | Key distribution | Secret to every verifying service | Public key published freely (JWKS) |
 | Blast radius of a verifier compromise | Attacker can forge tokens | Attacker can only verify |
-| Speed / size | Fast, small | RSA slower with big signatures; ES256 near-HMAC speed, small signatures |
+| Speed / size | Fastest by far (~1 µs), 32-byte tag | RSA-2048: slow to sign, fast to verify, 256-byte signature; ES256: fast to sign, slower to verify than RSA, 64-byte signature — both tens of µs per verify, still negligible per request |
 
 **Why asymmetric wins for microservices**: with HS256, *verifying* and *forging* are the same capability — so thirty services verifying tokens means thirty copies of a secret that can mint arbitrary identities, and your security equals your sloppiest service. With RS256/ES256, the private key lives only inside the IAM service (ideally an HSM — [[Designing an IAM Service]]); services fetch the **public** key from a **JWKS** (JSON Web Key Set, RFC 7517) endpoint like `https://iam.example.com/.well-known/jwks.json`. The token's header carries a `kid` (key ID) naming which published key signed it, which is also what makes zero-downtime key rotation possible. A leaked verifier compromises nothing but the ability to check signatures. HS256 remains fine when issuer and verifier are the *same* deployment or two tightly coupled services — provided the secret is long and random (a human-memorable string is brute-forceable offline; see [[JWT Pitfalls]]).
 

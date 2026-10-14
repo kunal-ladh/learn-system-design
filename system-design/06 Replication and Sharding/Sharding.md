@@ -4,7 +4,7 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: What sharding is from first principles — splitting one dataset across many machines — range vs hash partitioning, how to choose a shard key, and the real price: cross-shard queries and resharding.
 related: ["[[Replication]]", "[[Consistent Hashing]]", "[[Hot Partition Problem]]", "[[Rebalancing Partitions]]", "[[Why MySQL Does Scale]]"]
 ---
@@ -17,7 +17,7 @@ related: ["[[Replication]]", "[[Consistent Hashing]]", "[[Hot Partition Problem]
 
 A growing system, again. You've already done the cheap things in order ([[Database Scaling Patterns]]): indexes, query tuning, a bigger box ([[Vertical vs Horizontal Scaling]]), read replicas, caching. Three walls remain, and none of those tools touch them:
 
-1. **Data size**: the dataset is 10 TB and growing. The biggest box you can rent holds it, barely, but backups take a day, migrations lock for hours, and the price curve for ever-bigger machines is super-linear.
+1. **Data size**: the dataset is 10 TB and growing. One big box still holds it, but backups take a day, migrations lock for hours, and the price curve for ever-bigger machines is super-linear.
 2. **Write throughput**: replicas multiplied your *reads*, but every write still goes through one leader, and every replica still applies every write. At tens of thousands of writes/second a single leader saturates — CPU, lock contention, IOPS, replication fan-out — and no amount of replicas helps, because replication copies writes, it doesn't divide them.
 3. **Working set**: the fraction of data touched frequently no longer fits in one machine's RAM, so the cache hit rate collapses and every query becomes a disk read ([[Why Caching Works]]).
 
@@ -127,7 +127,7 @@ Shard counts are not forever: data grows, load grows, one shard gets hot. Moving
 
 ## In your stack
 
-- **MongoDB is natively sharded** — `mongos` routers + config servers + shards ([[MongoDB Architecture]]). If/when Niyo's data outgrows one replica set, the machinery exists; the shard-key decision (hashed `userId` vs ranged compound keys) is still entirely on you, and Mongo's documented shard-key-mistake stories are legion.
+- **MongoDB is natively sharded** — `mongos` routers + config servers + shards ([[MongoDB Architecture]]). If/when Niyo's data outgrows one replica set, the machinery exists; the shard-key decision (hashed `userId` vs ranged compound keys) is still entirely on you (MongoDB 5.0+ can change it online with `reshardCollection`, but that rewrites the whole collection — a full resharding migration, automated), and Mongo's documented shard-key-mistake stories are legion.
 - **You already run sharded systems**: Kafka/MSK topics are hash-partitioned by message key ([[Kafka Architecture]]); Redis Cluster splits its keyspace into 16384 slots ([[Redis Cluster and Sentinel]]). Same concepts, same hot-key risks, different vocabulary.
 - **Fintech shard key instinct**: `accountId`/`userId`, so that a user's money operations are single-shard and atomic locally; cross-user transfers become sagas with idempotency keys — which your RBI-auditable flows want to be explicit workflow records anyway.
 - **SQS-based flows** sidestep partitioning entirely (SQS standard queues have no user-visible partitions) — one reason they're operationally gentle; you re-inherit partition thinking when moving to Redis Streams (single stream = single node's throughput in Cluster: shard streams by key if needed).
@@ -147,7 +147,7 @@ Classic follow-ups: "Shard key for a chat app?" (`conversation_id`, not `message
 > All new transactions have "now"-ish timestamps, so every insert lands on the final range — one shard takes 100% of writes while the rest store cold history: a textbook hot tail. Shard by hashed `account_id` instead (even write spread, per-account queries stay single-shard), keeping `created_at` as a sort/clustering component within each account's data.
 
 > [!question]- Q: What happens to a query that doesn't include the shard key, and why does p99 suffer disproportionately?
-> It can't be routed, so it fans out to every shard and merges results (scatter-gather). The response completes only when the slowest shard answers, so the query's latency is the max of N samples — at N shards, hitting at least one shard's bad-percentile moment becomes near-certain, so the fan-out query's p50 behaves like a single shard's p99.
+> It can't be routed, so it fans out to every shard and merges results (scatter-gather). The response completes only when the slowest shard answers, so the query's latency is the max of N samples. The chance that at least one of N independent shards is at or above its own p99 is 1 − 0.99^N — about 40% at 50 shards, past 50% from roughly 70 — so at that scale the fan-out query's p50 behaves like a single shard's p99.
 
 > [!question]- Q: Mini-design — Niyo outgrows one Mongo replica set for transactions (5 TB, 20k writes/s). Sketch the sharding plan.
 > Shard key: hashed `accountId` — high cardinality, even spread, and statements/balance queries are per-account so they stay single-shard. Each shard is a 3-node replica set with majority writes (durability through [[Failover]]). Cross-account transfers: saga with idempotency keys, recorded as explicit workflow state (audit-friendly). Ops: start with enough shards to avoid early splits, alert on per-shard write skew to catch whales ([[Hot Partition Problem]]), and keep analytics off the OLTP cluster via CDC to a warehouse.

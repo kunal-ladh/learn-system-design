@@ -4,7 +4,7 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: What a hot key or hot partition is — one shard taking disproportionate traffic while the rest idle — why it happens (celebrity keys, monotonic keys, whale tenants), and the fixes: key design, salting, caching, adaptive capacity.
 related: ["[[Sharding]]", "[[Hot Key Problem]]", "[[DynamoDB Design]]", "[[Twitter Timeline Design]]"]
 ---
@@ -70,9 +70,9 @@ The two causes matter because the fixes differ: cause 2 is fixed by *choosing a 
 Hot partitions hide behind averages, so detection is a discipline of its own:
 
 - **Max, not mean, per-partition metrics**: alert on `max(partition_cpu) / avg(partition_cpu)` or on any single partition's utilisation — a cluster-average CPU of 20% with one node at 98% *is* the incident. Same for queue depth, IOPS, and request latency per shard.
-- **Top-k key sampling**: you rarely can afford to count every key, so sample. Space-efficient top-k sketches (count-min sketch + heap) in the request path, or periodic sampling at the proxy, surface the heavy hitters. Many systems ship this: Redis has `redis-cli --hotkeys` (works with an LFU eviction policy) and `MONITOR`-based sampling in dev; DynamoDB has **CloudWatch Contributor Insights**, with separate rules for the most-*accessed* and the most-*throttled* partition keys of a table or index — and, since 2025, a throttle-events-only mode that makes leaving it on cheap.
+- **Top-k key sampling**: you rarely can afford to count every key, so sample. Space-efficient top-k sketches (count-min sketch + heap) in the request path, or periodic sampling at the proxy, surface the heavy hitters. Many systems ship this: Redis has `redis-cli --hotkeys` (works with an LFU eviction policy) and `MONITOR`-based sampling in dev; DynamoDB has **CloudWatch Contributor Insights**, with separate rules for the most-*accessed* and the most-*throttled* partition keys of a table or index — and, since August 2025, a throttle-events-only mode that makes leaving it on cheap.
 - **Kafka**: per-partition consumer lag (`kafka-consumer-groups --describe`) and per-partition message-in rates — one partition's lag growing while siblings sit at zero is the signature of a hot message key.
-- **MongoDB**: `sh.status()` chunk distribution, per-shard opcounters in Atlas/`mongostat`, and the balancer's migration history — a shard receiving a disproportionate share of writes despite balanced chunk counts means a hot key *within* a chunk.
+- **MongoDB**: `sh.status()` chunk distribution, per-shard opcounters in Atlas/`mongostat`, and the balancer's migration history — a shard receiving a disproportionate share of writes despite balanced data per shard means a hot key *within* a chunk.
 - **Client-side symptoms**: throttling errors concentrated on specific keys, or p99 latency degrading for a coherent subset of users while global p50 looks fine. Be clear about which tool answers "*which* key", though: DynamoDB's ordinary CloudWatch metrics are dimensioned by table, index and operation and never by key, so they tell you that throttling happened and nothing about who caused it — only Contributor Insights names the offender.
 
 Detection matters because the cheap fixes (salting *the one hot key*, caching *the one hot item*, isolating *the one whale*) all require knowing *which* key is hot — a cluster-wide "it's slow" tells you nothing actionable.
@@ -86,7 +86,7 @@ Every hot-partition symptom has a more boring twin, and the difference between t
 | p99 up, p50 flat, average CPU normal | Per-shard **max** CPU/IOPS, never the cluster mean | One shard ≥ 90% while the rest sit under half | All shards evenly high → a genuine capacity shortfall; adding shards *will* help |
 | Some writes throttle, most succeed | Per-key access report: DynamoDB Contributor Insights, Redis `--hotkeys`, proxy sampling | One key or key range dominates the top-k | Throttles spread across many keys → under-provisioning, not skew |
 | Consumer lag climbing on one topic | `kafka-consumer-groups --describe`, per-partition lag | One partition's lag rises while siblings sit near zero | Every partition lagging → slow consumer logic or a stalled downstream |
-| Writes skewed across Mongo shards | `sh.status()` chunk counts **plus** per-shard opcounters | Chunk counts balanced but writes skewed → a hot key *inside* a chunk | Chunk counts themselves skewed → balancer stalled, disabled, or mid-migration |
+| Writes skewed across Mongo shards | `getShardDistribution()` data per shard **plus** per-shard opcounters | Data balanced but writes skewed → a hot key *inside* a chunk | Data itself skewed past the balancer's threshold → balancer stalled, disabled, or mid-migration (since 6.0.3 it evens data size, not chunk count, so uneven chunk counts alone are normal) |
 | One Redis node's CPU pinned, others idle | `INFO commandstats`, slowlog, `--hotkeys` | One key or slot dominates command volume | Memory pressure and evictions rather than CPU → a big-key or sizing problem |
 
 The pattern repeats in every row: **the cluster mean is the enemy and the per-partition maximum is the measurement.** A dashboard that plots only averages structurally cannot show you this failure, which is why hot partitions are so often reported by a customer before they are noticed by monitoring.
@@ -106,7 +106,7 @@ The numbers make the core lesson concrete: **provisioned capacity is a table-lev
 ### What it looks like in production
 
 - One partition's CPU, IOPS or queue depth pegged while cluster-average graphs look healthy — the shape the arithmetic above predicts.
-- **In DynamoDB terms**: the per-partition caps of **3,000 RCU and 1,000 WCU** hold whatever the table is provisioned for, and an *item* can never exceed them because it lives on exactly one partition. "Provisioned ≠ what one key can use" is the lesson ([[DynamoDB Design]]).
+- **In DynamoDB terms**: the per-partition caps of **3,000 RCU and 1,000 WCU** (AWS documented values, as of 2026) hold whatever the table is provisioned for, and an *item* can never exceed them because it lives on exactly one partition. "Provisioned ≠ what one key can use" is the lesson ([[DynamoDB Design]]).
 - In Kafka: one partition's consumer lag grows unboundedly while siblings are at zero, because one key (e.g. a whale tenant used as the message key) dominates — the partition is the unit of consumer parallelism, so one consumer eats the whale alone ([[Kafka Architecture]], [[Consumer Groups and Rebalancing]]).
 - p99 latency degrades for *some* users (those co-located with the hot entity) while overall dashboards look fine — hot partitions punish the hot key's *neighbors* too, which makes tickets confusing.
 
@@ -132,7 +132,7 @@ Either way the real finding is that a key-design decision got made at 3am that s
 
 **4. Isolate or dedicate (treats whales).** Give the whale tenant its own partition/shard/cluster (directed placement), so its load is budgeted rather than randomly co-located with smaller tenants. Many multi-tenant systems run "pool for the many, silo for the whales".
 
-**5. Let the platform help — and know its limits.** **DynamoDB adaptive capacity** automatically shifts unused throughput toward hot partitions (instant as of 2019) and can even **isolate a hot item onto its own partition**. Reality check: it rebalances *within your provisioned/on-demand ceiling* and cannot push one item past the hard per-partition limits (3,000 RCU / 1,000 WCU) — adaptive capacity softens moderate skew; it does not repeal the single-key ceiling. Similarly MongoDB can split-and-migrate a hot chunk ([[Rebalancing Partitions]]), but a *single* shard-key value can't be split below one chunk (hence Mongo's own docs push high-cardinality keys).
+**5. Let the platform help — and know its limits.** **DynamoDB adaptive capacity** automatically shifts unused throughput toward hot partitions (instant as of 2019) and can even **isolate a hot item onto its own partition**. Reality check: it rebalances *within your provisioned/on-demand ceiling* and cannot push one item past the hard per-partition limits (3,000 RCU / 1,000 WCU) — adaptive capacity softens moderate skew; it does not repeal the single-key ceiling. Similarly an operator can split and migrate a hot MongoDB chunk by hand — the balancer reacts only to data size, never to traffic ([[Rebalancing Partitions]]) — but a *single* shard-key value can't be split below one chunk (hence Mongo's own docs push high-cardinality keys).
 
 ```mermaid
 graph TD
@@ -182,7 +182,7 @@ Classic follow-ups: "Key for time-series events?" (entity-leading compound key, 
 > Balanced chunks mean a balanced *key space*, not balanced *load* — the balancer measures data, not traffic. Hashing guarantees accounts are spread evenly across shards; it guarantees nothing about how often each account is written. So some account on shard 3 is being written far more than the median. In a payments system the usual shape is a partner, nodal, or settlement account that participates in a large share of transactions — a structural hot key rather than a key-design mistake, since `accountId` was the right choice. What to check next, in order: per-shard opcounters to confirm the skew really is in writes and not a reporting artifact; the profiler or a sampled write log on shard 3 to identify the dominant `accountId`; and then whether that one account explains the whole 6× or only part of it, because "one hot key" and "one chunk full of correlated keys" have different fixes. If it is a single key, note the dead end: a chunk cannot be split below one shard-key value, so the balancer can never relieve it no matter how long you wait. The options left act on the key itself — salt that account's ledger entries into K sub-keys with periodic aggregation, or move it to a dedicated shard and budget for it explicitly.
 
 > [!question]- Q: Mini-design — a flash-sale inventory counter for one product must absorb 50k decrement requests/sec. Sketch an approach.
-> A single counter row is a structural write-hot key. Split it: shard the stock into K salted counters (e.g. 20 sub-counters of 1/20th the stock each); each decrement picks a random sub-counter, retrying on an empty one; sum sub-counters for display (slightly stale is fine). Alternatives/complements: queue the decrements and serialise through one fast consumer ([[Why Async Messaging Exists]]), or hold the counter in Redis (single node handles ~100k simple ops/sec) with durable reconciliation behind it — each trades consistency, cost, and complexity differently.
+> A single counter row is a structural write-hot key. Split it: shard the stock into K salted counters (e.g. 20 sub-counters of 1/20th the stock each); each decrement picks a random sub-counter, retrying on an empty one; sum sub-counters for display (slightly stale is fine). Alternatives/complements: queue the decrements and serialise through one fast consumer ([[Why Async Messaging Exists]]), or hold the counter in Redis (a single node handles on the order of 100k simple ops/sec unpipelined, far more pipelined — redis.io benchmark examples) with durable reconciliation behind it — each trades consistency, cost, and complexity differently.
 
 ## Sources
 

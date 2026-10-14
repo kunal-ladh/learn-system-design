@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: How a full cache decides what to throw away — LRU, LFU, FIFO, TTL, random — and why Redis's approximated LRU/LFU is deliberately imprecise.
 related: ["[[Why Caching Works]]", "[[Redis Internals]]", "[[Cache Invalidation]]", "[[Caching Strategies]]"]
 ---
@@ -43,7 +43,7 @@ This is what your in-process Java caches do: **Caffeine** uses W-TinyLFU — a s
 
 ### Redis: approximated LRU and LFU
 
-Redis deliberately does **not** implement exact LRU. An exact LRU needs a global linked list threaded through every key, costing 24+ bytes per key and pointer churn on every single read. Instead, when memory must be freed, Redis **samples N keys** (default `maxmemory-samples 5`) and evicts the best candidate among them — for LRU, the one with the oldest access time (each key stores a small access clock in spare bits of its object header). Since Redis 3.0 it also keeps a pool of good candidates across evictions, which sharpens the approximation.
+Redis deliberately does **not** implement exact LRU. An exact LRU needs a global linked list threaded through every key, costing at least two extra pointers per key and pointer churn on every single read. Instead, when memory must be freed, Redis **samples N keys** (default `maxmemory-samples 5`) and evicts the best candidate among them — for LRU, the one with the oldest access time (each key stores a small access clock in spare bits of its object header). Since Redis 3.0 it also keeps a pool of good candidates across evictions, which sharpens the approximation.
 
 Why approximation is fine: eviction only needs to avoid evicting the *hot head*, not find the single globally coldest key. Under skewed access, a sample of 5 almost never contains a hot key, so the evicted key is almost always cold — and raising `maxmemory-samples` to 10 approaches exact LRU closely (Redis's own documentation shows the comparison graphs) at slightly higher CPU. Precision beyond that buys nothing measurable in hit ratio.
 
@@ -94,7 +94,7 @@ Three consequences worth internalising:
 
 ### Expiry runs on its own clock
 
-TTL expiry and memory-pressure eviction are separate machinery, and expiry is deliberately lazy. A key past its TTL is removed in two ways: **on access** (any read of an expired key deletes it and reports a miss), and by an **active expiry cycle** that runs as part of Redis's periodic background job — roughly 10 times a second by default. Each pass samples about 20 keys from the set of keys that have a TTL, deletes those found expired, and if more than ~25% of the sample was expired it immediately repeats, so a large backlog drains fast while a small one costs almost nothing.
+TTL expiry and memory-pressure eviction are separate machinery, and expiry is deliberately lazy. A key past its TTL is removed in two ways: **on access** (any read of an expired key deletes it and reports a miss), and by an **active expiry cycle** that runs as part of Redis's periodic background job — roughly 10 times a second by default. Each pass samples about 20 keys from the set of keys that have a TTL, deletes those found expired, and if more than ~10% of the sample was expired it immediately repeats (the threshold since Redis 6.0's rewrite of the cycle; the redis.io `EXPIRE` page and pre-6.0 code say 25%), so a large backlog drains fast while a small one costs almost nothing.
 
 The probabilistic design means **expired-but-never-read keys keep occupying memory until a sampling pass happens to pick them**. A batch that wrote ten million keys with a one-hour TTL does not free ten million keys at the stroke of the hour. Two different `INFO stats` counters tell the two stories apart: `expired_keys` (removed because their TTL passed) and `evicted_keys` (removed because memory was tight). Rising `expired_keys` is normal housekeeping; rising `evicted_keys` means your working set no longer fits.
 

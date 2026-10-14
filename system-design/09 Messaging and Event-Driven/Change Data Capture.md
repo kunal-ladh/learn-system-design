@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Treating the database's own replication log as an event stream — Debezium, Mongo change streams, DynamoDB Streams — how snapshots plus log tailing work, row-shaped versus intent-shaped events, and where CDC fits versus application events.
 related: ["[[The Outbox Pattern]]", "[[Replication]]", "[[Event Schema Evolution]]", "[[Cache Invalidation]]"]
 ---
@@ -35,13 +35,13 @@ Meanwhile the database itself has been keeping the perfect answer all along: its
 
 ### Log tailing
 
-A CDC connector poses as a replication client: it reads MySQL's binlog, Postgres's WAL via logical decoding, MongoDB's oplog, and converts each entry into a change event — typically `{operation: insert|update|delete, before: {...}, after: {...}, source: {table, position, timestamp, txId}}` — published to a stream ([[Kafka Architecture|Kafka]] classically; Kinesis, SQS, or [[Redis Streams]] work too). The connector persists its **log position** (binlog offset, resume token, LSN) so restarts resume exactly where they left off — making the pipeline at-least-once ([[Delivery Semantics]]; duplicates on crash-replay, so consumers dedup on source position or key version).
+A CDC connector poses as a replication client: it reads MySQL's binlog, Postgres's WAL via logical decoding, MongoDB's oplog (through change streams — Debezium 2.0 removed direct oplog tailing), and converts each entry into a change event — typically `{operation: insert|update|delete, before: {...}, after: {...}, source: {table, position, timestamp, txId}}` — published to a stream ([[Kafka Architecture|Kafka]] classically; Kinesis, SQS, or [[Redis Streams]] work too). The connector persists its **log position** (binlog offset, resume token, LSN) so restarts resume exactly where they left off — making the pipeline at-least-once ([[Delivery Semantics]]; duplicates on crash-replay, so consumers dedup on source position or key version).
 
 **The main implementations:**
 
 - **Debezium** — the open-source standard: connectors for MySQL, Postgres, MongoDB, SQL Server, Oracle; runs on Kafka Connect (or standalone via Debezium Server); emits a well-defined envelope; includes the outbox event router ([[The Outbox Pattern]]).
-- **MongoDB change streams** — CDC built into the database: `watch()` on a collection/db/deployment returns an ordered cursor of changes with **resume tokens**; requires a replica set (it reads the oplog); your fleet can use this with zero extra infrastructure.
-- **DynamoDB Streams** — a 24-hour ordered change log per table, consumed by Lambda or Kinesis adapters; the same idea as a managed feature.
+- **MongoDB change streams** — CDC built into the database: `watch()` on a collection/db/deployment returns an ordered cursor of changes with **resume tokens**; requires a replica set or sharded cluster (it reads the oplog; a standalone `mongod` has none); your fleet can use this with zero extra infrastructure. The events are *not* the `before/after` envelope above: an update carries only the changed fields (`updateDescription`) unless you ask for `fullDocument: "updateLookup"` — the document's state when the lookup runs, which may be later than the change — and a **delete carries only `documentKey`** (the `_id`, plus the shard key on sharded collections), never the deleted document. Getting the pre-change document needs `changeStreamPreAndPostImages` enabled on the collection and `fullDocumentBeforeChange` on the stream (MongoDB 6.0+).
+- **DynamoDB Streams** — a 24-hour change log per table, ordered **per item** (not across the table), each modification appearing exactly once in the stream, consumed by Lambda or the Kinesis adapter; the stream view type (`KEYS_ONLY`, `NEW_IMAGE`, `OLD_IMAGE`, `NEW_AND_OLD_IMAGES`) decides whether before/after images are present. The same idea as a managed feature.
 - Postgres logical replication slots, MySQL binlog clients (maxwell, canal) — same family.
 
 ### Snapshot + log: bootstrapping
@@ -101,10 +101,10 @@ graph LR
 ## Failure modes
 
 - **Log retention outruns the connector.** The connector is down for longer than the oplog window / binlog retention / replication-slot ceiling; its resume position no longer exists. Recovery = full re-snapshot (hours-days on big tables) while consumers see a gap or duplicates. Monitor connector lag against retention with margin — the same cliff as [[Backpressure and Flow Control|Kafka lag vs retention]].
-- **The inverse: an abandoned Postgres replication slot** pins WAL forever and fills the primary's disk — CDC that nobody is consuming can take down the *source* database. Alert on slot lag/WAL retention.
+- **The inverse: an abandoned Postgres replication slot** pins WAL forever and fills the primary's disk (by default — Postgres 13+ can cap it with `max_slot_wal_keep_size`, which invalidates the slot instead and turns this into the failure above) — CDC that nobody is consuming can take down the *source* database. Alert on slot lag/WAL retention.
 - **Schema change breaks consumers at stream speed.** A column rename ships, and every downstream consumer starts failing within seconds — faster blast radius than any API change, because nobody thinks of `ALTER TABLE` as a deploy to other teams.
 - **Event storms from bulk operations.** A backfill touching 50M rows emits 50M events; downstream consumers and the broker get a day of traffic in minutes. Coordinate bulk changes with pipeline owners; consider snapshot-based rebuilds instead of letting the storm flow.
-- **Ordering across tables/shards.** CDC preserves order per source partition (one binlog, one oplog shard), but a sharded Mongo cluster or multi-table transaction fans into streams with no global order — consumers wanting transactional wholeness need the transaction markers some connectors emit, or must not need them ([[Message Ordering]]).
+- **Ordering across tables/shards.** CDC preserves order per source partition (one binlog, one oplog shard), but a multi-table transaction fans into per-table topics with no global order, and per-shard capture of a sharded store has none either (a Mongo change stream opened through `mongos` is the exception: it merges shards into one cluster-time order) — consumers wanting transactional wholeness need the transaction markers some connectors emit, or must not need them ([[Message Ordering]]).
 - **PII leaks by default.** The log contains *every* column; CDC happily replicates fields the warehouse must never hold. Column filters/masking in the connector are a compliance control, not an optimization.
 
 ## When NOT to use it
@@ -144,7 +144,7 @@ Classic follow-ups:
 > Status-diff events force the saga to infer intent: a migration flipping statuses, a support tool fixing a typo'd status, or a schema refactor renaming the field would all trigger (or silently stop triggering) disbursements — money movement keyed to storage archaeology. Better: the approval use-case writes an intent-shaped `loan.approved` event to an [[The Outbox Pattern|outbox]] in the same transaction as the status change; CDC (or a poller) relays the outbox. The saga consumes a deliberate contract; raw CDC remains for mechanical mirrors (search, cache, warehouse). Deterministic control over money movement also satisfies the auditor in ways "we diff rows" does not.
 
 > [!question]- Q: Mini-design — keep Redis cache and Elasticsearch in sync with a `merchants` collection updated by three different services. Sketch the pipeline and name the two alerts.
-> One Mongo change stream (deployment- or collection-level) consumed by a small CDC service (or Debezium Mongo connector → Kafka/SQS): for each change event, update/evict the Redis key (`merchant:{id}`, last-writer-wins by a version/updatedAt guard) and upsert the ES document (index by `_id`, idempotent). Resume token checkpointed durably. Bootstrap each new destination by snapshot-then-stream. Alerts: (1) CDC lag — resume-token age / change-stream latency vs oplog window, (2) destination divergence — periodic sampled reconciliation count between Mongo and ES/Redis (catches silent consumer bugs that lag alone misses).
+> One Mongo change stream (deployment- or collection-level) consumed by a small CDC service (or Debezium Mongo connector → Kafka/SQS): for each change event, update/evict the Redis key (`merchant:{id}`, last-writer-wins by a version/updatedAt guard) and upsert the ES document (index by `_id`, idempotent) — opening the stream with `fullDocument: "updateLookup"`, since an update event otherwise carries only the changed fields; a delete event carries only `documentKey._id`, which is exactly enough to evict the key and delete the ES document. Resume token checkpointed durably. Bootstrap each new destination by snapshot-then-stream. Alerts: (1) CDC lag — resume-token age / change-stream latency vs oplog window, (2) destination divergence — periodic sampled reconciliation count between Mongo and ES/Redis (catches silent consumer bugs that lag alone misses).
 
 ## Sources
 

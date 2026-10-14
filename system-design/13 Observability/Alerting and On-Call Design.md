@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: How to design alerts that page humans only for real, actionable, user-facing problems — symptom-based alerting, SLO burn rates, and the on-call practices that keep the system honest.
 related: ["[[SLA SLO SLI and Error Budgets]]", "[[Logs Metrics and Traces]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -65,14 +65,14 @@ The test for a page is brutal and binary: **is it actionable right now?** If the
 ```mermaid
 graph TD
     A["Proposed alert"] --> B{"User-visible symptom or fast budget burn?"}
-    B -->|no| C{"Genuinely predicts future symptom?"}
-    B -->|yes| D{"Action a human must take now?"}
-    D -->|yes| P["Page with runbook"]
-    D -->|no| C
-    C -->|yes| T["Ticket"]
-    C -->|no| E{"Useful during diagnosis?"}
-    E -->|yes| F["Dashboard only"]
-    E -->|no| X["Delete it"]
+    B -->|"no"| C{"Genuinely predicts future symptom?"}
+    B -->|"yes"| D{"Action a human must take now?"}
+    D -->|"yes"| P["Page with runbook"]
+    D -->|"no"| C
+    C -->|"yes"| T["Ticket"]
+    C -->|"no"| E{"Useful during diagnosis?"}
+    E -->|"yes"| F["Dashboard only"]
+    E -->|"no"| X["Delete it"]
 ```
 
 Beyond page-vs-ticket, mature teams grade *incidents* (not alerts) by severity once a human is engaged — a typical ladder:

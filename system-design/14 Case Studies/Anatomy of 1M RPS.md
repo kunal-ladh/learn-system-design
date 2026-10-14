@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: What actually changes at each order of magnitude from 100 RPS to 1M RPS — what breaks first, what you add, and which new failure class each tier introduces.
 related: ["[[Scalability]]", "[[Load Shedding and Graceful Degradation]]", "[[Sharding]]", "[[Back of the Envelope Estimation]]"]
 ---
@@ -19,13 +19,13 @@ One framing to hold throughout: **scaling is the art of removing things requests
 
 First, calibrate the numbers ([[Back of the Envelope Estimation]]):
 
-| Tier | RPS | Roughly equivalent to | Requests/day |
+| Tier | RPS | Roughly equivalent to (illustrative, 2020s, order of magnitude only) | Requests/day |
 |---|---|---|---|
 | 1 | ~100 | A successful B2B product; a mid-size fintech's core API | ~8.6M |
 | 2 | ~1,000 | A popular consumer app in one country | ~86M |
-| 3 | ~10,000 | A top-100 web property; a bank's UPI stack at peak | ~860M |
+| 3 | ~10,000 | A top-100 web property; all of India's UPI on an average second (Aug 2025: 20.01B txns/month, ~645M/day ≈ 7.5K TPS) | ~860M |
 | 4 | ~100,000 | A large social platform's read path | ~8.6B |
-| 5 | ~1,000,000 | Planet-scale: a hyperscaler service front door | ~86B |
+| 5 | ~1,000,000 | A very large consumer platform's API front door — hyperscaler stores run 100× beyond this (S3 serves 200M+ req/s, 2026; DynamoDB peaked at 146M req/s, Prime Day 2024) | ~86B |
 
 Two caveats that interviewers love: these are *sustained* numbers — peaks run 2–10× the average ([[Capacity Planning]]) — and 1M RPS of cache reads is a different universe from 1M RPS of money-moving writes. Always state the read/write mix before designing.
 
@@ -81,7 +81,7 @@ At this tier the unit of scaling stops being "a server" and becomes "a copy of t
 
 ## What broke along the way
 
-A compressed incident log of the climb, because each addition brought its own failure:
+A compressed incident log of the climb, because each addition brought its own failure (an illustrative composite, not one company's history — the durations are representative, not measured):
 
 - The LB added for redundancy flapped on an over-aggressive health check and took *both* servers out of rotation.
 - The cache added at 1K RPS served stale balances after a deploy skipped invalidation (why [[Cache Invalidation]] is "one of the two hard problems").
@@ -143,8 +143,8 @@ Classic follow-ups: "Where does the database connection limit bite and why?" (po
 
 ## Sources
 
-- *Designing Data-Intensive Applications*, Kleppmann — Ch. 1 (load parameters), Ch. 6 (partitioning).
-- AWS Builders' Library — "Workload isolation using shard-aware routing" and "Using load shedding to avoid overload" (cell-based design and shedding-as-policy, from the operators of tier-5 systems).
+- *Designing Data-Intensive Applications*, Kleppmann (1st ed., 2017) — Ch. 1 (load parameters), Ch. 6 (partitioning).
+- AWS Builders' Library — "Workload isolation using shuffle-sharding" and "Using load shedding to avoid overload" (blast-radius isolation and shedding-as-policy, from the operators of tier-5 systems); AWS Well-Architected whitepaper "Reducing the Scope of Impact with Cell-Based Architecture" (September 2023) for cell-based design.
 - Slack Engineering blog — "Slack's Migration to a Cellular Architecture" (2023).
 - Google SRE Book (2016) — chapters on handling overload and cascading failures; the origin of error-budget thinking for the "organizational" claim.
 - Marc Brooker (AWS) blog — posts on metastable failures and coordination avoidance; see also "Metastable Failures in Distributed Systems" (Bronson et al., HotOS 2021).

@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: How Stripe engineers correctness at money-scale — idempotency keys as an API contract, double-entry ledgers, exactly-once effects from at-least-once delivery, surgical load shedding, and date-pinned API versioning.
 related: ["[[Idempotency]]", "[[Design a Payment System]]", "[[Exactly-Once Delivery Is a Lie]]", "[[Rate Limiting]]"]
 ---
@@ -204,7 +204,7 @@ This is your home turf — Niyo is RBI-regulated money movement and KYC, so the 
 ## Sources
 
 - Stripe API documentation — "Idempotent requests" (the `Idempotency-Key` contract, 24-hour retention) and webhook delivery documentation (redelivery and event-ID dedup).
-- Brandur Leach, "Designing robust and predictable APIs with idempotency keys" — Stripe engineering blog, 2017.
+- Brandur Leach, "Designing robust and predictable APIs with idempotency" — Stripe engineering blog, 2017.
 - Paul Tarjan, "Scaling your API with rate limiters" — Stripe engineering blog, 2017 (the four limiters and shedding order).
 - Brandur Leach, "APIs as infrastructure: future-proofing Stripe with versioning" — Stripe engineering blog, 2017 (date-pinned versions, version-change gates).
 - Ilya Ganelin, "Ledger: Stripe's system for tracking and validating money movement" — Stripe engineering blog, February 2024 (double-entry model, immutability, reconciliation).

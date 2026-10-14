@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: The 4-phase method for running a 45-minute system design interview — time budgets, what interviewers actually grade, the classic failure patterns, and how to drill with this vault.
 related: ["[[Back of the Envelope Estimation]]", "[[Design a URL Shortener]]", "[[What Is System Design]]"]
 ---
@@ -44,7 +44,7 @@ Ask for numbers directly: "How many daily active users? Read-heavy or write-heav
 
 Turn the agreed scale into three numbers, showing arithmetic out loud:
 
-- **Throughput**: requests/day ÷ 86,400 ≈ requests/sec (use ~100K sec/day for mental math), then multiply by 2–3x for peak. Separate reads from writes using the read:write ratio.
+- **Throughput**: requests/day ÷ 86,400 ≈ requests/sec (use ~100K sec/day for mental math), then multiply by a peak factor — 2–3x for smooth traffic, 5–10x for spiky or event-driven traffic ([[Back of the Envelope Estimation]]). Separate reads from writes using the read:write ratio.
 - **Storage**: items/day × bytes/item × retention period. Sanity-check against intuition ("~18 TB over 5 years — a few large disks, fits a modest sharded cluster").
 - **Bandwidth**: throughput × payload size, for ingress and egress.
 
@@ -173,27 +173,16 @@ The same rubric in scanning form. Most interviewers are working from a sheet tha
 4. **Practice the transitions.** Rehearse the connective sentences — scoping, the estimation handoff, the buy-in question, the closing summary. They are what driving *sounds* like, and they come out fluently only if rehearsed.
 5. **Cover the full spread.** Drill at least one read-heavy fan-out problem ([[Design a News Feed]]), one connection-heavy real-time problem ([[Design a Chat System]]), one correctness-critical problem ([[Design a Payment System]]), and one infrastructure build ([[Design a Key-Value Store]]) — they exercise different muscles, and the interview you get is not your choice.
 
-### An eight-week schedule
+### The schedule
 
-The vault's modules are ordered as a dependency chain, so the schedule reads modules forward while drilling problems as soon as their prerequisites land. One concrete version — adjust the pace, keep the shape:
-
-| Week | Read | Drill cold, then diff against the note |
-|---|---|---|
-| 1 | Module 1 — Foundations | Estimation only: the *Back-of-envelope* section of five problem notes, five minutes each |
-| 2 | Modules 2 and 3 — Networking, Traffic | [[Design a URL Shortener]] |
-| 3 | Modules 4 and 5 — Caching, Relational | [[Design a Rate Limiter]], [[Design a Distributed ID Generator]] |
-| 4 | Modules 6 and 8 — Sharding, Distributed theory | Re-drill the URL shortener; it should take 30 minutes now, not 45 |
-| 5 | Modules 7 and 9 — NoSQL, Messaging. Read Module 9 twice; it is your work track | [[Design a Notification Service]], [[Design a Chat System]] |
-| 6 | Modules 10 and 11 — Architecture, Auth | [[Design a News Feed]], [[Design Typeahead Autocomplete]] |
-| 7 | Modules 12 and 13 — Resilience, Observability | [[Design a Payment System]], then re-drill week 5's two |
-| 8 | Module 14 — Case studies | [[Design a Key-Value Store]] as the capstone, plus one mock with a human |
+The week-by-week plan lives in one place so it cannot drift: **[[Practice Drills]], Part 3** — an eleven-week pass that reads the modules forward as a dependency chain and drills each design problem the week its prerequisites land. Read it there; this note only adds what turns that reading list into interview preparation.
 
 Two things make this a schedule rather than a reading list:
 
 - **Book two mock interviews with a person, minimum.** Nothing you do alone reproduces an interviewer interrupting at minute 12, or asking the follow-up you were quietly hoping to avoid. Week 8 is late for the first one — move it earlier if you can.
 - **Record your solo attempts and listen to one.** You will hear the silences, the hedging, and the stretches where you narrated nothing — the three habits that cost the most marks and the three you cannot notice while you are talking.
 
-If eight weeks is not available, the index's weekend track is the honest minimum: estimation, latency numbers, replication, sharding, caching, queues versus logs, and this note.
+If the full schedule is not available, the index's weekend track is the honest minimum: estimation, latency numbers, replication, sharding, caching, queues versus logs, and this note.
 
 ## Check yourself
 

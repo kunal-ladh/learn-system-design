@@ -4,14 +4,14 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Abadi's extension of CAP — during a partition choose availability vs consistency, ELSE choose latency vs consistency — and why the ELC half explains most real design decisions.
 related: ["[[CAP Theorem]]", "[[Consistency Models]]", "[[Replication]]", "[[Quorum Reads and Writes]]"]
 ---
 
 # PACELC
 
-[[CAP Theorem]] only speaks about the rare moments when the network is partitioned. PACELC (pronounced "pass-elk"), proposed by Daniel Abadi, adds the missing half: **even when the network is healthy, a replicated system must trade latency against consistency on every single operation**. The full statement: **if Partition, choose Availability or Consistency; Else, choose Latency or Consistency.** The "Else" clause describes 99.99% of your system's life, which is why PACELC predicts real design decisions far better than CAP does.
+[[CAP Theorem]] only speaks about the rare moments when the network is partitioned. PACELC (pronounced "pass-elk"), proposed by Daniel Abadi, adds the missing half: **even when the network is healthy, a replicated system must trade latency against consistency on every single operation**. The full statement: **if Partition, choose Availability or Consistency; Else, choose Latency or Consistency.** The "Else" clause describes nearly all of your system's life, which is why PACELC predicts real design decisions far better than CAP does.
 
 ## Why this matters
 
@@ -25,8 +25,8 @@ PACELC splits a system's behaviour into two regimes and asks one question per re
 
 ```mermaid
 graph TD
-  Start["Is the network partitioned right now"] -->|yes| P["P branch - choose A or C"]
-  Start -->|no| E["E branch - choose L or C"]
+  Start["Is the network partitioned right now"] -->|"yes"| P["P branch - choose A or C"]
+  Start -->|"no"| E["E branch - choose L or C"]
   P --> PA["PA - keep serving, accept staleness"]
   P --> PC["PC - refuse or block to stay consistent"]
   E --> EL["EL - ack fast, replicate async"]
@@ -59,9 +59,9 @@ The ELC trade is not philosophical; it is arithmetic you can do in an interview.
 |---|---|---|
 | Same host, process to process | tens of microseconds | negligible |
 | Same availability zone | under a millisecond | sub-millisecond — EC is nearly free here |
-| Across AZs in one region | ~1 millisecond, low single digits | a few milliseconds per quorum write |
+| Across AZs in one region | ~0.5–2 ms | a few milliseconds per quorum write |
 | Mumbai to Singapore | tens of milliseconds | tens of milliseconds, per write |
-| Mumbai to Virginia | roughly 180 to 250 ms round trip | the write latency budget is gone |
+| Mumbai to Virginia | roughly 190 to 250 ms round trip | the write latency budget is gone |
 
 Read the table as a *rule for where to put your quorum*. Intra-region EC is so cheap that choosing EL inside one region is usually a false economy — you give up recency to save a couple of milliseconds. Cross-continent EC is so expensive that it forces an architectural answer rather than a configuration one: either accept the latency (what [[Google Spanner Deep Dive]] does, deliberately, for workloads that need it), keep each quorum regional and replicate between regions asynchronously, or partition the data so each record has a home region and is written only there.
 
@@ -90,7 +90,7 @@ The framework is usually taught on datastores, but it classifies anything that k
 | Read model in CQRS | A projection of events | EL | Consumer lag ([[CQRS]]) |
 | Consensus store — etcd, ZooKeeper | Cluster and config state | EC | None; that is what you pay the quorum for ([[Consensus and Raft]]) |
 
-The row most people have never thought of as a consistency decision is the JWT one, and it is the one that bites hardest in a regulated system: a short-lived token is an EC-leaning choice (revocation propagates fast, every request pays more IAM traffic), a long-lived token is EL (cheap, but a disabled account keeps working until expiry). Token lifetime is not a security setting with a conventional value — it is where you placed this system on the ELC axis, and it should be argued that way ([[Refresh Tokens and Token Rotation]]).
+The row most people have never thought of as a consistency decision is the JWT one, and it is the one that bites hardest in a regulated system: a short-lived token is an EC-leaning choice (revocation propagates fast, more frequent refreshes pay more IAM traffic), a long-lived token is EL (cheap, but a disabled account keeps working until expiry). Token lifetime is not a security setting with a conventional value — it is where you placed this system on the ELC axis, and it should be argued that way ([[Refresh Tokens and Token Rotation]]).
 
 ## Common misconceptions
 
@@ -119,7 +119,7 @@ The productive question is *which path does each screen read through?* Typically
 
 ## In your stack
 
-- MongoDB with `w: majority` + `readConcern: majority` is you choosing EC: every acknowledged write has survived a majority — the latency cost is the replication round trip. Default `w: 1` writes are the EL corner, and their cost is the rollback window on failover. For ledger-like data, majority is the only defensible setting.
+- MongoDB with `w: majority` + `readConcern: majority` is you choosing EC: every acknowledged write has survived a majority — the latency cost is the replication round trip. `w: 1` writes — the default before MongoDB 5.0, which defaults to `w: majority` in most replica sets — are the EL corner, and their cost is the rollback window on failover. For ledger-like data, majority is the only defensible setting.
 - Redis cache-aside is a deliberate EL architecture: you serve possibly-stale values with sub-millisecond latency because MongoDB holds the truth — see [[Caching Strategies]] and [[Cache Invalidation]].
 - Kafka's `acks=all` vs `acks=1` producer setting is PACELC-in-miniature for the broker: wait for in-sync replicas (EC) or ack fast and risk loss on leader failure (EL) — see [[Kafka Architecture]].
 - When a design review asks "should this read go to a Mongo secondary?", translate it: "is this operation EL-tolerant?" For displaying KYC status, probably yes. For deciding whether to release funds, no — see the operation-splitting logic in [[CAP Theorem]]'s check-yourself section.

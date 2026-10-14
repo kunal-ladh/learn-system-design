@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: The four isolation levels, the exact anomaly each one readmits — dirty reads, non-repeatable reads, phantoms, lost updates, write skew — plus MVCC, SELECT FOR UPDATE, and what Postgres and MySQL actually default to.
 related: ["[[ACID Transactions]]", "[[How Databases Store Data]]", "[[Consistency Models]]"]
 ---
@@ -59,7 +59,7 @@ Two successful 70-unit deductions; the account paid out 140 and shows 30 — one
 **PostgreSQL**
 - *Read committed*: each **statement** sees a snapshot of data committed before that statement began. Two statements in one transaction can see different states.
 - *Repeatable read*: the whole **transaction** sees one snapshot (taken at its first query). This also prevents phantoms in Postgres — stronger than the SQL standard requires. Lost updates are *detected*: if you update a row that a concurrent transaction updated and committed after your snapshot, your transaction aborts with a serialization error. **Your code must be prepared to retry.**
-- *Serializable*: repeatable read plus **Serializable Snapshot Isolation (SSI)** — the database tracks read/write dependencies between concurrent transactions and aborts one whenever a cycle (a potential write-skew outcome) appears. Optimistic: no extra blocking, but a retry loop is mandatory.
+- *Serializable*: repeatable read plus **Serializable Snapshot Isolation (SSI)** — the database tracks read/write dependencies between concurrent transactions and aborts one whenever it sees a dependency pattern that *could* complete a cycle (a potential write-skew outcome) — conservatively, so some aborts are false positives. Optimistic: no extra blocking, but a retry loop is mandatory.
 
 **MySQL InnoDB**
 - *Repeatable read* (default): plain `SELECT`s read from a **consistent snapshot** taken at the first read — so non-repeatable reads and (for plain reads) phantoms don't appear. But plain snapshot reads take no locks, so **lost updates are NOT prevented**: read-modify-write in app code still races. Locking reads (`SELECT ... FOR UPDATE`) read the *latest* committed data and take **next-key locks** (the matched record plus the gap before it), which block other transactions from inserting into the scanned range — preventing phantoms for locking reads. The exception worth knowing: an equality match on a *unique* index degenerates to a plain record lock with no gap, because no new row can appear in that slot.
@@ -106,7 +106,8 @@ COMMIT;
 ```java
 // Spring: per method, with retries for the abort-on-conflict levels
 @Transactional(isolation = Isolation.SERIALIZABLE)
-@Retryable(retryFor = ConcurrencyFailureException.class, maxAttempts = 3)  // SQLState 40001 lands here
+@Retryable(includes = ConcurrencyFailureException.class, maxRetries = 2)  // SQLState 40001 lands here; 3 attempts total
+// (Spring Framework 7 core @Retryable; the standalone spring-retry project was archived in 2026)
 public void closeRota(...) { ... }
 ```
 

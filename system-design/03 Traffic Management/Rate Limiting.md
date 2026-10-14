@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: The five rate-limiting algorithms and their burst/accuracy trade-offs, local vs distributed enforcement, and how to reject traffic well (429, Retry-After, limit dimensions).
 related: ["[[API Gateway]]", "[[Load Shedding and Graceful Degradation]]", "[[Design a Rate Limiter]]", "[[Redis Internals]]"]
 ---
@@ -86,7 +86,7 @@ A **local (in-process) limiter** keeps buckets in the instance's memory. Zero ad
 
 A **distributed limiter** keeps counters in a shared store — in practice almost always **Redis** ([[Redis Internals|single-threaded command execution]] makes it a natural atomic counter). Now the budget is truly global, paid for with a Redis round trip per request and a new dependency.
 
-**The race condition:** the naive sequence `GET count → if count < N → INCR` is a read-check-write across two commands; two gateway nodes interleave and both admit request number N+1:
+**The race condition:** the naive sequence `GET count → if count < N → INCR` is a read-check-write across two commands; two gateway nodes interleave, each believes it is admitting request number N, and so request N+1 gets through:
 
 ```mermaid
 sequenceDiagram
@@ -116,7 +116,7 @@ Rejecting well is part of the design:
 
 - **Status 429 Too Many Requests** (RFC 6585, 2012 — 429 was never folded into RFC 9110, so 6585 is still its defining document). Use **403** instead when you don't want to reveal a limit exists to a suspected attacker.
 - **`Retry-After` header** (defined in RFC 9110 §10.2.3; RFC 6585 says a 429 *may* carry it). Its value is either a delay in seconds or an absolute HTTP-date — not seconds only. It stops well-behaved clients from hammering and guessing, but send a **per-client jittered** value: handing every blocked caller the identical number synchronizes the whole population into one retry spike at the same instant, which is precisely the thundering herd you were avoiding.
-- **Rate-limit headers** let clients self-regulate before hitting the wall. The thing actually deployed in the wild is the de-facto `X-RateLimit-Limit` / `-Remaining` / `-Reset` trio (GitHub among many). The IETF work to standardise this is still an Internet-Draft, not an RFC, and it has changed shape: early revisions mirrored that trio as `RateLimit-Limit` / `-Remaining` / `-Reset`, while revisions from 2023 onward collapse it into two structured fields, `RateLimit` and `RateLimit-Policy`. Emit the `X-` trio today and don't call the `RateLimit-*` trio a standard.
+- **Rate-limit headers** let clients self-regulate before hitting the wall. The thing actually deployed in the wild is the de-facto `X-RateLimit-Limit` / `-Remaining` / `-Reset` trio (GitHub among many). The IETF work to standardise this is still an Internet-Draft, not an RFC, and it has changed shape: early revisions mirrored that trio as `RateLimit-Limit` / `-Remaining` / `-Reset`, while revisions from 2023 onward collapse it into two structured fields, `RateLimit` and `RateLimit-Policy`. Emit the `X-` trio today and don't call the `RateLimit-*` trio a standard (Kong's own rate-limiting plugin still emits that pre-2023 trio alongside its `X-RateLimit-*` headers, as of 2026).
 - A body with a machine-readable error code, so SDKs can branch on it.
 
 ### Dimensions: per-what?
@@ -164,7 +164,7 @@ The **key** you count by defines the policy:
 
 ## Interview angle
 
-**The 60-second version:** "Rate limiting bounds requests per key per time window. Token bucket is the default — tunable burst B, sustained rate r, O(1) state. Leaky bucket smooths output for burst-intolerant backends. Fixed window is cheapest but admits 2N at boundaries; sliding window log is exact but O(N) memory; sliding window counter approximates the rolling window at O(1). At scale the counters live in Redis with atomic Lua updates to avoid check-then-act races. Reject with 429 plus Retry-After and RateLimit headers so clients back off instead of storming. Key by user, IP, or API key depending on what identity you have — usually layered."
+**The 60-second version:** "Rate limiting bounds requests per key per time window. Token bucket is the default — tunable burst B, sustained rate r, O(1) state. Leaky bucket smooths output for burst-intolerant backends. Fixed window is cheapest but admits 2N at boundaries; sliding window log is exact but O(N) memory; sliding window counter approximates the rolling window at O(1). At scale the counters live in Redis with atomic Lua updates to avoid check-then-act races. Reject with 429 plus Retry-After and `X-RateLimit-*` headers so clients back off instead of storming. Key by user, IP, or API key depending on what identity you have — usually layered."
 
 Interviewers probe:
 - *Token vs leaky bucket, crisply?* — Token caps admission allowing bursts; leaky fixes the *output* rate, queueing/rejecting to smooth flow.
@@ -193,7 +193,7 @@ Interviewers probe:
 **Q4 (mini design):** Design the limiter set for a fintech's public API: login, OTP send, money transfer, and a partner data API. Name algorithm, key, store, and failure policy for each.
 
 > [!question]- Q: Limiter design for login, OTP, transfers, partner API?
-> Login: sliding window log (exactness, tiny N ~5–10/15 min), key = username + source IP, Redis, fail closed, 403/generic error (don't advertise the limit), immutable audit log. OTP send: sliding log, key = phone number (attacker rotates IPs; the phone is the scarce resource), N very small, Redis, fail closed — this is SMS-pumping/brute-force defense. Money transfer: token bucket per user with small B (humans don't burst transfers), Redis, fail closed, plus deterministic velocity checks in the service — the limiter supplements, never replaces, domain controls ([[Idempotency]] handles retries). Partner API: token bucket per API key sized to contract (e.g., 50/sec sustained, burst 200), Redis via Kong at the edge, fail open with local fallback, 429 + Retry-After + RateLimit headers.
+> Login: sliding window log (exactness, tiny N ~5–10/15 min), key = username + source IP, Redis, fail closed, 403/generic error (don't advertise the limit), immutable audit log. OTP send: sliding log, key = phone number (attacker rotates IPs; the phone is the scarce resource), N very small, Redis, fail closed — this is SMS-pumping/brute-force defense. Money transfer: token bucket per user with small B (humans don't burst transfers), Redis, fail closed, plus deterministic velocity checks in the service — the limiter supplements, never replaces, domain controls ([[Idempotency]] handles retries). Partner API: token bucket per API key sized to contract (e.g., 50/sec sustained, burst 200), Redis via Kong at the edge, fail open with local fallback, 429 + Retry-After + `X-RateLimit-*` headers.
 
 ## Sources
 

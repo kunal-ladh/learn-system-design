@@ -4,14 +4,14 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: Why hash-mod-N reshuffles almost everything when N changes, and how the hash ring with virtual nodes lets you add or remove machines while moving only 1/N of the keys.
 related: ["[[Sharding]]", "[[Rebalancing Partitions]]", "[[The Dynamo Paper]]", "[[Load Balancers]]"]
 ---
 
 # Consistent Hashing
 
-**Consistent hashing** is a technique for assigning keys to machines such that when a machine joins or leaves, only a small, predictable fraction of keys move — instead of nearly all of them, which is what naive `hash(key) mod N` does. It is the standard answer to "how do we [[Sharding|shard]] without a full reshuffle every time the cluster resizes", invented in 1997 for web caching and now inside Cassandra, DynamoDB's lineage, Memcached client libraries, and many load balancers. If an interviewer says "consistent hashing", they want the ring, virtual nodes, and the mod-N failure story.
+**Consistent hashing** is a technique for assigning keys to machines such that when a machine joins or leaves, only a small, predictable fraction of keys move — instead of nearly all of them, which is what naive `hash(key) mod N` does. It is the standard answer to "how do we [[Sharding|shard]] without a full reshuffle every time the cluster resizes", invented in 1997 for web caching and now inside Cassandra, Riak and the rest of the Dynamo lineage, Memcached client libraries, and many load balancers. If an interviewer says "consistent hashing", they want the ring, virtual nodes, and the mod-N failure story.
 
 ## The problem that created it
 
@@ -55,7 +55,7 @@ graph LR
 
 Now resize-behaviour falls out geometrically:
 
-- **Add node D** between A and B: D takes only the keys in the arc between A and D — keys that used to belong to B. Nothing else moves. Expected share moved: 1/N.
+- **Add node D** between A and B: D takes only the keys in the arc between A and D — keys that used to belong to B. Nothing else moves. Expected share moved: 1/(N+1) of the keys, N being the old node count — roughly 1/N.
 - **Remove node B** (crash or decommission): B's arc is absorbed by its clockwise successor C. Every other key stays put.
 
 The mapping no longer contains "N" anywhere — that's the trick. `mod N` bakes the cluster size into every key's address; the ring makes each key's address a *position*, and servers merely claim arcs of positions.
@@ -69,11 +69,11 @@ Hashing N server names onto a circle produces *uneven arcs* — with a handful o
 - **Heterogeneity**: a 2× bigger machine simply gets 2× the vnodes.
 - Cost: ring metadata grows (thousands of entries — trivial), and lookups are a binary search over sorted positions — still microseconds.
 
-Cassandra ships vnodes by default (historically 256 per node, lower in recent versions); [[The Dynamo Paper]] used the same idea in 2007.
+Cassandra ships vnodes by default (256 per node until Cassandra 4.0; 16 since 4.0, 2021); [[The Dynamo Paper]] used the same idea in 2007.
 
 ### Bounded-load variant, in one line
 
-**Consistent hashing with bounded loads** (Mirrokni, Thorup, Zadimoghaddam — Google, 2017): walk clockwise as usual, but if the owner is already above (1+ε)× average load, spill to the next node — guaranteeing no server exceeds the cap while keeping movement small; used in Google's Maglev-adjacent systems and Vimeo's HAProxy work.
+**Consistent hashing with bounded loads** (Mirrokni, Thorup, Zadimoghaddam — arXiv 2016, SODA 2018): walk clockwise as usual, but if the owner is already above (1+ε)× average load, spill to the next node — guaranteeing no server exceeds the cap while keeping movement small; deployed in Google Cloud Pub/Sub and, via Vimeo's contribution, in HAProxy.
 
 ### A note on what "consistent" buys — and doesn't
 
@@ -84,7 +84,7 @@ Consistent hashing solves *placement churn*. It does **not** balance *access* lo
 | System | How |
 |---|---|
 | **Dynamo / Cassandra / Riak / ScyllaDB** | Ring + vnodes for data placement ([[The Dynamo Paper]]) |
-| **Memcached clients** (Ketama, 2007) | Client library hashes servers onto a ring so adding a cache node invalidates ~1/N of keys, not all — the original production use |
+| **Memcached clients** (Ketama, 2007) | Client library hashes servers onto a ring so adding a cache node invalidates ~1/N of keys, not all — the use that popularised it outside CDNs |
 | **Load balancers / routers** | Consistent-hash balancing (e.g. Envoy's ring hash, NGINX `hash ... consistent`) to keep a client/session hitting the same backend for cache affinity, surviving backend churn ([[Load Balancers]]) |
 | **CDNs** | Mapping URLs to edge cache machines (Akamai's founding use case, Karger et al. 1997) |
 | **Chord DHT** (2001) | Peer-to-peer lookup; the ring plus finger tables for O(log N) routing |
@@ -110,15 +110,15 @@ Consistent hashing solves *placement churn*. It does **not** balance *access* lo
 - **Cluster size is fixed and known** (a stable 3-node setup): `mod N` or static config is simpler and debuggable; consistent hashing earns its complexity only when membership changes.
 - **You need range queries**: it's hash placement — sorted scans fan out everywhere. Use range partitioning ([[Sharding]]) or a hybrid key design.
 - **A coordinator already exists**: with a central metadata service (MongoDB config servers, Kafka's controller), moving *fixed partitions* around is simpler and gives finer operator control than a ring — this is the mainstream choice in brokered systems ([[Rebalancing Partitions]]).
-- **Strict balance caps matter more than movement**: plain ring load varies a few percent even with vnodes; use the bounded-load variant or explicit partition assignment.
+- **Strict balance caps matter more than movement**: plain ring load still varies with vnodes — spread ≈ 1/√(vnodes per node), ~10% at 100, ~3% at 1,000; use the bounded-load variant or explicit partition assignment.
 
 ## In your stack
 
 - **Redis Cluster is NOT consistent hashing** — 16384 fixed hash slots assigned to nodes, moved explicitly during resharding ([[Redis Cluster and Sentinel]]). Worth saying precisely in interviews; it's the fixed-partitions alternative.
 - **Memcached-style client-side rings** are the pattern if you ever run a client-sharded Redis/cache fleet without Cluster mode — e.g. Jedis sharded mode historically used Ketama-style hashing.
 - **Kafka/MSK**: `hash(key) mod partitionCount` over a *fixed* partition count — which is exactly why changing partition count breaks key→partition stability and per-key ordering ([[Kafka Architecture]], [[Message Ordering]]); the fixed count is doing the job the ring does elsewhere.
-- **Kong / ALB**: consistent-hash upstream balancing is available (e.g. hash on `userId` header) when you want per-user backend affinity without sticky-session state.
-- **DynamoDB** descends from Dynamo's ring design ([[DynamoDB Design]]) — though AWS manages placement invisibly; what you still own is the hot-key consequence.
+- **Kong**: consistent-hash upstream balancing is available (e.g. hash on a `userId` header) when you want per-user backend affinity without sticky-session state. **ALB** has no key-hash algorithm (round robin, least outstanding requests, weighted random, as of 2026) — only cookie stickiness.
+- **DynamoDB** shares Dynamo's name and hash partitioning but not its ring: tables split into partitions tracked by a metadata service, each replicated by a leader-based Multi-Paxos group ([[DynamoDB Design]]). Placement is invisible to you; what you still own is the hot-key consequence.
 
 ## Interview angle
 
@@ -144,7 +144,7 @@ Classic follow-ups: "Why virtual nodes?" (smoothness, failure spreading, heterog
 
 - Karger, Lehman, Leighton, Panigrahy, Levine, Lewin — *Consistent Hashing and Random Trees* (STOC 1997): the original paper (Akamai lineage).
 - [[The Dynamo Paper]] — DeCandia et al. (2007), Section 4.2–4.3: ring + virtual nodes in production.
-- Mirrokni, Thorup, Zadimoghaddam — *Consistent Hashing with Bounded Loads* (2017); Vimeo engineering blog write-up of deploying it in HAProxy.
+- Mirrokni, Thorup, Zadimoghaddam — *Consistent Hashing with Bounded Loads* (arXiv 2016; SODA 2018); Vimeo engineering blog write-up of deploying it in HAProxy.
 - Stoica et al., *Chord: A Scalable Peer-to-peer Lookup Service* (2001).
 - *Designing Data-Intensive Applications*, Kleppmann — **Chapter 6** (partitioning by hash, rebalancing discussion and why DDIA prefers fixed partitions for databases).
 - last.fm blog / libketama — the Memcached consistent-hashing client that popularised the technique.

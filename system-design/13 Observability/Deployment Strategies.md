@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How to ship new code without breaking users — rolling, blue-green, canary, and shadow deployments, feature flags, zero-downtime database migrations, and rollback as a first-class requirement.
 related: ["[[Graceful Shutdown and Deployment Safety]]", "[[Alerting and On-Call Design]]", "[[Health Checks and Service Discovery]]"]
 ---
@@ -34,7 +34,7 @@ Every strategy below is a different answer to the same two questions: *how many 
 ### The strategy ladder
 
 - **Big bang (recreate)**: stop old, start new. Downtime guaranteed, blast radius total. Acceptable only where downtime is acceptable.
-- **Rolling**: replace instances a few at a time; old and new serve simultaneously during the window. Kubernetes' default strategy, with `maxSurge`/`maxUnavailable` controlling the pace — both default to **25%**, `maxUnavailable` rounded *down* and `maxSurge` rounded *up*. No extra fleet needed, no downtime — but rollback means rolling forward through the same gradual process, and **both versions run at once**, so every deploy must be backward-compatible in its API and data access. Correct draining matters: see [[Graceful Shutdown and Deployment Safety]] and [[Health Checks and Service Discovery]] — a rolling deploy without readiness gating is a self-inflicted outage.
+- **Rolling**: replace instances a few at a time; old and new serve simultaneously during the window. Kubernetes' default strategy, with `maxSurge`/`maxUnavailable` controlling the pace — both default to **25%** (as of v1.37, 2026), `maxUnavailable` rounded *down* and `maxSurge` rounded *up*. No extra fleet needed, no downtime — but rollback means rolling forward through the same gradual process, and **both versions run at once**, so every deploy must be backward-compatible in its API and data access. Correct draining matters: see [[Graceful Shutdown and Deployment Safety]] and [[Health Checks and Service Discovery]] — a rolling deploy without readiness gating is a self-inflicted outage.
 - **Blue-green**: run two full environments; blue serves while green receives the new version; flip the router when green is verified, keep blue warm as instant rollback. Rollback is one routing change — seconds. Cost: double the fleet (at least during the deploy), and the flip is still all-or-nothing for traffic: a bug that only shows under full load hits everyone at once.
 - **Canary**: route a small slice (1%, 5%, 25%…) to the new version, compare its health against the stable fleet, widen on success, abort on regression. **Automated canary analysis** (Argo Rollouts, Flagger, Spinnaker/Kayenta) makes the comparison statistical rather than someone squinting at dashboards: define the metrics (error rate, p99, business KPIs), let the controller promote or roll back. This is the production standard at scale — the bet is sized at 1% and the judge is a machine with no deadline pressure.
 - **Shadow (mirror) traffic**: copy real production traffic to the new version but discard its responses. Zero user risk, real load and data shapes — ideal for rewrites and performance validation. Sharp edge: side effects. A shadowed payment service must not debit anyone twice — shadowing suits read paths and pure computation, or demands careful stubbing of writes.
@@ -83,7 +83,7 @@ Treat "how do we undo this?" as part of the design review, not an incident impro
 - **Roll back beats debug forward** during user-facing pain: restore service first, diagnose from traces/logs after ([[Distributed Tracing]]).
 - A rollback target must actually work: old images retained, old config compatible, and — the usual trap — **the database must still be readable by the old version**, which is exactly what expand–migrate–contract guarantees and ad-hoc migrations destroy.
 - Some changes are effectively **irreversible** (data deleted, messages consumed, external side effects like payouts). Flag these in review and wrap them in a feature flag or a dark launch, because the deploy-level rollback story no longer covers them.
-- Measure it: DORA's change failure rate and its recovery-time metric are the two numbers that tell you whether your strategy works in practice. (That second metric was "time to restore service" / MTTR in the *Accelerate* era; DORA renamed and narrowed it to **failed deployment recovery time** in 2024, so it now measures recovery from *your deploy* rather than from any outage — which is the number a deployment strategy actually controls.)
+- Measure it: DORA's change failure rate and its recovery-time metric are the two numbers that tell you whether your strategy works in practice. (That second metric was "time to restore service" / MTTR in the *Accelerate* era; DORA renamed and narrowed it to **failed deployment recovery time** in its 2023 report, so it now measures recovery from *your deploy* rather than from any outage — which is the number a deployment strategy actually controls.)
 
 Practices that make rollback stay fast in reality, not just in the design doc:
 

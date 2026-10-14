@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: A WhatsApp-class chat system — WebSocket gateways and the connection registry, the end-to-end message flow, per-conversation ordering, write-heavy storage, offline sync with per-device cursors, group fan-out, and presence.
 related: ["[[WebSockets Server-Sent Events and Long Polling]]", "[[Cassandra and Wide-Column Stores]]", "[[Design a Notification Service]]"]
 ---
@@ -17,7 +17,7 @@ A chat system (WhatsApp, Slack, Messenger) inverts the usual web shape: instead 
 
 **Functional:**
 
-- **1:1 chat** and **group chat** (confirm group size cap — WhatsApp historically low hundreds, ~1,024 as of ~2024; Slack channels reach tens of thousands; the cap drives fan-out design).
+- **1:1 chat** and **group chat** (confirm group size cap — WhatsApp historically 256, raised to 1,024 in late 2022; Slack channels reach tens of thousands; the cap drives fan-out design).
 - **Delivery states**: sent / delivered / read indicators.
 - **Multi-device**: the same account on phone + laptop, both in sync, including messages received while a device was offline.
 - **Online presence** (online / last-seen).
@@ -38,9 +38,9 @@ A chat system (WhatsApp, Slack, Messenger) inverts the usual web shape: instead 
 Assume **500M DAU × 40 messages sent/day** each:
 
 - **Writes**: 500,000,000 × 40 = 2 × 10¹⁰ messages/day ÷ 86,400 ≈ **231,000 messages/sec** average; × 2.5 peak ≈ **~580,000/sec**. Each delivered message is written once and pushed to ≥1 recipient — a **write-heavy** system, which drives the storage choice.
-- **Connections**: 500M DAU, say 1/3 concurrently connected ≈ **~170M open WebSockets**. At ~1M connections per gateway box (achievable with tuned epoll-based servers; WhatsApp famously ran >1M per Erlang server) → **~170–200 gateway servers**. Memory: ~10 KB/connection ≈ 10 GB per box for a million — feasible.
-- **Storage**: message row ≈ 100 bytes (ids, sender, 60-byte avg text, timestamps) → 2 × 10¹⁰ × 100 B = **2 TB/day**; 1 year hot retention ≈ **730 TB** → sharded, write-optimized store, compression on.
-- **Registry size**: one `userId → gatewayId` entry per online user: 170M × ~50 B ≈ **8.5 GB** — fits a Redis cluster.
+- **Connections**: 500M DAU, say 1/3 concurrently connected ≈ **~170M open WebSockets**. At ~1M connections per gateway box (achievable with tuned epoll-based servers; WhatsApp famously ran >1M per Erlang server) → **~170–200 gateway servers**. Memory: ~10–50 KB/connection ([[WebSockets Server-Sent Events and Long Polling]] budgets ~50 KB once kernel buffers and TLS state are counted) ≈ 10–50 GB per box for a million — feasible.
+- **Storage**: message row ≈ 100 bytes (ids, sender, 60-byte avg text, timestamps) → 2 × 10¹⁰ × 100 B = **2 TB/day**; 1 year hot retention ≈ **730 TB** raw (~2.2 PB at 3× replication) → sharded, write-optimized store, compression on.
+- **Registry size**: one `userId → gatewayId` entry per online user: 170M × ~50 B ≈ **8.5 GB** of payload (~17 GB once Redis per-key overhead roughly doubles it) — fits a Redis cluster.
 
 ## High-level design
 
@@ -87,7 +87,7 @@ Two honest subtleties: order is fixed by **server arrival, not client send time*
 
 The access pattern: colossal append rate (~580K writes/sec peak), reads almost always "recent messages of conversation C, newest first," old data cooling rapidly. That is the textbook fit for a **wide-column, LSM-based store** ([[Cassandra and Wide-Column Stores]], [[B-Tree vs LSM-Tree]]): partition key `conversationId`, clustering key `messageId DESC` — one conversation's messages live together, sorted, and writes are sequential appends.
 
-Scars to cite from [[Discord Message Storage Evolution]]: Discord outgrew MongoDB (index/working-set pain at billions of messages), moved to Cassandra, then suffered from giant partitions (one busy channel's years of history in one partition) and tombstone-heavy reads, eventually bucketing partitions by time window (`(channelId, bucket)`) and later migrating to ScyllaDB. Takeaway for your design: **partition by conversation AND a time bucket** so no partition grows unbounded ([[Hot Partition Problem]]), and let per-device deletes be cursor-based rather than tombstoning every row.
+Scars to cite from [[Discord Message Storage Evolution]]: Discord outgrew MongoDB (index/working-set pain at ~100M messages, 2015), moved to Cassandra (2017) with partitions bucketed by a ~10-day time window (`(channelId, bucket)`) from the start so one busy channel's history could not become one unbounded partition, still suffered hot partitions and tombstone-heavy reads, and later migrated to ScyllaDB (2022–23). Takeaway for your design: **partition by conversation AND a time bucket** so no partition grows unbounded ([[Hot Partition Problem]]), and let per-device deletes be cursor-based rather than tombstoning every row.
 
 ### 3. Sync protocol — per-device cursors
 
@@ -95,7 +95,7 @@ Multi-device + offline means each *device* (not user) tracks its own position: a
 
 ### 4. Group fan-out
 
-A message to a 500-member group: persist **once** against the conversation, then fan out *delivery*, not storage — look up online members in the registry, group them by gateway, and send **one batch per gateway** which distributes locally to its connected members (170 gateways means a 500-member group rarely touches more than a few dozen boxes). Offline members get it via their sync cursors + a push notification. Do the fan-out async via a queue for large groups so the sender's ack isn't held hostage by 500 pushes. Contrast with [[Design a News Feed]]: chat fans out **delivery to online devices**, feeds fan out **storage into timelines** — different because chat readers must see the message now, feed readers scroll later. For mega-groups/channels (100K+), per-member delivery pushes collapse into "notify conversation updated; members pull" — the push→pull flip at high fan-out is the same celebrity lesson as [[Twitter Timeline Design]].
+A message to a 500-member group: persist **once** against the conversation, then fan out *delivery*, not storage — look up online members in the registry, group them by gateway, and send **one batch per gateway** which distributes locally to its connected members (with ~1/3 of 500 members online spread at random over ~170 gateways, expect ~105 distinct boxes, ~160 if all 500 are online — batching trims the call count here and pays off properly in mega-groups, where recipients vastly outnumber gateways). Offline members get it via their sync cursors + a push notification. Do the fan-out async via a queue for large groups so the sender's ack isn't held hostage by 500 pushes. Contrast with [[Design a News Feed]]: chat fans out **delivery to online devices**, feeds fan out **storage into timelines** — different because chat readers must see the message now, feed readers scroll later. For mega-groups/channels (100K+), per-member delivery pushes collapse into "notify conversation updated; members pull" — the push→pull flip at high fan-out is the same celebrity lesson as [[Twitter Timeline Design]].
 
 ### 5. Presence — heartbeat + TTL
 
@@ -116,7 +116,7 @@ With E2EE (WhatsApp runs the Signal protocol), clients hold the keys and the ser
 
 ## Common mistakes
 
-- **HTTP polling as the transport** — "clients poll every second" fails the latency requirement at 500M DAU arithmetic (500M polls/sec of mostly-empty responses); the interviewer expects WebSockets and a reason.
+- **HTTP polling as the transport** — "clients poll every second" fails the latency requirement at 500M DAU arithmetic (~170M polls/sec of mostly-empty responses from the concurrently connected third); the interviewer expects WebSockets and a reason.
 - **No connection registry** — a design where "the server" pushes to the recipient without explaining *which* of 200 gateways holds that socket hasn't engaged the core problem.
 - **Fat gateways** — business logic in the connection tier makes every deploy a mass disconnection event.
 - **Ack before persist** — sender sees ✓, gateway crashes, message gone. The single unforgivable data-loss bug in this design.

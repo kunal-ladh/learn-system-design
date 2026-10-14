@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: The method for turning vague product statements into RPS, storage, and bandwidth numbers — rounding conventions, powers-of-two shortcuts, and two fully worked examples.
 related: ["[[Latency Numbers Every Engineer Should Know]]", "[[Scalability]]", "[[The System Design Interview Framework]]"]
 ---
@@ -37,11 +37,11 @@ Back-of-the-envelope estimation is the practice of computing rough system number
 
 | Power | Exact-ish | Name |
 |---|---|---|
-| 2¹⁰ | ~10³ | KB (kibi) |
-| 2²⁰ | ~10⁶ | MB (mebi) |
-| 2³⁰ | ~10⁹ | GB (gibi) |
-| 2⁴⁰ | ~10¹² | TB (tebi) |
-| 2⁵⁰ | ~10¹⁵ | PB (pebi) |
+| 2¹⁰ | ~10³ | KiB (kibi) ≈ KB |
+| 2²⁰ | ~10⁶ | MiB (mebi) ≈ MB |
+| 2³⁰ | ~10⁹ | GiB (gibi) ≈ GB |
+| 2⁴⁰ | ~10¹² | TiB (tebi) ≈ TB |
+| 2⁵⁰ | ~10¹⁵ | PiB (pebi) ≈ PB |
 
 At envelope precision, treat 2¹⁰ ≈ 10³ and never apologize for it.
 
@@ -61,7 +61,7 @@ At envelope precision, treat 2¹⁰ ≈ 10³ and never apologize for it.
 
 ### Worked example 1 — Twitter-like feed service
 
-Assumptions (stated, round): 200M DAU; each user posts 0.5 tweets/day and reads 100 timeline tweets/day; tweet = 140 chars + metadata ≈ 300 B; media on 10% of tweets ≈ 1 MB average; 5-year retention; 3× replication; peak = 3× average.
+Assumptions (stated, round): 200M DAU; each user posts 0.5 tweets/day and reads 100 timeline tweets/day; tweet = 140 chars + metadata ≈ 300 B (the limit has been 280 since 2017, but most tweets stay under 140); media on 10% of tweets ≈ 1 MB average; 5-year retention; 3× replication; peak = 3× average.
 
 - **Write RPS**: 200M × 0.5 = 10⁸ tweets/day ÷ 10⁵ s = **~1,000 tweets/sec average, ~3,000/sec peak.**
 - **Read RPS**: 200M × 100 = 2 × 10¹⁰ reads/day ÷ 10⁵ = **~200,000 reads/sec average, ~600K/sec peak.** Read:write ratio = 200:1 → read-optimized design: precomputed timelines, heavy caching ([[Scalability]]'s fan-out discussion, [[Twitter Timeline Design]]).
@@ -80,11 +80,11 @@ Assumptions: 100M new URLs/month; 10:1 read:write; URL record ≈ 500 B (long UR
 - **Write RPS**: 100M/month ÷ 2.5 × 10⁶ s = **40 writes/sec** (80 peak). Tiny.
 - **Read RPS**: ×10 = **400 reads/sec** (800 peak). Still tiny — one good server territory; the interesting problems are elsewhere.
 - **Storage**: 100M × 12 × 10 years = 1.2 × 10¹⁰ records × 500 B = **6 TB over 10 years** (18 TB replicated) — fits a single well-indexed database with room to spare; [[Sharding]] is optional, not required.
-- **Key space**: Base62, 7 chars = 62⁷ ≈ 3.5 × 10¹² — thousands of years of IDs at this rate; 6 chars (≈5.7 × 10¹⁰) is already enough for ~40 years. → short code length is a math decision, not a guess ([[Design a Distributed ID Generator]]).
-- **Cache**: 80/20 rule on daily reads: 400 × 10⁵ = 4 × 10⁷ reads/day; hot 20% of *objects* likely serve 80%+ of hits; caching ~1M hot mappings × 500 B = **500 MB** — one small Redis node makes the DB nearly idle ([[Why Caching Works]]).
+- **Key space**: Base62, 7 chars = 62⁷ ≈ 3.5 × 10¹² — thousands of years of IDs at this rate; 6 chars (≈5.7 × 10¹⁰) is already enough for ~47 years at 1.2 × 10⁹ URLs/year. → short code length is a math decision, not a guess ([[Design a Distributed ID Generator]]).
+- **Cache**: 80/20 rule on daily reads: 400 × 10⁵ = 4 × 10⁷ reads/day; hot 20% of *objects* likely serve 80%+ of hits; caching 20% of daily read volume = 0.2 × 4 × 10⁷ = 8M mappings × 500 B ≈ **4 GB** (an upper bound — repeat reads of the same URL dedupe) — one small Redis node makes the DB nearly idle ([[Why Caching Works]]).
 - **Bandwidth**: 400 × 500 B = 200 KB/s egress. A phone tether could serve it.
 
-Decisions made: this is an *availability and latency* problem (redirects must be fast and always up — [[Availability Reliability Durability]]), not a scale problem; single DB + cache + [[Load Balancers|replicated stateless redirect tier]]; the design conversation should spend its time on ID generation and cache policy ([[Design a URL Shortener]]).
+Decisions made: this is an *availability and latency* problem (redirects must be fast and always up — [[Availability Reliability Durability]]), not a scale problem; single DB + cache + [[Load Balancers|replicated stateless redirect tier]]; the design conversation should spend its time on ID generation and cache policy ([[Design a URL Shortener]], which reruns this estimate with 100:1 reads and 5-year retention — 4,000 redirects/sec and 3 TB — and lands in the same regime).
 
 ```mermaid
 graph TD
@@ -116,13 +116,13 @@ Worth literally memorizing before an interview loop:
 - **"Estimate, then design whatever you wanted anyway."** The estimate must *bind*: if you computed 40 writes/sec, proposing a 20-node Cassandra ring is a worse signal than never estimating.
 - **"Peak = average."** Systems die at peak; forgetting the 2–10× factor undersizes everything. Conversely, sizing storage (a cumulative quantity) by peak RPS overbuilds — know which quantities are rates and which are integrals.
 - **"Forgetting the multipliers."** Replication (×3), indexes (+20–100% on row stores), fan-out (×followers), and growth (×/year) are where naive estimates miss by 10×.
-- **"1 day = 86,400 s, let me get a calculator."** The convention 1 day ≈ 10⁵ s exists because calculator fumbling costs more than the 16% error. Same for 2¹⁰ ≈ 10³.
+- **"1 day = 86,400 s, let me get a calculator."** The convention 1 day ≈ 10⁵ s exists because calculator fumbling costs more than the 16% error. Same for 2¹⁰ ≈ 10³. (The [[The System Design Interview Framework|Interview Playbook]] problem notes divide by the exact 86,400 so their figures can be checked line by line — 10M/day is 116/sec there and 100/sec here; both are the same magnitude, so use whichever you can do aloud without stalling.)
 
 ## In your stack
 
 - Run the pipeline on any new Niyo feature before the design review: e.g. "push transaction notifications" — X DAU × Y txns/day ÷ 10⁵ → events/sec into SQS; × payload → bandwidth; × retention → [[Message Queues vs Event Logs|queue/log]] storage. Ten minutes of this decides whether the consumer needs 1 pod or a [[Consumer Groups and Rebalancing|scaled group]].
 - Fintech peak factors are vicious and calendar-shaped: salary days, festival sales, bill-due dates. A 10× peak factor on the 1st of the month is realistic for transaction flows — size queues and single-replica services against *that*, not the monthly average ([[Capacity Planning]]).
-- Storage envelopes matter for compliance: RBI-mandated retention (often 5–10 years for transaction records) × per-record size × growth tells you when MongoDB collections need archiving tiers or [[Time Series and Analytics Stores|separate analytics stores]] — compute it before the collection hits billions of documents.
+- Storage envelopes matter for compliance: regulatory retention (at least 5 years from the transaction date under PMLA and RBI's KYC Master Direction; longer where other rules or internal policy apply) × per-record size × growth tells you when MongoDB collections need archiving tiers or [[Time Series and Analytics Stores|separate analytics stores]] — compute it before the collection hits billions of documents.
 - Mongo-specific multipliers: working set must fit in RAM for predictable latency; indexes on a busy collection can rival data size. An envelope that ignores index size undersizes the cluster ([[MongoDB Architecture]], [[Database Indexes]]).
 
 ## Interview angle
@@ -151,4 +151,4 @@ Worth literally memorizing before an interview loop:
 - Alex Xu, *System Design Interview Vol. 1* — ch. 2 "Back-of-the-envelope Estimation": the canonical interview treatment, source of the conventions used here.
 - Jeff Dean — "Numbers Everyone Should Know" (Google talks, ~2009–2010); the latency companion table lives in [[Latency Numbers Every Engineer Should Know]].
 - *Designing Data-Intensive Applications*, Kleppmann — ch. 1's Twitter numbers as a model of load-parameter arithmetic ([[Scalability]]).
-- "The Google Workbook"-style estimation drills in *Grokking the System Design Interview* (Design Gurus) — additional worked examples per design problem.
+- *Grokking the System Design Interview* (Design Gurus) — capacity-estimation sections in each worked design problem; additional worked examples.

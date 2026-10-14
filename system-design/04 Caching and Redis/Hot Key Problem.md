@@ -4,8 +4,8 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
-summary: When one celebrity key draws so much traffic that the single shard holding it melts — how to detect it, and the four mitigations: local caching, key replication, key splitting, and request coalescing.
+updated: 2026-10-14
+summary: "When one celebrity key draws so much traffic that the single shard holding it melts — how to detect it, and the four mitigations: local caching, key replication, key splitting, and request coalescing."
 related: ["[[Hot Partition Problem]]", "[[Redis Cluster and Sentinel]]", "[[Why Caching Works]]", "[[Cache Stampede and Thundering Herd]]"]
 ---
 
@@ -21,7 +21,7 @@ The same Zipfian skew that makes caching work ([[Why Caching Works]]) guarantees
 
 ### Anatomy of a melt
 
-A Redis Cluster node comfortably serves on the order of 100K simple ops/s (one core — measure your own). A viral event drives 500K GET/s to one key:
+A Redis Cluster node comfortably serves on the order of 100K simple ops/s with I/O threads off (one core for execution; as of 2026 — measure your own). A viral event drives 500K GET/s to one key:
 
 ```mermaid
 graph TD
@@ -54,7 +54,7 @@ The counter-intuitive part is the `N` in the numerator: **the bigger your cluste
 
 Hot keys hide inside aggregate metrics: cluster-average CPU looks fine while one node burns. Detection is about **per-node and per-key visibility**:
 
-- **Per-node imbalance:** one shard's CPU/ops/network far above the rest — the first signal on any dashboard that splits by node. In Redis Cluster, per-slot stats (`CLUSTER` info and newer per-slot metrics) localize it further.
+- **Per-node imbalance:** one shard's CPU/ops/network far above the rest — the first signal on any dashboard that splits by node. In Redis Cluster, per-slot stats (`CLUSTER` info and, from Redis 8.2, `CLUSTER SLOT-STATS`) localize it further.
 - **Redis built-ins:** `redis-cli --hotkeys` scans the keyspace using the LFU access counters (requires `maxmemory-policy` set to an LFU variant — [[Cache Eviction Policies]]); `MONITOR` on a suspect node shows the live command stream (seconds only — it costs real throughput); `SLOWLOG` catches hot-and-big keys.
 - **Client-side sampling:** the most scalable approach — sample 1-in-N cache requests in the app (or a proxy/sidecar) into a streaming top-k (count-min sketch); this is how large fleets spot hot keys in near-real-time and can trigger automatic mitigation, and it is the only method that keeps working when the keyspace is too big to scan and the node is too busy to `MONITOR`.
 - **Provider metrics:** managed stores expose it directly — e.g. per-node `EngineCPUUtilization` divergence on ElastiCache; DynamoDB's CloudWatch "contributor insights" names your hottest partition keys.
@@ -62,7 +62,7 @@ Hot keys hide inside aggregate metrics: cluster-average CPU looks fine while one
 ### The detection runbook, in the order you would actually run it
 
 1. **Confirm it is imbalance, not load.** Plot CPU and ops/s per node as separate series. If one node is pinned and the rest are idle, you have a hot key or a hot slot; if all nodes climb together, you have a capacity problem and this note is the wrong one.
-2. **Narrow to a slot, then to keys.** `CLUSTER NODES` maps slot ranges to nodes, so the hot node's ranges are your search space. `CLUSTER COUNTKEYSINSLOT <slot>` and `CLUSTER GETKEYSINSLOT <slot> <count>` enumerate what lives in a specific slot, and `CLUSTER KEYSLOT <key>` confirms a suspect in one round trip — useful for proving "yes, `config:global` really is on the burning node." Recent Redis versions have added per-slot statistics; check whether your server version offers them before building the equivalent yourself.
+2. **Narrow to a slot, then to keys.** `CLUSTER NODES` maps slot ranges to nodes, so the hot node's ranges are your search space. `CLUSTER COUNTKEYSINSLOT <slot>` and `CLUSTER GETKEYSINSLOT <slot> <count>` enumerate what lives in a specific slot, and `CLUSTER KEYSLOT <key>` confirms a suspect in one round trip — useful for proving "yes, `config:global` really is on the burning node." Redis 8.2 added `CLUSTER SLOT-STATS` (key count always; CPU and network per slot only with `cluster-slot-stats-enabled yes`), and Redis 8.6 added a server-side `HOTKEYS` command that ranks keys by CPU time and network bytes over a tracking window — check whether your server version offers them before building the equivalent yourself.
 3. **`redis-cli --hotkeys`.** Understand what it does before trusting it: it walks the whole keyspace with `SCAN` and calls `OBJECT FREQ` on each key, so it requires an LFU `maxmemory-policy` ([[Cache Eviction Policies]]) and it reports **approximate, decayed access counters — not request rates**. A key hammered for thirty seconds and a key steadily warm all day can report similarly. The scan also takes real time on a large keyspace. Treat the output as a shortlist, not a verdict.
 4. **`MONITOR`, briefly and carefully.** It streams every command the node receives, which is the ground truth — and Redis's own documentation notes a benchmark where running it cut throughput by more than half. Rules: run it for a few seconds, pipe straight into a counting pipeline rather than a terminal, and never on a node that is already saturated (you will finish the job it started). The subtle trap: `MONITOR` shows only the commands *that node itself* receives — replicated writes plus whatever replica-read traffic your clients send it — so pointing it at a replica to be safe will not reveal reads that your clients are sending to the primary.
 5. **Check for hot *and* big.** `redis-cli --bigkeys` / `--memkeys` and `SLOWLOG GET` — a 2 MB value fetched 5,000 times a second saturates the NIC long before the CPU, and the fix is different (stop fetching the whole structure: `HGET` the field you need, not `HGETALL`).
@@ -149,7 +149,7 @@ Classic follow-ups: "Why doesn't adding nodes help?" (the key is atomic to one s
 > [!question]- Q: When does key splitting beat key replication, and what do you permanently give up?
 > Splitting is for *write*-hot aggregates: replication multiplies writes (every writer updates N copies), so a 100K INCR/s counter gets worse with replication but linearly better split into counter:0..15 with random-sub-key writes. You give up: single-key atomicity over the whole aggregate (no one INCR holds the true total; reads SUM 16 keys and race in-flight writes — the total is momentarily approximate), simple key management, and easy reversibility — merging sub-keys later is a migration. Replication, conversely, fits read-hot/rarely-written data where copies converge via TTL.
 
-> [!question]- Q: Scenario — a 6-shard cluster serves 600K req/s; one key takes 25% of all traffic and its shard sits at 95% CPU while the others idle near 20%. The team doubles the cluster to 12 shards. Predict the result with the arithmetic, then say what you would actually do.
+> [!question]- Q: Scenario — a 6-shard cluster serves 600K req/s; one key takes 25% of all traffic and its shard sits at 95% CPU while the others sit near 30%. The team doubles the cluster to 12 shards. Predict the result with the arithmetic, then say what you would actually do.
 > Before: the other 75% spreads as `0.75 × 600K / 6 = 75K/s` per shard; the hot shard carries `75K + 150K = 225K/s`, an imbalance of 3× (`1 + 0.25 × 6 / 0.75`). After doubling: normal shards drop to `0.75 × 600K / 12 = 37.5K/s`, but the hot shard still carries all 150K of hot-key traffic plus its share — `187.5K/s`. The hot node's load fell by only ~17%, while the **imbalance ratio got worse, from 3× to 5×** (`1 + 0.25 × 12 / 0.75`). The only thing resharding genuinely bought is reduced collateral damage: fewer innocent keys now share the burning node. Doubling the cluster also doubled the bill. What to do instead: attack the 150K/s directly — single-flight plus a short-TTL L1 cache in every app instance absorbs most of it at the source, replica reads or N suffixed copies divide whatever remains across shards, and if the key is an aggregate, split it. Reshard for capacity; never reshard for skew.
 
 > [!question]- Q: Mini design — your top-k sampling says one tenant's session-lookup key family is 40% of all Redis traffic, because that tenant's mobile app polls every 2 s. Options beyond the cache layer?

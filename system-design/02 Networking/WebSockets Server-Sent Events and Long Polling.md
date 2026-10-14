@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: The three ways a server pushes data to clients, what a million open connections costs, and why push infrastructure is stateful in a world built for stateless.
 related: ["[[Stateless vs Stateful Services]]", "[[Load Balancers]]", "[[Design a Chat System]]", "[[Design a Notification Service]]"]
 ---
@@ -25,7 +25,7 @@ A growing product adds its first realtime feature — say, order status. V1: the
 
 ## How it works
 
-**Long polling** — the client sends a normal request; the server *doesn't answer* until an event arrives or a timeout (~30–60s) fires; the client immediately re-requests. Each event costs a full HTTP round trip + re-request, and ordering across consecutive polls needs care (a cursor/offset parameter). Its virtue is compatibility: it *is* plain HTTP, so every proxy, LB, and corporate firewall on earth passes it. This is exactly how **SQS long polling** works (`WaitTimeSeconds` up to 20s) — the pattern survives at the heart of AWS.
+**Long polling** — the client sends a normal request; the server *doesn't answer* until an event arrives or a timeout (~30–60s) fires; the client immediately re-requests. Each event costs a full HTTP round trip + re-request, and ordering across consecutive polls needs care (a cursor/offset parameter). Its virtue is compatibility: it *is* plain HTTP, so every proxy, LB, and corporate firewall on earth passes it. This is exactly how **SQS long polling** works (`WaitTimeSeconds` up to 20s, as of 2026) — the pattern survives at the heart of AWS.
 
 **Server-Sent Events (SSE)** — the client opens `GET /events` with `Accept: text/event-stream`; the server keeps the response open and writes `data:` frames down it indefinitely. One-directional (server→client only); client→server goes via ordinary separate requests. Native browser API (`EventSource`) with **built-in auto-reconnect and `Last-Event-ID` resume** — the reconnection machinery WebSockets makes you build yourself. It's just HTTP, so it rides h2/h3 cleanly. Fits: news feeds, notifications, price tickers, LLM token streaming (the ChatGPT-style streaming response is SSE). Caveats: text-oriented protocol; on HTTP/1.1 each SSE stream eats one of the browser's ~6 connections per origin (h2 multiplexing removes this); buffering middleboxes that don't flush can break it.
 
@@ -75,7 +75,7 @@ Back-of-envelope sizing for a push tier (the arithmetic interviewers want to see
 **Load balancer implications.** This is where push architectures bite:
 
 - The LB must **support** the technique (WebSocket Upgrade pass-through; not buffering SSE). ALB does; classic setups and some proxies don't by default.
-- **Idle timeouts**: an ALB's default idle timeout is 60s — any connection quieter than that is silently cut. Hence **heartbeats** (ping/pong frames, SSE comments) at an interval below the *lowest* timeout on the path, which also detect half-dead connections (TCP won't tell you a peer vanished until you try writing).
+- **Idle timeouts**: an ALB's default idle timeout is 60s (configurable 1–4000s, as of 2026) — any connection quieter than that is silently cut. Hence **heartbeats** (ping/pong frames, SSE comments) at an interval below the *lowest* timeout on the path, which also detect half-dead connections (TCP won't tell you a peer vanished until you try writing).
 - **Statefulness**: once a client's socket lives on gateway G3, every event for that client must reach G3. Two standard shapes: a **pub/sub backplane** (each gateway subscribes to Redis pub/sub / Kafka topics for its connected users — the common choice) or a **connection registry** (userId→gateway map in Redis, events routed directly). Sticky sessions at the LB help the *handshake* phase but don't solve event routing.
 - **Draining**: deploys can't just kill a gateway — it holds 50k live conversations. You need connection draining, graceful close frames, and clients that resume; see [[Graceful Shutdown and Deployment Safety]].
 - **Reconnect storms**: when a gateway (or the LB, or a region) blips, *every* connected client reconnects at once — a thundering herd of TLS handshakes and auth checks that can flatten the auth service and the gateways in a retry loop ([[Cache Stampede and Thundering Herd]] is the same shape). Mitigations: **jittered exponential backoff in every client**, cheap reconnect auth (token validation, not DB hits), LB-level connection-rate limiting, and resume protocols (`Last-Event-ID`, message cursors) so reconnects don't also trigger full state refetches.
@@ -145,7 +145,7 @@ Classic follow-ups: *Why heartbeats if TCP is "reliable"?* (Silent middlebox cut
 **Q3 (mini design): Sketch the push path for live payment-status updates to the Niyo app: ~200k DAU, foreground sessions ~3 min, status events from the payments service. Name technique, routing, and the two ops guardrails you'd insist on.**
 
 > [!question]- Q3 answer
-> Technique: SSE (one-way, auto-reconnect, HTTP-friendly through CloudFront/ALB/Kong); FCM/APNs for backgrounded apps. Routing: payments service publishes `payment.status` to a Redis pub/sub channel keyed by userId; a small SSE gateway fleet (2+ replicas, Netty/WebFlux-style event loop) subscribes for its connected users and streams events down. Rough connection load: 200k DAU × 3 min ≈ a few thousand concurrent sockets at peak — small, but still: Guardrail 1: heartbeat comments every ~25s (under ALB's 60s idle timeout) + client jittered backoff. Guardrail 2: deploy-time connection draining with resume cursors, so releases don't manufacture reconnect storms or lost events.
+> Technique: SSE (one-way, auto-reconnect, HTTP-friendly through CloudFront/ALB/Kong); FCM/APNs for backgrounded apps. Routing: payments service publishes `payment.status` to a Redis pub/sub channel keyed by userId; a small SSE gateway fleet (2+ replicas, Netty/WebFlux-style event loop) subscribes for its connected users and streams events down. Rough connection load: 200k DAU × 3 min ≈ 600k socket-minutes/day ÷ 1,440 min ≈ ~400 concurrent on average; a few sessions per user and a 3–5× peak puts it in the low thousands — small, but still: Guardrail 1: heartbeat comments every ~25s (under ALB's 60s idle timeout) + client jittered backoff. Guardrail 2: deploy-time connection draining with resume cursors, so releases don't manufacture reconnect storms or lost events.
 
 ## Sources
 

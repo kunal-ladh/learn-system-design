@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: The N R W model — why R+W greater than N gives read-your-latest-write overlap, where that intuition breaks down, and what sloppy quorums and witness replicas change.
 related: ["[[Replication]]", "[[The Dynamo Paper]]", "[[Consensus and Raft]]", "[[Consistency Models]]"]
 ---
@@ -38,7 +38,7 @@ Parameters:
 graph TD
   Client["Client write v2"] --> A["Replica A v2 ack"]
   Client --> B["Replica B v2 ack"]
-  Client -.->|slow or down| C["Replica C still v1"]
+  Client -.->|"slow or down"| C["Replica C still v1"]
   Reader["Client read R2"] --> B
   Reader --> C
   Reader --> Result["Sees v2 and v1 - returns v2 - repairs C"]
@@ -62,7 +62,7 @@ Two readings worth internalising. First, **W and R are a seesaw**: making one si
 
 **Sloppy quorums and hinted handoff.** Strict quorums fail writes when fewer than W of the *home* replicas are reachable. Dynamo-style systems ([[The Dynamo Paper]]) prefer availability: a **sloppy quorum** accepts the write on W reachable nodes *even if some aren't home replicas*; the stand-ins store a **hint** ("this belongs to C") and hand the data off when C recovers. Crucial consequence: during the sloppy period, R + W > N **no longer guarantees overlap** — the read quorum consults home replicas while the latest write sits on a neighbour. Sloppy quorums are an explicit PA/EL move ([[PACELC]]): durability and availability up, read-latest guarantee gone.
 
-**Witness replicas.** A full replica costs storage and write bandwidth. A **witness** participates in quorum *voting* (and typically stores logs/metadata or acts as a tiebreaker) without storing a full data copy — letting you keep quorum sizes (e.g., 2-of-3 across three sites) at closer to two copies' storage cost. Variants appear in Spanner (witness regions in multi-region configs), Cassandra's experimental "transient replication", and classic replicated-voting literature (Pâris, 1986). The trade: lose a data-bearing replica and the witness can vote but cannot serve the data — recovery options narrow.
+**Witness replicas.** A full replica costs storage and write bandwidth. A **witness** participates in quorum *voting* (and typically stores logs/metadata or acts as a tiebreaker) without storing a full data copy — letting you keep quorum sizes (e.g., 2-of-3 across three sites) at closer to two copies' storage cost. Variants appear in Spanner (witness regions in multi-region configs), Cassandra's "transient replication" (still experimental as of 2026), and classic replicated-voting literature (Pâris, 1986). The trade: lose a data-bearing replica and the witness can vote but cannot serve the data — recovery options narrow.
 
 **Three things called "quorum".** The word is overloaded, and conflating the three is the most common source of wrong answers in interviews and design docs:
 
@@ -138,7 +138,7 @@ Quorums come up two ways: directly ("explain R+W>N") and embedded ("how does Dyn
 
 The 60-second version: "Leaderless stores replicate each key to N nodes; writes need W acks, reads consult R and take the newest version. R+W>N forces the read set to overlap every successful write set, so some replica in each read holds the latest write — with read repair patching stragglers. N=3, R=W=2 tolerates one node down either way. But overlap is weaker than linearizability: concurrent writes still conflict, failed partial writes linger, and a read racing a write can give new-then-old to successive readers. Dynamo-style sloppy quorums go further — any W reachable nodes accept the write with hints for the home replicas — buying availability at the cost of even the overlap guarantee. If I need actual linearizability I use consensus, not arithmetic."
 
-Classic follow-ups: "What does R=3,W=1 optimize for?" (write latency/availability; read-heavy correctness); "Why is W=2,R=2,N=4 weaker than it looks?" (R+W=N, no overlap); "Sloppy vs strict quorum?"; "How do witnesses cut cost?"
+Classic follow-ups: "What does R=3,W=1 optimize for?" (write latency/availability; data written often and read rarely); "Why is W=2,R=2,N=4 weaker than it looks?" (R+W=N, no overlap); "Sloppy vs strict quorum?"; "How do witnesses cut cost?"
 
 ## Check yourself
 
@@ -152,7 +152,7 @@ Classic follow-ups: "What does R=3,W=1 optimize for?" (write latency/availabilit
 > R+W = 2 = N: no overlap guarantee at all. Any read may miss any write until anti-entropy converges — pure eventual consistency. One node down: writes still succeed (W=1) but half the reads go stale or fail. Also, failed-write residue and concurrent-write conflicts with no quorum to arbitrate. For preferences this may be perfectly fine — but it should be chosen as "eventual consistency is acceptable here", not as "quorums make it safe", because no quorum property is in effect.
 
 > [!question]- Q: Scenario — a growing cluster is resized from N=3 to N=5 for durability. Client config still says W=2, R=2. A week later, support reports intermittently stale profile reads. Explain the mechanism and the two candidate fixes.
-> The resize silently broke overlap: 2 + 2 = 4, which is not greater than 5, so a write's ack set and a read's consult set can be disjoint — a read can legitimately consult three replicas that never received the write. Nothing errors, and it is intermittent because it depends on which replicas each coordinator happens to contact. Fix A: restore overlap by raising the quorum to the new N — W=3, R=3 (or W=3, R=2 if reads matter more than write latency); the cost is extra latency and less failure tolerance per operation. Fix B: decide this data does not need recency, document it as eventually consistent, and make the staleness bounded and visible — rely on anti-entropy plus a session guarantee (read-your-writes) for the user's own edits, per [[Read Your Own Writes and Replica Lag Anomalies]]. The wrong fix is leaving W and R alone and adding retries: retries re-roll the dice on which replicas answer, which makes the anomaly rarer and much harder to diagnose.
+> The resize silently broke overlap: 2 + 2 = 4, which is not greater than 5, so a write's ack set and a read's consult set can be disjoint — a read can legitimately consult three replicas that never received the write. Nothing errors, and it is intermittent because it depends on which replicas each coordinator happens to contact. Fix A: restore overlap by raising the quorum to the new N — W=3, R=3 (or W=4, R=2 if reads matter more than write latency — W=3, R=2 sums to 5 and has no overlap); the cost is extra latency and less failure tolerance per operation. Fix B: decide this data does not need recency, document it as eventually consistent, and make the staleness bounded and visible — rely on anti-entropy plus a session guarantee (read-your-writes) for the user's own edits, per [[Read Your Own Writes and Replica Lag Anomalies]]. The wrong fix is leaving W and R alone and adding retries: retries re-roll the dice on which replicas answer, which makes the anomaly rarer and much harder to diagnose.
 
 > [!question]- Q: Mini design prompt — three datacenters, you want writes to survive a full DC loss but can only afford two full data copies. Sketch a quorum design.
 > Place full replicas in DC1 and DC2 and a witness in DC3: N=3 for voting, 2 data-bearing. Writes require W=2 acks — both data replicas, or one data replica plus the witness (which records the vote/log but not full data). Lose any one DC and a 2-of-3 quorum survives, so writes continue. Cost honestly stated: if the surviving quorum is "one data node + witness", you're down to one full copy until recovery — durability risk is elevated, and reads must target the surviving data node. This is the Spanner witness-region pattern at small scale.

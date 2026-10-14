@@ -4,7 +4,7 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: Why OLTP and OLAP are different physics — columnar layout, compression and vectorized scans for analytics; append-mostly writes, downsampling and retention for time series — and why analytics never belongs on the OLTP primary.
 related: ["[[B-Tree vs LSM-Tree]]", "[[How Databases Store Data]]", "[[Change Data Capture]]", "[[Choosing a Database]]"]
 ---
@@ -32,7 +32,7 @@ Every database question so far in this module has been about **serving**: find o
 | Latency bar | Milliseconds | Seconds acceptable |
 | Users | The product, at request rate | Analysts, dashboards, finance |
 
-A row store ([[How Databases Store Data]]) lays each row's bytes contiguously — perfect for "fetch order 123's whole row", terrible for "sum one column over a billion rows", because every page read drags along the ~98% of each row the query doesn't want, and the working set is the whole table, evicting the OLTP cache.
+A row store ([[How Databases Store Data]]) lays each row's bytes contiguously — perfect for "fetch order 123's whole row", terrible for "sum one column over a billion rows", because every page read drags along all the columns of each row the query doesn't want, and the working set is the whole table, evicting the OLTP cache.
 
 ### Columnar layout: store columns, not rows
 
@@ -55,7 +55,7 @@ Metrics and sensor data have a sharper profile still: **append-mostly** (new poi
 - **Retention**: time series data expires — drop whole time-partitioned chunks rather than deleting rows (no tombstone problem; the unit of delete is a file).
 - **Cardinality is the real capacity limit**: every unique label combination (`service x endpoint x status x pod`) is its own series with its own index entry. A `user_id` label turns thousands of series into millions and kills the store — the famous **cardinality explosion**.
 
-**Who's who:** **Prometheus** — pull-based scraper + local TSDB, default 15-day retention, deliberately single-node; it does **not** natively downsample — long-term storage, HA and downsampling come from Thanos/Cortex/Mimir layered on top (typically backed by S3). **InfluxDB** — push-based with retention policies and rollup machinery. **Amazon Timestream** — managed, with a memory tier for recent data and a magnetic tier for history, each with its own retention. **TimescaleDB** — Postgres extension using time-partitioned "hypertables", for when SQL-on-time-series matters more than peak ingest.
+**Who's who:** **Prometheus** — pull-based scraper + local TSDB, default 15-day retention, deliberately single-node; it does **not** natively downsample — long-term storage and HA come from Thanos, Cortex or Mimir layered on top (typically backed by S3), and of those only Thanos downsamples. **InfluxDB** — push-based with per-database retention periods and rollup machinery. **Amazon Timestream for LiveAnalytics** — managed, with a memory tier for recent data and a magnetic tier for history, each with its own retention; closed to new customers since June 2025, with AWS pointing new workloads at Timestream for InfluxDB. **TimescaleDB** — Postgres extension using time-partitioned "hypertables", for when SQL-on-time-series matters more than peak ingest.
 
 ### Getting data from OLTP to OLAP
 
@@ -96,7 +96,7 @@ Worth stating as mechanics, since the request will come:
 - **"A read replica solves analytics."** It solves *isolation* only; the query is still a row-store scan, still slow, and still able to stall replication apply.
 - **"Columnar databases are just row databases with an index per column."** No — the physical layout, compression and execution model differ; a row store with many indexes gets *slower* to write and still scans rows.
 - **"Time-series data is small — it's just numbers."** Per-point cost is tiny; *series count* (cardinality) and retention are what explode. The bill is multiplicative: series x resolution x retention.
-- **"We need real-time analytics."** Usually the requirement is "fresh within minutes", which is 10x cheaper than seconds. Interrogate the freshness number before architecting for streams.
+- **"We need real-time analytics."** Usually the requirement is "fresh within minutes", which is far cheaper than seconds. Interrogate the freshness number before architecting for streams.
 
 ## Failure modes
 
@@ -111,7 +111,7 @@ Worth stating as mechanics, since the request will come:
 - **Don't add a warehouse before you have warehouse questions** — at small scale, a read replica plus indexes answers the finance team honestly ([[Choosing a Database]]: boring first).
 - **Don't serve product features from the warehouse** — its latency and freshness are wrong for request paths; if a product feature needs aggregates, precompute them back into the serving store.
 - **Don't use a time-series store as a general database** — no entities, weak joins; it stores *measurements*, not state.
-- **Don't keep raw forever because storage is cheap** — cost shape: warehouse cost scales with bytes scanned per query (BigQuery bills exactly that) and retained bytes; downsampling and lifecycle policies are the levers.
+- **Don't keep raw forever because storage is cheap** — cost shape: warehouse cost scales with bytes scanned per query (BigQuery's on-demand pricing bills exactly that) and retained bytes; downsampling and lifecycle policies are the levers.
 
 ## In your stack
 
@@ -146,5 +146,5 @@ Classic follow-ups: *why does columnar compress so well?* (homogeneous type + lo
 - Melnik et al. — "Dremel: Interactive Analysis of Web-Scale Datasets", VLDB 2010 (BigQuery's ancestor; nested columnar storage).
 - Pelkonen et al. — "Gorilla: A Fast, Scalable, In-Memory Time Series Database", VLDB 2015 (the compression scheme behind modern TSDBs).
 - Abadi, Madden, Hachem — "Column-Stores vs. Row-Stores: How Different Are They Really?", SIGMOD 2008.
-- Prometheus documentation — storage/TSDB format and retention; Thanos/Mimir docs for downsampling and long-term storage.
+- Prometheus documentation — storage/TSDB format and retention; Thanos docs for downsampling, Thanos/Mimir docs for long-term storage.
 - ClickHouse documentation — MergeTree engine, sparse indexes, compression codecs.

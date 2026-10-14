@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How a hostname becomes an IP address — recursive resolution, record types, TTL trade-offs, and why DNS is also a load balancing and failover tool.
 related: ["[[Anatomy of a Web Request]]", "[[Load Balancers]]", "[[CDN]]", "[[Failover]]"]
 ---
@@ -29,7 +29,7 @@ In the early ARPANET, every machine kept a local file (`HOSTS.TXT`, maintained b
 Two roles matter:
 
 - A **recursive resolver** (e.g. your ISP's resolver, `8.8.8.8`, or the VPC resolver in AWS) does the full lookup on the client's behalf and caches results.
-- **Authoritative servers** hold the actual records for a zone and answer only for what they own: the 13 root server *identities* (one identity is many machines — well over a thousand anycast instances worldwide by the mid-2020s), the TLD servers (`.com`), and the zone's own name servers.
+- **Authoritative servers** hold the actual records for a zone and answer only for what they own: the 13 root server *identities* (one identity is many machines — about 2,000 anycast instances worldwide as of 2026), the TLD servers (`.com`), and the zone's own name servers.
 
 **Recursive vs iterative resolution**: the client-to-resolver query is *recursive* ("get me the final answer"); the resolver-to-authoritative queries are *iterative* ("tell me the answer or who to ask next"). Each iterative response is a **referral** down the tree until an authoritative answer arrives.
 
@@ -62,7 +62,7 @@ Caching actually happens at *every* layer on the client side too, each with its 
 - the recursive resolver (honors TTL),
 - sometimes a middlebox or VPN resolver you forgot exists.
 
-Two more pieces of the modern picture: lookups are classically plain UDP on port 53 (readable by anyone on the path; **DoT/DoH** — DNS over TLS/HTTPS — encrypt the client→resolver hop), and **DNSSEC** adds signatures so a resolver can verify a record wasn't forged — it provides authenticity, not confidentiality, and deployment remains patchy as of ~2024.
+Two more pieces of the modern picture: lookups are classically plain UDP on port 53 (readable by anyone on the path; **DoT/DoH** — DNS over TLS/HTTPS — encrypt the client→resolver hop), and **DNSSEC** adds signatures so a resolver can verify a record wasn't forged — it provides authenticity, not confidentiality, and deployment remains patchy — as of 2026 only about 40% of users sit behind DNSSEC-validating resolvers (APNIC measurement).
 
 **Record types you must know:**
 
@@ -84,7 +84,7 @@ Two more pieces of the modern picture: lookups are classically plain UDP on port
 
 **DNS as load balancer, failover, and geo-router.** Because the authoritative server composes each response, managed DNS (AWS **Route 53** is the canonical example) offers routing policies:
 
-- **Simple and multivalue answer** — return several A records; clients pick one (crude round-robin spread). The two are not the same policy: simple routing just returns all values in random order, while *multivalue answer* returns up to eight records per response and omits the ones failing their health checks.
+- **Simple and multivalue answer** — return several A records; clients pick one (crude round-robin spread). The two are not the same policy: simple routing just returns all values in random order, while *multivalue answer* returns up to eight records per response (as of 2026) and omits the ones failing their health checks.
 - **Weighted** — e.g. 90/10 split across targets: canary releases, gradual migrations.
 - **Latency-based** — answer with the region historically lowest-latency for the asking resolver.
 - **Geolocation / geoproximity** — route by where the query comes from: data-residency rules, localized content.
@@ -105,7 +105,7 @@ This is load balancing *before* any [[Load Balancers|load balancer]] is reachabl
 
 - **Expired domain / bad delegation** — NS records point nowhere; the entire company disappears at once. Detected instantly and catastrophically.
 - **Resolver outage** — your app can't resolve anything even though every server is healthy. The 2016 Dyn DDoS took down Twitter, Spotify, and GitHub without touching their infrastructure. Mitigation: multiple DNS providers, sane client-side caching.
-- **Stuck caches after a change** — some resolvers and some *applications* cache beyond TTL. The JVM is a classic offender: `networkaddress.cache.ttl` historically cached successful lookups **forever** when a security manager was in effect; many services still pin it high. A failover "completes" and half your Java fleet keeps calling the dead IP.
+- **Stuck caches after a change** — some resolvers and some *applications* cache beyond TTL. The JVM is a classic offender: `networkaddress.cache.ttl` historically cached successful lookups **forever** when a security manager was in effect (the default is otherwise 30s, and JDK 24 permanently disabled the Security Manager); many services still pin it high. A failover "completes" and half your Java fleet keeps calling the dead IP.
 - **Negative caching** — "no such name" answers (NXDOMAIN) are cached too (per the SOA record's negative TTL); deploy a brand-new record and clients that asked a minute too early keep failing.
 - **Split-horizon surprises** — internal and external DNS give different answers for the same name; a service works in the VPC and fails from the office, or vice versa.
 
@@ -121,7 +121,7 @@ Detection: resolution-time metrics and NXDOMAIN/SERVFAIL rates in client logs; s
 
 - Your clients resolve through CloudFront/ALB hostnames managed in Route 53; **failover and region choice happen at DNS before Kong or any pod sees a packet** — worth knowing when debugging "works from UAT, fails from prod" reports.
 - Inside EKS, `service-name.namespace.svc.cluster.local` is resolved by **CoreDNS** — a DNS outage *inside* the cluster looks like every service failing simultaneously; it has nothing to do with your code.
-- JVM DNS caching: if a managed datastore (MongoDB Atlas, ElastiCache) fails over by changing DNS, a Spring Boot service with a high `networkaddress.cache.ttl` will keep dialing the old primary. Check the JVM setting before blaming the driver.
+- JVM DNS caching: if a managed datastore fails over by changing DNS (ElastiCache's primary endpoint does; a MongoDB replica set does not — the driver finds the new primary by topology monitoring), a Spring Boot service with a high `networkaddress.cache.ttl` will keep dialing the old primary. Check the JVM setting before blaming the driver.
 - With many services pinned at 1 replica, DNS-level failover buys you nothing within a service — there is no second target to answer with. It only helps across regions or across managed endpoints.
 
 ## Interview angle
@@ -140,7 +140,7 @@ Classic follow-ups: *Why can't a CNAME live at the zone apex?* (It must be the o
 **Q2 (scenario): Route 53 health checks mark your primary region unhealthy at 12:00:00. The failover record has TTL 60. When does user traffic actually stop hitting the dead region, and who keeps hitting it after that?**
 
 > [!question]- Q2 answer
-> New resolver queries get the secondary answer within the health-check detection window (tens of seconds). Resolvers that cached the primary's IP at 11:59:59 serve it until ~12:00:59 — so roughly a minute of tail traffic is expected. Beyond that: clients with their own long-lived caches (JVMs with high `networkaddress.cache.ttl`, OS caches, apps that resolved once at startup and kept the socket/IP) can keep hitting the dead region indefinitely until restarted or reconnected.
+> Detection already happened, so resolvers querying after 12:00:00 get the secondary answer almost immediately. Resolvers that cached the primary's IP at 11:59:59 serve it until ~12:00:59 — so roughly a minute of tail traffic is expected. Beyond that: clients with their own long-lived caches (JVMs with high `networkaddress.cache.ttl`, OS caches, apps that resolved once at startup and kept the socket/IP) can keep hitting the dead region indefinitely until restarted or reconnected.
 
 **Q3 (mini design): You must canary a new API cluster for 5% of traffic, with instant rollback. Would you do this in DNS? Defend your answer.**
 

@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: Retrieval-augmented generation as a system design problem — the async ingestion pipeline, the query path, freshness via CDC, evaluation, and the failure modes that actually bite in production.
 related: ["[[Vector Databases and Similarity Search]]", "[[LLM Serving Infrastructure]]", "[[Change Data Capture]]", "[[Why Async Messaging Exists]]"]
 ---
@@ -116,7 +116,7 @@ A RAG index is **derived data**; the question is how it learns the source change
 ## In your stack
 
 - The ingestion pipeline is your home turf: SQS (or Redis Streams, post-migration) between sources and embedding workers, idempotent upserts keyed on chunk ID, DLQ for poison documents — the same patterns as every async flow you run, plus an `x-correlation-id` from source event to index write so a stale answer is traceable to the event that should have fixed it.
-- MongoDB as source of truth fits the derived-index model: CDC from Mongo change streams drives re-embedding — noting that change streams require a replica set or sharded cluster (they do not exist on a standalone `mongod`) and that a `delete` event carries only the `_id`, so the pipeline must map document id to chunk ids itself; the vector index stays rebuildable, never authoritative.
+- MongoDB as source of truth fits the derived-index model: CDC from Mongo change streams drives re-embedding — noting that change streams require a replica set or sharded cluster (they do not exist on a standalone `mongod`) and that a `delete` event carries only the `documentKey` (the `_id`, plus the shard key on a sharded collection) unless pre-images are enabled (6.0+), so the pipeline must map document id to chunk ids itself; the vector index stays rebuildable, never authoritative.
 - Redis covers two layers: embedding/retrieval cache (plain cache-aside) and, if adopted, the semantic cache — keep the similarity threshold conservative; in fintech, serving user A's cached answer shape to user B's "similar" question must never leak tenant data, so scope cache keys per tenant.
 - An internal support-agent assistant over policy documents is the realistic first RAG system at a fintech: human-in-the-loop by construction, citations mandatory, revoked-policy deletion treated as a compliance event.
 - **Cost shape**: ingestion cost scales with *corpus churn × embedding price* (recurring, not one-time); query cost scales with *QPS × (retrieval + LLM tokens)* — and the LLM term dominates, which is why rerank-then-trim and caching pay for themselves.

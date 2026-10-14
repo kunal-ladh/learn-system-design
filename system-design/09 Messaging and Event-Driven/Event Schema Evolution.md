@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Why an event is a public contract that outlives every deploy — compatibility modes defined precisely, how a schema registry works, Avro vs Protobuf vs JSON Schema, which changes are safe, and the versioning strategies that survive a replay of six-month-old data.
 related: ["[[Kafka Architecture]]", "[[Event Sourcing]]", "[[API Design and Versioning]]", "[[Change Data Capture]]"]
 ---
@@ -87,7 +87,7 @@ graph LR
 ```
 
 1. On first use of a schema, the producer's serializer **registers** it under the subject. The registry runs the compatibility check for that subject and either returns a **schema id** or rejects the registration — this is the gate.
-2. Every message is framed as a **magic byte `0`**, then the **4-byte big-endian schema id**, then the encoded payload. With the binary formats, field names are not on the wire at all; the JSON Schema serializer uses the same header but still ships a readable document behind it.
+2. Every message is framed as a **magic byte `0`**, then the **4-byte big-endian schema id**, then the encoded payload (Protobuf inserts a short message-index list before the payload, identifying which message type in the schema file was used). With the binary formats, field names are not on the wire at all; the JSON Schema serializer uses the same header but still ships a readable document behind it.
 3. The consumer's deserializer reads the id, fetches that schema **once**, caches it in memory, and uses it as the **writer schema** alongside its own compiled **reader schema** to resolve the record.
 
 Consequences worth internalising: the registry is on the hot path only for cache misses, but a cold consumer with an unreachable registry cannot deserialize anything — it is a hard dependency at startup, and it belongs in your DR plan. Also, the id is global and immutable; you cannot "fix" a published schema, only publish a new version. AWS Glue Schema Registry and others implement the same idea with a different envelope (Glue embeds a schema-version UUID rather than Confluent's 4-byte int), so the framing is format-specific, not universal.
@@ -106,7 +106,7 @@ Confluent Schema Registry supports all three (Protobuf and JSON Schema were adde
 | Debuggability | unreadable without the schema | unreadable without the schema | readable in any console |
 | Relative size | smallest | close behind | largest |
 
-Two format-specific traps are worth memorising. In **Avro**, the default of a union must match its **first** branch, so `["null","string"]` with `default: null` is valid and `["string","null"]` with `default: null` is not — an invalid schema produced by reordering two words, and an easy one to miss in review. In **Protobuf**, renaming a field is wire-safe because the number is the identity, but it still breaks generated-code call sites and the JSON mapping; and deleting a field without marking its number `reserved` lets a future developer reuse that number for a different type, which silently misinterprets every old message.
+Two format-specific traps are worth memorising. In **Avro** through 1.11, the default of a union must match its **first** branch, so `["null","string"]` with `default: null` is valid and `["string","null"]` with `default: null` is not — an invalid schema produced by reordering two words, and an easy one to miss in review (the 1.12 spec relaxes this to any matching branch, but pre-1.12 parsers still apply the old rule — keep `null` first). In **Protobuf**, renaming a field is wire-safe because the number is the identity, but it still breaks generated-code call sites and the JSON mapping; and deleting a field without marking its number `reserved` lets a future developer reuse that number for a different type, which silently misinterprets every old message.
 
 ### Safe changes, breaking changes
 
@@ -177,7 +177,7 @@ A registry check is producer-side and structural: it proves v5 parses against v4
 
 ## Failure modes
 
-- **The strict-consumer trap, direction one — new data, old consumer.** A producer adds a field. Under registry rules this is the safest change there is. But a consumer deserializing JSON with a hand-rolled `new ObjectMapper()` fails immediately, because Jackson's `FAIL_ON_UNKNOWN_PROPERTIES` defaults to **true**. The confusion is that Spring Boot's auto-configured `ObjectMapper` *disables* it — so "Spring Boot is lenient about unknown fields" is folklore everyone believes, and the one service that constructs its own mapper, or generates a closed class, is the one that pages. The JSON Schema equivalent is `additionalProperties: false`: a closed content model makes field addition forward-breaking by construction.
+- **The strict-consumer trap, direction one — new data, old consumer.** A producer adds a field. Under registry rules this is the safest change there is. But a consumer deserializing JSON with a hand-rolled `new ObjectMapper()` fails immediately, because Jackson 2's `FAIL_ON_UNKNOWN_PROPERTIES` defaults to **true** (Jackson 3, GA Oct 2025 and the default in Spring Boot 4, flips it to `false` — the trap now lives in Jackson 2 / Spring Boot 3.x code and in any mapper that re-enables the flag). The confusion is that Spring Boot's auto-configured `ObjectMapper` *disables* it — so "Spring Boot is lenient about unknown fields" is folklore everyone believes, and the one service that constructs its own mapper, or generates a closed class, is the one that pages. The JSON Schema equivalent is `additionalProperties: false`: a closed content model makes field addition forward-breaking by construction.
 - **The strict-consumer trap, direction two — old data, new consumer.** This is the 3am one. A team adds a field "just for us" and marks it required because their code genuinely needs it. Live traffic is fine: every message in flight has the field. Months later someone replays a six-month-old partition — a reconciliation dispute, a rebuilt read model ([[CQRS]]), a [[Dead Letter Queues and Poison Messages|DLQ]] drain — and every record written before the change lacks the field. Deserialization fails, the consumer crash-loops, and the on-call engineer is debugging a change made by a different team two quarters ago. Worse, under [[Delivery Semantics|at-least-once]] the failed record is redelivered forever — a schema break is a poison message, and without a DLQ it blocks the partition behind it. `BACKWARD` compatibility exists precisely to make this registration fail; a required field with no default is the change it rejects.
 - **Semantic drift that passes every check.** A unit change, a reused status code, a field that quietly starts meaning something else. Structurally compatible, financially disastrous. Only consumer-driven contracts, a human review step on money-path events, or an explicit new field name catch this.
 - **`compatibility: NONE` set during an incident and never reverted.** A classic way a registry quietly stops providing any value at all. Audit subject-level compatibility settings; they drift.

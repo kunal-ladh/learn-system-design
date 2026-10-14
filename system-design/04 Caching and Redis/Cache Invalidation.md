@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Why making a cache forget stale data is famously hard — TTL vs explicit vs event-driven invalidation, versioned keys, the races that survive each approach, and double-delete's honest limits.
 related: ["[[Caching Strategies]]", "[[Cache Eviction Policies]]", "[[Change Data Capture]]", "[[Why Caching Works]]"]
 ---
@@ -28,7 +28,7 @@ Every cached byte is a potential lie, and invalidation is your only tool for bou
 
 ### Strategy 1 — TTL-based (passive)
 
-Give every key a time-to-live; staleness is bounded by the TTL, no invalidation code at all. This is the baseline and the **backstop every other scheme still needs** (see [[Cache Eviction Policies]] for choosing TTLs). Cost: average staleness ≈ TTL/2 for data that changed right after caching, and the shorter you make the TTL to reduce staleness, the more you pay in misses — and synchronized expiry invites [[Cache Stampede and Thundering Herd]].
+Give every key a time-to-live; staleness is bounded by the TTL, no invalidation code at all. This is the baseline and the **backstop every other scheme still needs** (see [[Cache Eviction Policies]] for choosing TTLs). Cost: average staleness ≈ TTL/2 for a change landing at a random point in the cached lifetime (up to the full TTL for one that lands right after caching), and the shorter you make the TTL to reduce staleness, the more you pay in misses — and synchronized expiry invites [[Cache Stampede and Thundering Herd]].
 
 ### Strategy 2 — Explicit invalidation (active, in-line)
 
@@ -167,7 +167,7 @@ Classic follow-ups: "Walk me through the race in delete-on-write cache-aside" (d
 > The cache and database are separate systems with no shared transaction, so write-DB and delete-key are two operations that can interleave with reads and fail independently. A reader can read old data from the DB before a write commits and populate the cache after the writer's delete — no ordering of two non-atomic operations eliminates this. You can shrink the window (double delete), move detection out-of-band (CDC), or sidestep reuse (versioned keys), but each leaves either a window or a new dependency. TTL is the only absolute bound, and it is a bound, not a fix.
 
 > [!question]- Q: Scenario — users report seeing old KYC status for up to an hour after re-verification. The code does cacheEvict after every Mongo update, and the TTL is one hour. List the plausible causes in order of likelihood.
-> (1) A write path without the evict — a batch re-verification job, admin console, or another service writing the same collection; the TTL (1h) exactly matches the max observed staleness, which smells like evict-never-fired. (2) Evict failures being swallowed — Redis timeout during DEL, exception caught and logged, write proceeds. (3) The read-populate race — possible but it wouldn't cluster at "up to an hour" unless traffic is low. (4) Wrong key derivation — evicting `kyc:{userId}` while reads cache under a composite key. Fix order: inventory write paths, make DEL failures loud/retryable, then shorten TTL for regulated state regardless.
+> (1) A write path without the evict — a batch re-verification job, admin console, or another service writing the same collection; the TTL (1h) exactly matches the max observed staleness, which smells like evict-never-fired. (2) Evict failures being swallowed — Redis timeout during DEL, exception caught and logged, write proceeds. (3) The read-populate race — it too pins the stale value for a full TTL counted from the bad populate, but it needs a read to straddle the write, so it explains occasional reports rather than a steady pattern. (4) Wrong key derivation — evicting `kyc:{userId}` while reads cache under a composite key. Fix order: inventory write paths, make DEL failures loud/retryable, then shorten TTL for regulated state regardless.
 
 > [!question]- Q: What does event-driven CDC invalidation give you that explicit delete-on-write cannot, and what new failure does it introduce?
 > Coverage: CDC tails the database's own change log, so every write path — services, admin tools, manual DBA fixes — produces an invalidation event; nothing depends on developers remembering. Durability: events can be retried after consumer crashes. New failure: the pipeline is asynchronous and can lag or stop — staleness becomes a function of pipeline health, so you must monitor CDC lag like replication lag, and you still keep TTLs for the day the pipeline is down.

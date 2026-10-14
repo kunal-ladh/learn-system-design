@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: How RabbitMQ's AMQP model (exchanges, bindings, queues, per-message acks) works, where its smart-broker philosophy shines, and where it strains.
 related: ["[[Message Queues vs Event Logs]]", "[[Kafka Architecture]]", "[[Delivery Semantics]]", "[[Choosing a Message Broker]]"]
 ---
@@ -15,7 +15,7 @@ RabbitMQ is the classic **smart broker**: the server owns routing, delivery trac
 
 ## The problem that created it
 
-Picture a growing system in the mid-2000s. Services talk over synchronous RPC; every integration is a bespoke socket protocol or an FTP drop of CSV files. Banks (the original AMQP drivers — the spec came out of JPMorgan in 2003) needed to connect dozens of systems with different message shapes, different consumers interested in different subsets, and no tolerance for silent loss.
+Picture a growing system in the mid-2000s. Services talk over synchronous RPC; every integration is a bespoke socket protocol or an FTP drop of CSV files. Banks (the original AMQP drivers — work on the spec began at JPMorgan in 2003; the first public version followed in 2006) needed to connect dozens of systems with different message shapes, different consumers interested in different subsets, and no tolerance for silent loss.
 
 Three pains kept recurring:
 
@@ -77,11 +77,11 @@ RabbitMQ keeps per-message state on the broker: which message is delivered, to w
 - A RabbitMQ **cluster** shares metadata (exchanges, bindings, users) across nodes, but a classic queue's contents live on one node.
 - **Classic mirrored queues** were RabbitMQ's old HA story — and a notorious source of split-brain data loss during partitions. They were deprecated for years and **removed in RabbitMQ 4.0 (2024)**. Do not design anything new on them.
 - **Quorum queues** (since 3.8) are the replacement: each queue is a Raft group ([[Consensus and Raft]]) across an odd number of nodes; a publish is confirmed once a quorum has it. Predictable [[Failover]], no silent loss on partition — at the cost of higher latency and more disk/memory per queue.
-- **Memory flow control:** RabbitMQ wants queues near-empty. When memory crosses the high watermark, the broker **blocks publishers** until consumers drain. Historically **lazy queues** pushed messages to disk immediately to survive backlogs; since 3.12, classic queues v2 behave this way by default. A RabbitMQ with millions of messages parked in queues is a RabbitMQ operating outside its design center.
+- **Memory flow control:** RabbitMQ wants queues near-empty. When memory crosses the high watermark, the broker **blocks publishers** until consumers drain. Historically **lazy queues** pushed messages to disk immediately to survive backlogs; since 3.12 the lazy flag is ignored and all classic queues behave this way by default (CQv2 storage became the default — and only — classic queue format in 4.0). A RabbitMQ with millions of messages parked in queues is a RabbitMQ operating outside its design center.
 
 ### RabbitMQ Streams — the "we have Kafka at home" caveat
 
-One nuance before "no replay" hardens into dogma: since 3.9, RabbitMQ also ships a **stream** queue type — a genuine append-only log with offset-based reads, non-destructive consumption, and retention, accessed via AMQP or a dedicated binary protocol. It exists precisely because teams kept leaving for Kafka over replay and fan-out-to-many-readers. It is real and fast, but it does not change the comparison in this note's conclusions: streams are per-node logs with replication, not a partitioned log fabric — there is no partition-by-key scale-out model, the ecosystem (connectors, stream processors, schema tooling) is a fraction of Kafka's, and the rest of RabbitMQ (exchanges feeding classic/quorum queues) keeps its delete-on-ack semantics. Treat it as "a log endpoint inside your existing RabbitMQ" for moderate-scale replay needs, not as a Kafka alternative. Everything else in this note describes the queue types, which remain the reason you run RabbitMQ.
+One nuance before "no replay" hardens into dogma: since 3.9, RabbitMQ also ships a **stream** queue type — a genuine append-only log with offset-based reads, non-destructive consumption, and retention, accessed via AMQP or a dedicated binary protocol. It exists precisely because teams kept leaving for Kafka over replay and fan-out-to-many-readers. It is real and fast, but it does not change the comparison in this note's conclusions: each stream is a single replicated log; **super streams** (3.11+) add hash-partitioning across several streams, but that is a thinner partition-by-key model than Kafka's, the ecosystem (connectors, stream processors, schema tooling) is a fraction of Kafka's, and the rest of RabbitMQ (exchanges feeding classic/quorum queues) keeps its delete-on-ack semantics. Treat it as "a log endpoint inside your existing RabbitMQ" for moderate-scale replay needs, not as a Kafka alternative. Everything else in this note describes the queue types, which remain the reason you run RabbitMQ.
 
 ## Trade-offs
 
@@ -95,8 +95,8 @@ One nuance before "no replay" hardens into dogma: since 3.9, RabbitMQ also ships
 
 ## Failure modes
 
-- **Unbounded queue growth** — a dead consumer plus a healthy producer fills the queue until memory alarms fire and *all publishers on the node block*, turning one slow consumer into a platform-wide outage. Detect: queue depth + memory alarm metrics. Mitigate: max-length policies, DLX overflow, consumer autoscaling.
-- **Poison message loops** — a message that always fails processing gets redelivered forever, pinning a consumer at 100% CPU. Mitigate with delivery-limit → dead-letter ([[Dead Letter Queues and Poison Messages]]).
+- **Unbounded queue growth** — a dead consumer plus a healthy producer fills the queue until memory alarms fire, and because memory alarms are cluster-wide, publishers on *every* node block — turning one slow consumer into a platform-wide outage. Detect: queue depth + memory alarm metrics. Mitigate: max-length policies, DLX overflow, consumer autoscaling.
+- **Poison message loops** — a message that always fails processing gets redelivered forever (classic queues; quorum queues default to a delivery limit of 20 since 4.0), pinning a consumer at 100% CPU. Mitigate with delivery-limit → dead-letter ([[Dead Letter Queues and Poison Messages]]).
 - **Network partition with classic queues** — the historical horror story: both sides keep accepting publishes, then merge discards one side. Quorum queues fix this by refusing writes without quorum — availability sacrificed for consistency ([[CAP Theorem]]).
 - **Connection/channel churn** — apps opening a connection per message exhaust file descriptors and Erlang processes. Connections and channels are meant to be long-lived.
 - **Prefetch misconfiguration** — prefetch too high plus slow processing means one consumer holds thousands of unacked messages; when it crashes, they all redeliver at once (a redelivery storm).
@@ -104,10 +104,10 @@ One nuance before "no replay" hardens into dogma: since 3.9, RabbitMQ also ships
 
 ## When NOT to use it
 
-- **Very high throughput** (sustained hundreds of thousands of msgs/sec): Kafka's append-only design wins by an order of magnitude on the same hardware.
+- **Very high throughput** (sustained hundreds of thousands of msgs/sec — a rough 2026 rule of thumb, not a benchmark): Kafka's append-only design typically wins by a wide margin on the same hardware.
 - **Replay / event sourcing / multiple independent readers of history**: queues delete on ack. If a new service needs last month's events, RabbitMQ queues cannot help ([[Event Sourcing]], [[Change Data Capture]]); the stream queue type partially covers this at moderate scale, but if replay is a core requirement you are usually better served by a purpose-built log.
 - **Huge backlogs as a normal state** (e.g., batch consumers that run hourly against a day of traffic): RabbitMQ degrades; Kafka or SQS absorb this shrug-free.
-- **Ordered, partitioned consumption at scale**: per-queue FIFO exists, but there is no native partition-by-key fan-out comparable to Kafka partitions.
+- **Ordered, partitioned consumption at scale**: per-queue FIFO exists, and super streams (3.11+) partition streams by key, but there is no queue-side partition-by-key model comparable to Kafka partitions.
 - **When a managed zero-ops queue suffices**: if routing needs are simple, [[SQS and SNS|SQS]] removes the broker you'd otherwise patch, upgrade, and page on.
 
 ## In your stack
@@ -136,7 +136,7 @@ Classic probes:
 > The broker sees the channel close, returns the message to the queue (marked redelivered), and delivers it to another consumer. The work happens twice — this is why at-least-once delivery forces consumer [[Idempotency]]. Nothing in RabbitMQ can prevent this duplicate; it can only be absorbed downstream.
 
 > [!question]- Q: Why were classic mirrored queues dangerous, and what replaced them?
-> Mirroring was asynchronous-ish and partition handling was ad hoc: during a network partition both sides could accept writes, and healing discarded one side's messages — silent loss. **Quorum queues** replaced them: each queue is a Raft group, a publish is confirmed only when a quorum persists it, and a minority partition refuses writes instead of diverging. Mirrored queues were removed entirely in RabbitMQ 4.0.
+> Mirroring was not consensus-based: mirrors could fall out of sync after restarts (and unsynchronised mirrors could be promoted), and partition handling was ad hoc: during a network partition both sides could accept writes, and healing discarded one side's messages — silent loss. **Quorum queues** replaced them: each queue is a Raft group, a publish is confirmed only when a quorum persists it, and a minority partition refuses writes instead of diverging. Mirrored queues were removed entirely in RabbitMQ 4.0.
 
 > [!question]- Q: Mini-design — you need "payment events" consumed by a ledger service (every event), a fraud service (only card events), and an alerting service (only failures). Sketch the topology.
 > One **topic exchange** `payments`. Routing keys like `payment.card.success`, `payment.upi.failed`. Bindings: ledger queue binds `payment.#`; fraud queue binds `payment.card.*`; alerts queue binds `#.failed`. Each service gets its own durable (quorum) queue so consumption is independent; each queue gets a DLX with a delivery limit for poison messages.

@@ -1,10 +1,10 @@
 ---
 title: S3 Deep Dive
-tags: [system-design, case-study]
+tags: [system-design, case-study, aws]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: How S3 engineers eleven nines of durability as a continuous process, why the 2020 strong-consistency change was hard, and what immutable objects plus a flat namespace buy at planet scale.
 related: ["[[How S3 Works]]", "[[Availability Reliability Durability]]", "[[DynamoDB in Production]]", "[[CDN]]"]
 ---
@@ -20,7 +20,7 @@ Labeled by year, since these numbers move fast:
 - **2021** (S3's 15th birthday): over **100 trillion objects**.
 - **2023** (AWS Pi Day): over **280 trillion objects**, averaging over **100 million requests per second**.
 - **2024** (AWS Pi Day): over **350 trillion objects**.
-- **2026** (AWS's "Twenty years of Amazon S3" post): over **500 trillion objects**, peaks above **200 million requests per second**.
+- **2026** (AWS's "Twenty years of Amazon S3" post, March 2026): over **500 trillion objects**, serving more than **200 million requests per second**.
 
 At this scale, rare events are routine arithmetic: with exabytes on millions of drives, **drive failures happen constantly** — not occasionally — and even bit-flips in memory and on the wire ([[The Fallacies of Distributed Computing|the network corrupts data more than people think]]) occur daily somewhere in the fleet. The durability promise — **99.999999999% annual durability**, i.e. an annual loss probability of about **1 in 100 billion** per object, or in AWS's own self-checking framing, store 10 million objects and expect to lose one roughly every 10,000 years — must hold *despite* a background hum of hardware death. That inversion is the key mental shift: S3 is not designed to avoid failure; it is designed so that continuous failure is unobservable.
 

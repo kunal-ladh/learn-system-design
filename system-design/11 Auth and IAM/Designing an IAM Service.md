@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: How to design a central identity and access management service from scratch — token issuance, signing-key custody and JWKS rotation, authn/authz separation, gateway vs per-service validation, session management, regulator-grade audit logging, and surviving your own outage.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[API Gateway]]"]
 ---
@@ -164,6 +164,6 @@ Serving multiple tenants (brands, partner banks, B2B customers) from one IAM:
 
 - RFC 7517 (JWK), RFC 8414 (authorization server metadata), OpenID Connect Discovery — the JWKS/metadata machinery.
 - RFC 9700 — *Best Current Practice for OAuth 2.0 Security* — issuer-side requirements.
-- NIST SP 800-63B — *Digital Identity Guidelines: Authentication and Lifecycle Management* — credential storage, MFA, session guidance.
+- NIST SP 800-63B-4 (July 2025, superseding the 2017 revision) — *Digital Identity Guidelines: Authentication and Authenticator Management* — credential storage, MFA, session guidance.
 - OWASP Authentication Cheat Sheet and Secrets Management Cheat Sheet.
 - AWS KMS / CloudHSM documentation — non-exportable key custody mechanics in the reader's cloud.

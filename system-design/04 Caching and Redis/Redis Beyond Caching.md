@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: Redis as counters, rate limiters, leaderboards, locks, pub/sub, streams, sessions, and dedup — which of these uses are sound, what each actually guarantees, and where stretching Redis becomes misuse.
 related: ["[[Redis Internals]]", "[[Distributed Locking]]", "[[Redis Streams]]", "[[Rate Limiting]]", "[[Redis Cluster and Sentinel]]"]
 ---
@@ -23,7 +23,7 @@ The central question for every pattern below is: **what happens when Redis loses
 
 Every pattern below rests on the same property: Redis executes commands on a single thread, so each command — and each *group* of commands you hand it as a unit — runs to completion with nothing interleaved ([[Redis Internals]]). Three ways to claim that unit, with genuinely different semantics:
 
-- **A single command.** `INCR`, `SETNX`, `ZADD`, `LMOVE` are already atomic read-modify-writes. Most "do I need a lock for this?" questions dissolve once you find the single command that expresses the whole operation.
+- **A single command.** `INCR`, `SET … NX`, `ZADD`, `LMOVE` are already atomic read-modify-writes. Most "do I need a lock for this?" questions dissolve once you find the single command that expresses the whole operation.
 - **`MULTI` / `EXEC`.** Commands are queued and then executed as one uninterrupted batch. The trap worth naming explicitly: **Redis transactions do not roll back**. If a command fails at runtime — wrong type for the key, say — the remaining queued commands still run and the earlier ones stay applied. There is no undo, because there is no log to undo from. This is nothing like an [[ACID Transactions|ACID]] transaction, and treating it as one is a real source of corrupted state. (A command that is malformed enough to be rejected at *queue* time does abort the whole transaction; the no-rollback rule is about errors discovered during execution.) `WATCH` adds optimistic concurrency: watch a key, and the `EXEC` aborts if anyone modified it in the meantime — a compare-and-set you retry in a loop.
 - **Lua scripts, and Functions.** `EVAL` runs a script as one unit, which is what makes read-compute-write logic — token buckets, conditional releases, atomic pops — expressible at all. Redis 7 added **Functions** (`FUNCTION LOAD`): the same execution model, but the library is persisted with the dataset and replicated, so it survives a restart and exists on the replica rather than being something each client must remember to re-load. The cost of both is shared: a script occupies the single thread for its entire duration, so a slow script is an outage for every other client. Keep them short, loop-free, and measured.
 
@@ -33,7 +33,7 @@ Every pattern below rests on the same property: Redis executes commands on a sin
 
 ### Leaderboards — the showcase
 
-The zset was practically built for this: `ZINCRBY` on score events, `ZREVRANGE 0 99 WITHSCORES` for top-100, `ZREVRANK` for "where am I" — the point operations are O(log N), and the range read is O(log N + M) for the M entries it actually returns, so a top-100 slice stays cheap however large the board grows ([[Redis Internals]]). No relational database serves "rank of user X among 10M by score, live" this cheaply; doing it in SQL means window functions over millions of rows per query. Caveats: a zset is one key, so it lives on one shard — big boards shard by league/region, and rank queries across shards need merge logic. Loss semantics: scores are usually re-derivable from the source events; persist accordingly.
+The zset was practically built for this: `ZINCRBY` on score events, `ZRANGE board 0 99 REV WITHSCORES` for top-100 (`ZREVRANGE`, deprecated since 6.2, in older code), `ZREVRANK` for "where am I" — the point operations are O(log N), and the range read is O(log N + M) for the M entries it actually returns, so a top-100 slice stays cheap however large the board grows ([[Redis Internals]]). No relational database serves "rank of user X among 10M by score, live" this cheaply; doing it in SQL means window functions over millions of rows per query. Caveats: a zset is one key, so it lives on one shard — big boards shard by league/region, and rank queries across shards need merge logic. Loss semantics: scores are usually re-derivable from the source events; persist accordingly.
 
 ### Distributed locks — sound only in its narrow lane
 
@@ -77,11 +77,11 @@ The bitmap case deserves its arithmetic, because it is startlingly cheap when it
 
 ### Delay queues and scheduling — the zset trick
 
-A pattern hiding in plain sight: a zset whose **score is a timestamp** is a time-ordered index, which makes it a delay queue. To schedule work: `ZADD delayq <executeAtMillis> <jobId>`. A poller loop runs `ZRANGEBYSCORE delayq 0 <now> LIMIT 0 100` to fetch due jobs, processes them, and `ZREM`s them. Uses: retry-with-backoff scheduling ([[Timeouts Retries and Exponential Backoff]]), delayed notifications, order-expiry timers ("cancel unpaid order after 15 min"), visibility-timeout emulation.
+A pattern hiding in plain sight: a zset whose **score is a timestamp** is a time-ordered index, which makes it a delay queue. To schedule work: `ZADD delayq <executeAtMillis> <jobId>`. A poller loop runs `ZRANGE delayq 0 <now> BYSCORE LIMIT 0 100` (the pre-6.2 `ZRANGEBYSCORE` form is deprecated) to fetch due jobs, processes them, and `ZREM`s them. Uses: retry-with-backoff scheduling ([[Timeouts Retries and Exponential Backoff]]), delayed notifications, order-expiry timers ("cancel unpaid order after 15 min"), visibility-timeout emulation.
 
 Two sharp edges to engineer around:
 
-- **Fetch-and-remove is not atomic across poller instances** — two pollers can both read the same due job before either removes it. Fix with a Lua script that pops due entries atomically (`ZRANGEBYSCORE` + `ZREM` in one event-loop turn), or `ZPOPMIN` variants where ordering fits, or accept duplicates and rely on [[Idempotency]] downstream.
+- **Fetch-and-remove is not atomic across poller instances** — two pollers can both read the same due job before either removes it. Fix with a Lua script that pops due entries atomically (`ZRANGE … BYSCORE` + `ZREM` in one event-loop turn), or `ZPOPMIN` variants where ordering fits, or accept duplicates and rely on [[Idempotency]] downstream.
 - **Loss semantics again:** a scheduled job is acknowledged future work — eviction or failover silently cancels it. For "nice to have" timers that's fine; for contractual timers (regulatory notification deadlines), the schedule belongs in a durable store with Redis as the fast dispatcher at most.
 
 The same score-as-timestamp zset also powers sliding-window rate limiters and "recently active users" queries — it is the most reusable composite pattern in the Redis toolbox beyond plain KV.
@@ -121,7 +121,7 @@ The pattern behind all misuse: **relying on guarantees Redis doesn't make** — 
 
 - **Primary source of truth** for business records: durability is tunable-but-probabilistic, failover loses acknowledged writes; no audit story. Misuse, full stop, for regulated data.
 - **The job queue that grew up:** `LPUSH`/`BRPOP` is a fine toy queue, but no acks means a consumer crash loses the popped job (the `LMOVE` reliable-queue pattern patches this; Streams do it properly). If you're rebuilding acks, retries, DLQs and backpressure on lists — you're writing a worse [[RabbitMQ]].
-- **Querying by value:** Redis indexes nothing but keys. `KEYS pattern` / `SCAN`-and-filter as a query layer means O(N) scans on the shared thread — the "database" smell. (RediSearch exists; at that point evaluate it as a database on its own merits.)
+- **Querying by value:** Redis indexes nothing but keys. `KEYS pattern` / `SCAN`-and-filter as a query layer means O(N) scans on the shared thread — the "database" smell. (The Redis Query Engine — formerly the RediSearch module, bundled into Redis Open Source from 8.0 — exists; at that point evaluate it as a database on its own merits.)
 - **Large blobs / unbounded structures:** multi-MB values and million-member collections monopolize the event loop and blow replication buffers ([[Hot Key Problem]] adjacent). Object storage and databases exist.
 - **Kafka cosplay:** Streams with multiple groups and replay is genuinely log-shaped, but memory-bound retention, single-slot throughput, and failover tail-loss mean it replaces Kafka only at modest scale with idempotent consumers — the honest comparison lives in [[Redis Streams]] and [[Choosing a Message Broker]].
 

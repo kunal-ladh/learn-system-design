@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: Why serving LLMs breaks normal web-service intuition — KV cache memory pressure, continuous batching, token streaming over SSE, TTFT vs throughput metrics, token-based rate limits, and GPU autoscaling pain.
 related: ["[[RAG Architecture]]", "[[Vector Databases and Similarity Search]]", "[[WebSockets Server-Sent Events and Long Polling]]", "[[Rate Limiting]]", "[[Autoscaling]]"]
 ---
@@ -75,7 +75,7 @@ Since tokens are produced one at a time over seconds, holding the response until
 | **Throughput** (total tokens/sec per GPU) | Fleet efficiency under continuous batching | Your infra bill |
 | **Cost per 1K tokens** | Unit economics, input and output priced separately | Finance, pricing |
 
-TTFT and throughput *trade against each other* — the [[Latency vs Throughput vs Bandwidth|latency-vs-throughput]] tension in its purest form: packing batches fuller raises throughput but queues new arrivals (worse TTFT). You tune the scheduler to a TTFT SLO and take the throughput that remains. A useful target for tokens/sec per request: comfortably above human reading speed — and do that conversion rather than guessing at it, because 200–300 words per minute is only 3–5 words/sec, and at roughly ¾ of a word per token that lands at just **~5–7 tokens/sec**. Much faster than that buys little UX, so surplus capacity is better spent on batch size.
+TTFT and throughput *trade against each other* — the [[Latency vs Throughput vs Bandwidth|latency-vs-throughput]] tension in its purest form: packing batches fuller raises throughput but queues new arrivals (worse TTFT). You tune the scheduler to a TTFT SLO and take the throughput that remains. A useful target for tokens/sec per request: comfortably above human reading speed — and do that conversion rather than guessing at it, because 200–300 words per minute is only 3–5 words/sec, and at roughly ¾ of a word per token that lands at just **~4–7 tokens/sec** (3.3–5 words/sec ÷ 0.75). Much faster than that buys little UX, so surplus capacity is better spent on batch size.
 
 ### Routing, rate limiting, autoscaling
 

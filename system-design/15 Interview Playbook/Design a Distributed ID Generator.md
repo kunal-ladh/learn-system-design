@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Generating unique, roughly time-sorted 64-bit IDs across many nodes — why auto-increment and UUIDv4 fail, the Snowflake bit layout, the clock-backwards problem, and the alternatives.
 related: ["[[Design a URL Shortener]]", "[[Database Indexes]]", "[[Logical Clocks and Ordering]]"]
 ---
@@ -19,11 +19,11 @@ Every system that writes data needs unique identifiers, and the moment writes ha
 
 - Generate **globally unique** 64-bit numeric IDs (confirm size — 64 bits fits a `BIGINT`, a CPU register, and existing schemas; 128 bits is the fallback if uniqueness must be coordination-free forever).
 - IDs are **roughly sortable by generation time** — ask *why* the requirement exists: "do you need ordering for pagination/merging, or just uniqueness?" If only uniqueness, the problem collapses to UUIDs and you just saved 30 minutes. Interviewers want you to notice this fork.
-- Numeric only (confirm) — some consumers (URLs, JS clients) care about encoding; JavaScript's safe integer is 2⁵³, which is a real reason APIs return IDs as strings.
+- Numeric only (confirm) — some consumers (URLs, JS clients) care about encoding; JavaScript's largest safe integer is 2⁵³ − 1, which is a real reason APIs return IDs as strings.
 
 **Non-functional:**
 
-- **Scale**: tens of thousands of IDs/sec per node, across thousands of nodes.
+- **Scale**: tens of thousands of IDs/sec per node, across hundreds of nodes (the classic layout below caps at 1,024 generators).
 - **Latency**: generation must be local and sub-millisecond — **no network call per ID**.
 - **High availability**: ID generation is upstream of *every write* in the company; if it blocks, everything blocks.
 - **No duplicates, ever** — a duplicate ID is silent data corruption (two tweets, one ID). Fail closed: refuse to generate rather than risk a dupe.
@@ -36,7 +36,7 @@ Assume Twitter-scale writes: **10,000 new objects/sec** average across the fleet
 
 - **Per-node load**: with even 10 generator-bearing nodes, 3,000 IDs/sec/node — trivial for an in-memory counter. The constraint is never throughput; it is **uniqueness without coordination**.
 - **Capacity of a 41-bit millisecond timestamp**: 2⁴¹ ms = 2.199 × 10¹² ms ≈ 2.199 × 10⁹ s ≈ **69.7 years** from the chosen custom epoch. Show the division: 2⁴¹ ÷ 1000 ÷ 86,400 ÷ 365 ≈ 69.7.
-- **Per-node rate ceiling**: a 12-bit sequence = 2¹² = **4,096 IDs per millisecond per worker** = ~4.09M IDs/sec/worker — three orders of magnitude above our need; 1,024 workers (10 bits) × 4,096 = ~4.2 **billion** IDs/sec fleet-wide ceiling.
+- **Per-node rate ceiling**: a 12-bit sequence = 2¹² = **4,096 IDs per millisecond per worker** ≈ 4.1M IDs/sec/worker — three orders of magnitude above our need; 1,024 workers (10 bits) × 4,096 = ~4.2 **billion** IDs/sec fleet-wide ceiling.
 - **Storage effect**: 64-bit IDs = 8 bytes vs UUID's 16 bytes (36 as text). At 10B rows, the ID column alone is 80 GB vs 160 GB — *before* counting its repetition in every index and foreign key, where the difference multiplies.
 
 ## High-level design
@@ -78,7 +78,7 @@ The only coordination is **worker-ID assignment at startup** (ZooKeeper/etcd lea
 
 ### 1. The clock-backwards problem
 
-Snowflake's uniqueness *within one worker* rests entirely on "time moves forward." Real clocks don't promise that: **NTP corrections step clocks backward**, VM migrations and leap-second smearing shift them. If the clock jumps back 50 ms, the generator may re-enter a worker-millisecond it already used — and with the sequence reset, **re-issue identical IDs**. Silent duplicates: the worst failure available.
+Snowflake's uniqueness *within one worker* rests entirely on "time moves forward." Real clocks don't promise that: **NTP corrections step clocks backward**, VM migrations and un-smeared leap seconds (a repeated second) shift them. If the clock jumps back 50 ms, the generator may re-enter a worker-millisecond it already used — and with the sequence reset, **re-issue identical IDs**. Silent duplicates: the worst failure available.
 
 Handling, in the order to present:
 
@@ -91,8 +91,8 @@ Bonus point: note that this is physical-clock fragility in general, the same rea
 
 ### 2. Alternatives and when they beat Snowflake
 
-- **DB segment / ticket servers (Flickr)**: a tiny MySQL "ticket" table dispenses blocks — or in the **segment** variant, services lease *ranges* (e.g. IDs 1M–2M) from a central allocator and serve them from memory, fetching the next range before exhaustion. Flickr ran two ticket servers (odd/even) behind a load balancer for availability. Pros: dead simple, strictly increasing-ish, no clock dependency. Cons: central service to operate; IDs leak volume; ordering across services is coarse (range-grained, not time-grained). Right answer when you need *numeric* IDs but only weak ordering.
-- **UUIDv7** (RFC 9562, 2024): 128-bit UUID with a 48-bit Unix-millisecond timestamp in the high bits + random tail — i.e. "Snowflake's idea, standardized, no worker-ID ceremony." Time-sorted, index-friendly, zero coordination (no worker registration, no clock-back dupe risk because the tail is random). Cost: 16 bytes, and only k-sorted. Increasingly the *practical* default when 64 bits isn't mandatory — saying "today I'd reach for UUIDv7 unless 64-bit is a hard constraint" is a current-knowledge signal. (ULID is the same shape, older, base32-encoded.)
+- **DB segment / ticket servers (Flickr)**: a tiny MySQL "ticket" table dispenses blocks — or in the **segment** variant, services lease *ranges* (e.g. IDs 1M–2M) from a central allocator and serve them from memory, fetching the next range before exhaustion. Flickr ran two ticket servers (odd/even) and round-robined between them for load spreading and availability. Pros: dead simple, strictly increasing-ish, no clock dependency. Cons: central service to operate; IDs leak volume; ordering across services is coarse (range-grained, not time-grained). Right answer when you need *numeric* IDs but only weak ordering.
+- **UUIDv7** (RFC 9562, 2024): 128-bit UUID with a 48-bit Unix-millisecond timestamp in the high bits + random tail — i.e. "Snowflake's idea, standardized, no worker-ID ceremony." Time-sorted, index-friendly, zero coordination (no worker registration, negligible clock-back dupe risk because ~74 bits of the tail are random). Cost: 16 bytes, and only k-sorted. Increasingly the *practical* default when 64 bits isn't mandatory — saying "today I'd reach for UUIDv7 unless 64-bit is a hard constraint" is a current-knowledge signal. (ULID is the same shape, older, base32-encoded.)
 - **Multi-ID-per-call RPC service** (Snowflake as a *service* rather than a library): centralizes clock discipline and worker IDs; clients fetch batches to amortize the network hop. Trades a hop for operational control.
 
 | Option | Bits | Sorted by time | Coordination | Clock-sensitive | Pick when |
@@ -101,7 +101,7 @@ Bonus point: note that this is physical-clock fragility in general, the same rea
 | UUIDv4 | 128 | no | none | no | uniqueness only, no DB-index pressure |
 | Snowflake | 64 | k-sorted | worker ID at startup | **yes** | 64-bit + time-sorted at scale |
 | Ticket/segment server | 64 | coarse | per range lease | no | simple numeric IDs, modest ordering |
-| UUIDv7 | 128 | k-sorted | none | duplicates impossible; ordering only | 128 bits acceptable — the modern default |
+| UUIDv7 | 128 | k-sorted | none | duplicates negligible; ordering only | 128 bits acceptable — the modern default |
 
 ### 3. Sortability drives everything — say it explicitly
 

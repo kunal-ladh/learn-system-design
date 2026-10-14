@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: A field taxonomy of how distributed systems actually die — cascading failure, retry amplification, thundering herd, metastable failure, gray failure, correlated failure — with the signature, a real example, and the defense for each.
 related: ["[[Timeouts Retries and Exponential Backoff]]", "[[Circuit Breakers]]", "[[Chaos Engineering]]"]
 ---
@@ -36,7 +36,7 @@ The taxonomy at a glance:
 
 **Mechanism.** A dependency slows; callers' threads park waiting on it; the callers' own callers now see slowness and park *their* threads; each layer's pool drains in turn. Load may also *concentrate*: when one replica dies, survivors inherit its traffic, which pushes them past saturation, which kills them — failures feeding failures until the whole tier is down.
 **Signature.** Latency and error graphs light up in a *wave* moving up the call graph; thread-pool and connection-pool saturation everywhere; the originating dependency often looks *least* alarming because its callers stopped reaching it.
-**Real example.** AWS's October 2025 us-east-1 event had this shape in public telling: a DNS/metadata-plane fault around DynamoDB endpoints propagated into dependent services and their dependents, far beyond the original fault. Nygard's *Release It!* opens with an airline grounded by one unhandled exception in a connection pool.
+**Real example.** AWS's October 19–20, 2025 us-east-1 event had this shape in public telling: a race condition in DynamoDB's automated DNS management left the regional endpoint's DNS record empty, and the fault propagated into dependent services (EC2 launches, NLB, Lambda) and their dependents, far beyond the original fault. Nygard's *Release It!* opens with an airline grounded by one unhandled exception in a connection pool.
 **Defense.** Aggressive timeouts so threads can't park indefinitely; [[Bulkheads and Isolation|bulkheads]] so one dependency can only drain its own pool; [[Circuit Breakers|breakers]] to stop calling the sick tier; [[Load Shedding and Graceful Degradation|shedding]] on survivors so inherited load doesn't kill them too.
 
 ### Retry amplification

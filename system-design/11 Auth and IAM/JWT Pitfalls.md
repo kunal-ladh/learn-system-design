@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: The known ways JWT deployments get broken or painful — alg=none and algorithm confusion, weak secrets, missing aud/iss checks, long-lived tokens, mutable data in immutable tokens, the logout problem, and header bloat — with the standard mitigations.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[Sessions vs Tokens]]"]
 ---
@@ -62,7 +62,7 @@ Signature validity proves *the issuer minted it* — not that it was minted *for
 - **Cross-service**: a token legitimately issued for the low-stakes notifications API is presented to the payments API. Both verify against the same IAM keys; without an `aud` check, payments accepts it.
 - **Cross-issuer**: a service trusting multiple issuers (common after mergers or with third-party IdPs) accepts a token from staging IAM in production because nobody compared `iss`.
 
-Every verifier must check `iss` equals its expected issuer and `aud` contains its own identifier. Libraries only enforce these if configured — an unset expected-audience usually means the check silently doesn't run. In Spring Security, that's an explicit `JwtValidators`/audience-validator addition; the default validates `exp` and (if set) `iss`, not `aud`.
+Every verifier must check `iss` equals its expected issuer and `aud` contains its own identifier. Libraries only enforce these if configured — an unset expected-audience usually means the check silently doesn't run. In Spring Security the default validates `exp` and (if set) `iss`, not `aud`; audience needs explicit configuration — the `spring.security.oauth2.resourceserver.jwt.audiences` property in current Spring Boot, or an audience validator added via `JwtValidators`.
 
 ### 5. Long-lived access tokens
 

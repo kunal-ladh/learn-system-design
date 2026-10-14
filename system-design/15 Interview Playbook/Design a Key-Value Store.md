@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: The capstone — building a mini-Dynamo from first principles with consistent hashing, N equals 3 replication, tunable quorums, conflict resolution, hinted handoff, Merkle anti-entropy, gossip membership, and an LSM engine.
 related: ["[[The Dynamo Paper]]", "[[Quorum Reads and Writes]]", "[[Consistent Hashing]]", "[[Design a Distributed Cache]]"]
 ---
@@ -36,7 +36,7 @@ Anchor numbers (announce them as assumptions, not facts): **10 billion keys, ~1 
 - **Internal op rate**: 500K client ops/s = 400K reads/s + 100K writes/s. A write goes to all N = 3 replicas → **300K internal writes/s**. A read is sent to all N and the coordinator waits for R → **1.2M internal reads/s**. Total 1.5M / 16 nodes ≈ **~94K ops/s per node** — feasible for an LSM engine on NVMe *only because* most reads are answered from the memtable, page cache, or a single bloom-filtered file. Say that caveat; it is where the design can fail.
 - **Network**: naively, 400K reads/s × 3 × 1 KB = 1.2 GB/s of replica responses. The standard fix is **digest reads** — the coordinator asks one replica for the full value and the other two for a cheap hash, fetching full data again only on mismatch: 400 MB/s + a few tens of MB/s of digests ≈ **~425 MB/s**. Writes add 100K × 3 × 1 KB = **300 MB/s**. ~725 MB/s over 16 nodes ≈ 45 MB/s each — comfortable on 10 GbE, and the digest trick just saved two thirds of the read bandwidth.
 - **The arithmetic that changes a requirement**: 100K writes/s × 1 KB = 100 MB/s = **8.6 TB/day**. The cluster's entire 10 TB logical capacity is one day of writes. So the workload *must* be overwrite-dominated or TTL'd — if these are 100K genuinely new keys per second, the honest answer is "this cluster is sized for about 28 hours" and the capacity plan, not the architecture, is the problem ([[Back of the Envelope Estimation]], [[Capacity Planning]]).
-- **Latency budget for a quorum read**: one intra-datacenter round trip to the coordinator (~0.5 ms, skippable with a partition-aware client) + one parallel round trip to replicas (~0.5 ms) + node-local storage, which is microseconds from memory and tens of microseconds from an NVMe random read — call it 50 µs as the memorized anchor ([[Latency Numbers Every Engineer Should Know]]). p50 lands a few milliseconds; the p99.9 is set by compaction, garbage collection, and queueing — not by the happy path.
+- **Latency budget for a quorum read**: one intra-datacenter round trip to the coordinator (~0.5 ms, skippable with a partition-aware client) + one parallel round trip to replicas (~0.5 ms) + node-local storage, which is microseconds from memory and tens of microseconds from an NVMe random read — call it 50 µs as the memorized anchor ([[Latency Numbers Every Engineer Should Know]]). p50 lands around a millisecond or two; the p99.9 is set by compaction, garbage collection, and queueing — not by the happy path.
 
 ## High-level design
 
@@ -47,9 +47,9 @@ graph TD
     CO --> R2["Replica two rack B"]
     CO --> R3["Replica three rack C"]
     CO -.->|"hinted handoff when a replica is down"| R4["Standby node rack D"]
-    R1 ---|gossip| R2
-    R2 ---|gossip| R3
-    R3 ---|gossip| R1
+    R1 ---|"gossip"| R2
+    R2 ---|"gossip"| R3
+    R3 ---|"gossip"| R1
     R1 --> S1["Local LSM engine"]
     R2 --> S2["Local LSM engine"]
     R3 --> S3["Local LSM engine"]
@@ -245,7 +245,7 @@ One key, one hash, one preference list: all traffic for it lands on the same thr
 > Note the regulatory edge for your own stack: anything carrying money movement or KYC state should fail closed and be replayable from an immutable record — a store whose documented behaviour is "concurrent writes may be silently discarded" cannot be the system of record for either.
 
 > [!question]- Q: Design the variant — the same cluster, but single-key linearizable reads and writes are now a requirement. What changes, and what does it cost?
-> Linearizability means every operation appears to take effect at one instant, in one global order. The leaderless design cannot provide it, so the per-key replica group acquires a leader elected by consensus — Raft or equivalent, one group per partition ([[Consensus and Raft]]). Writes go through that leader, are committed to a majority of the group's log, and are applied in log order; reads either go through the leader with a lease or read from a majority. What that buys: no siblings, no vector clocks, no LWW, no read repair for conflict purposes, and a compare-and-set primitive — which makes the balance operation from the previous question legal. What it costs: write availability during elections and on the minority side of a partition (the system becomes CP, and [[PACELC]] classifies it PC/EC — consistency even in the no-partition case, paid in latency); a round trip to the leader for every write; and a far more complicated membership change protocol, since joint-consensus reconfiguration replaces "gossip the new token". Hinted handoff disappears entirely — you cannot hand a write to a non-member and stay linearizable. This is roughly the path from Dynamo to a Raft-per-shard store, and it is why [[Bigtable and Spanner]] and Dynamo-lineage systems read like different species despite solving the same surface problem.
+> Linearizability means every operation appears to take effect at one instant, in one global order. The leaderless design cannot provide it, so the per-key replica group acquires a leader elected by consensus — Raft or equivalent, one group per partition ([[Consensus and Raft]]). Writes go through that leader, are committed to a majority of the group's log, and are applied in log order; reads either go through the leader with a lease or have the leader confirm its leadership with a majority round before answering (Raft's ReadIndex) — reading from any majority of followers is not enough. What that buys: no siblings, no vector clocks, no LWW, no read repair for conflict purposes, and a compare-and-set primitive — which makes the balance operation from the previous question legal. What it costs: write availability during elections and on the minority side of a partition (the system becomes CP, and [[PACELC]] classifies it PC/EC — consistency even in the no-partition case, paid in latency); a round trip to the leader for every write; and a far more complicated membership change protocol, since joint-consensus reconfiguration replaces "gossip the new token". Hinted handoff disappears entirely — you cannot hand a write to a non-member and stay linearizable. This is roughly the path from Dynamo to a Raft-per-shard store, and it is why [[Bigtable and Spanner]] and Dynamo-lineage systems read like different species despite solving the same surface problem.
 
 ## Sources
 
@@ -265,10 +265,10 @@ This is the vault's final exam. Every row is a component of the design above and
 |---|---|---|
 | Ring placement, virtual nodes, minimal remap on resize | [[Consistent Hashing]] | 6 |
 | Why mod-N hashing fails; choosing what to partition on | [[Sharding]] | 6 |
-| Copies across failure domains, sync vs async trade | [[Replication]] | 6 |
+| Leader-follower, multi-leader and leaderless copies; sync vs async trade | [[Replication]] | 6 |
 | Streaming ranges on join and decommission without downtime | [[Rebalancing Partitions]] | 6 |
-| Partition skew vs key skew; why vnodes fix only one | [[Hot Partition Problem]] | 6 |
-| Leaderless vs leader-based failover, and what elections cost | [[Failover]] | 6 |
+| Partition skew vs key skew; why adding shards cannot spread one key | [[Hot Partition Problem]] | 6 |
+| Leader-based failover and what elections cost — the contrast case | [[Failover]] | 6 |
 | The door closed by single-key-only operations | [[Secondary Indexes on Sharded Data]] | 6 |
 | Sloppy quorums, hinted handoff, Merkle anti-entropy, gossip | [[The Dynamo Paper]] | 7 |
 | LSM vs B-tree, compaction, bloom filters, write amplification | [[B-Tree vs LSM-Tree]] | 7 |
@@ -281,7 +281,7 @@ This is the vault's final exam. Every row is a component of the design above and
 | Why availability during a partition is a choice, not a property | [[CAP Theorem]], [[PACELC]] | 8 |
 | What eventual consistency actually promises | [[Consistency Models]] | 8 |
 | Why retries are safe only when writes are idempotent | [[Idempotency]], [[Exactly-Once Delivery Is a Lie]] | 8 |
-| Why a leaderless store has nothing to fence | [[Split Brain and Fencing]] | 8 |
+| Quorum elections and fencing tokens — the machinery a leaderless store has no role for | [[Split Brain and Fencing]] | 8 |
 | Unreliable networks, changing topology, and the assumptions that bite | [[The Fallacies of Distributed Computing]] | 8 |
 | The Raft-per-shard variant in the last self-test | [[Consensus and Raft]] | 8 |
 | Hot key detection, local caching, key splitting | [[Hot Key Problem]] | 4 |
@@ -290,7 +290,7 @@ This is the vault's final exam. Every row is a component of the design above and
 | Coordinator timeouts, retry budgets, backoff on unreachable replicas | [[Timeouts Retries and Exponential Backoff]] | 12 |
 | Shedding instead of queueing when replicas are slow | [[Load Shedding and Graceful Degradation]] | 12 |
 | Metastable failure — when rebalancing becomes the outage | [[Failure Modes in Distributed Systems]] | 12 |
-| Containing a hot key's blast radius to one tenant | [[Bulkheads and Isolation]] | 12 |
+| Containing a slow dependency's backlog to one compartment | [[Bulkheads and Isolation]] | 12 |
 | Multi-region replicas, RPO and RTO | [[Disaster Recovery]] | 12 |
-| RPS, storage and bandwidth arithmetic; p99.9 and the fan-out tail | [[Back of the Envelope Estimation]], [[Latency Numbers Every Engineer Should Know]] | 1 |
+| RPS, storage and bandwidth arithmetic; p99.9 and the fan-out tail | [[Back of the Envelope Estimation]], [[Latency Numbers Every Engineer Should Know]], [[Latency vs Throughput vs Bandwidth]] | 1 |
 | Where the cache's assumptions stop and a database's begin | [[Design a Distributed Cache]] | 15 |

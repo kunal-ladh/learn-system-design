@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: The eight false assumptions engineers make about networks, each paired with a modern production failure it causes.
 related: ["[[Network Partitions and Timeouts]]", "[[CAP Theorem]]", "[[Timeouts Retries and Exponential Backoff]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -103,7 +103,7 @@ A compact way to remember the whole list: fallacies 1 and 5 are about **things c
 - **"The cloud fixed this."** Cloud providers made individual fallacies *less frequent*, not false. Managed networks still partition; managed services still throttle you (fallacy 6); cross-AZ traffic still costs money (fallacy 7).
 - **"Retries fix fallacy 1."** Retries convert "maybe it failed" into "maybe it happened twice". Retries are only safe on top of [[Idempotency]], and naive retries create retry storms ([[Timeouts Retries and Exponential Backoff]]).
 - **"These are about the network layer, so they're the platform team's problem."** Every fallacy surfaces as an *application* bug: double charges, stale caches, zombie leaders. The application owns the consequences.
-- **"Fallacy 2 is solved by faster hardware."** The speed of light sets a floor: Mumbai to Virginia and back is roughly 180–250 ms no matter how good the hardware is. Latency budgets are physics, not engineering debt.
+- **"Fallacy 2 is solved by faster hardware."** The speed of light sets a floor: Mumbai to Virginia and back is roughly 190–250 ms no matter how good the hardware is. Latency budgets are physics, not engineering debt.
 - **"A timeout means the call failed."** It means you stopped waiting. The work may have completed, may be running now, or may never have started — and the difference matters most where money moves. Treating a timeout as a failure and acting on that belief is how duplicate debits happen; the correct handling is to treat it as *unknown* and resolve it by query or reconciliation ([[Idempotency]]).
 - **"We've never had a partition, so we're fine."** You have had many and resolved them without noticing, because the retry succeeded. The fallacies describe events whose frequency is high and whose visibility is low — which is exactly the combination that makes a system look robust right up until the retry does not succeed.
 

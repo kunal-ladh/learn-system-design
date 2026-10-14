@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How SLIs, SLOs, and SLAs chain together, how an error budget is computed and spent, and how Google-style SRE uses the budget to arbitrate between shipping and stability.
 related: ["[[Availability Reliability Durability]]", "[[Latency vs Throughput vs Bandwidth]]", "[[Alerting and On-Call Design]]"]
 ---
@@ -76,7 +76,7 @@ The **error budget** is simply `1 − SLO`: the amount of badness you are *allow
 
 **Burn rate** is the operational refinement: burn rate = (current error rate) / (budgeted error rate). Burn rate 1 means you'll exactly exhaust the budget at window's end; burn rate 14.4 on a 30-day window means the whole budget gone in ~2 days. Modern alerting pages on *fast burn* (e.g. 14.4× sustained for an hour) and files a ticket on *slow burn* (3× for a day, or 1× sustained for three) — this is how SLOs replace noisy per-cause alerts ([[Alerting and On-Call Design]]).
 
-The standard multi-window burn-rate ladder (from Google's SRE Workbook), for a 30-day window:
+The standard multi-window burn-rate ladder for a 30-day window — the 14.4×, 6× and 1× rows are the SRE Workbook's recommended set (ch. 5, Table 5-8); the 3× row is a common intermediate addition, not from the Workbook:
 
 | Burn rate | Budget consumed if sustained | Window to confirm | Response |
 |---|---|---|---|
@@ -137,7 +137,7 @@ A complete example: *"SLI: proportion of requests to `POST /v1/transfers` at the
 - Natural SLI points in your path: CloudFront/ALB logs and Kong metrics give request success/latency ratios *before* your services' own view — closer to the user than pod metrics, and they catch gateway-level failures your Spring Boot metrics never see.
 - Services pinned at 1 replica are less doomed than folklore suggests, and the budget arithmetic says why. A *deploy* need not burn budget at all: with a Kubernetes Deployment's default rolling update, `maxSurge` rounds up to 1 and `maxUnavailable` rounds down to 0 at `replicas: 1`, so the replacement pod must pass its readiness probe before the old one is terminated — zero-downtime, provided the readiness probe is honest and shutdown drains in-flight requests ([[Graceful Shutdown and Deployment Safety]]). What 1 replica genuinely cannot cover is **unplanned** loss — OOM kill, eviction, node drain, spot reclamation — where there is no peer to serve during the gap.
 - Put numbers on that gap. A 99.9% SLO over 30 days allows 43.2 minutes; a 45-second cold start costs 0.75 min, so time-based accounting tolerates 43.2 / 0.75 ≈ **57 such gaps a month**. Restart frequency is rarely the thing that breaks a 1-replica SLO. A single 20-minute incident is: 20 / 43.2 = **46% of the month's budget in one event**, because with one replica nothing shortens an incident except a human. The honest statement is therefore "this service targets 99.9%, and its budget is dominated by MTTR, not by restarts" ([[Availability Reliability Durability]]).
-- The exception that does burn budget on every deploy: services pinned at 1 for *singleton semantics* — an ordered consumer, a scheduler, a lock holder — cannot surge to two pods at all, so they must use the `Recreate` strategy and take a real gap each release. Those are the ones where deploy frequency belongs in the SLO conversation.
+- The exception that does burn budget on every deploy: services pinned at 1 for *singleton semantics* — an ordered consumer, a scheduler, a lock holder — cannot surge to two pods at all, so they must use the `Recreate` strategy (or `maxSurge: 0`) and take a real gap each release. Those are the ones where deploy frequency belongs in the SLO conversation.
 - Fintech nuance: for money movement, *correctness* SLIs (failed-then-reconciled transfers, duplicate postings caught) matter as much as availability — an SLO like "99.99% of transfers complete without manual reconciliation" captures what RBI-regulated operations actually fear ([[Idempotency]], [[Stripe and Payment System Design]]).
 - Async flows need freshness SLOs, not just uptime: "99% of KYC-status events processed within 5 minutes" turns SQS/Kafka backlog age into a budgeted, alertable number ([[Backpressure and Flow Control]], [[Message Queues vs Event Logs]]).
 - Your `x-correlation-id` discipline is what makes SLI attribution possible — tracing a failed-request budget burn to the guilty hop ([[Distributed Tracing]]).

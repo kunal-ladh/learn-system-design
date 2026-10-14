@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Why statelessness is the property that makes horizontal scaling work, where the state actually goes (Redis, database, JWT), and why sticky sessions are a trap rather than a fix.
 related: ["[[Vertical vs Horizontal Scaling]]", "[[Sessions vs Tokens]]", "[[How JWT Works]]"]
 ---
@@ -92,7 +92,7 @@ A concrete audit, worth running on any service before raising its replica count:
 
 | You gain | You pay |
 |---|---|
-| Any-replica routing, trivial scaling and failover | Every request pays a network hop for state (Redis/DB ~0.5–5 ms) that RAM gave for ~100 ns |
+| Any-replica routing, trivial scaling and failover | Every request pays a network hop for state (Redis/DB ~0.2–5 ms) that RAM gave for ~100 ns |
 | Free rolling deploys and autoscaling | Shared stores become critical dependencies — Redis down can mean *all* sessions down ([[Redis Cluster and Sentinel]]) |
 | Interchangeable cattle; simple ops | State problems don't vanish — they concentrate in the stateful tier, which must be engineered well |
 | Horizontal cost curve on the app tier | JWT route: tokens can't be revoked server-side without reintroducing state ([[JWT Pitfalls]]) |
@@ -145,7 +145,7 @@ Statelessness is the right default for request/response services, but:
 
 ## Sources
 
-- *Designing Data-Intensive Applications*, Kleppmann — shared-nothing architectures (ch. 1, ch. 6 intro) and the general principle of pushing state into specialized systems.
+- *Designing Data-Intensive Applications*, Kleppmann — shared-nothing architectures (ch. 1, and the Part II introduction, "Distributed Data") and the general principle of pushing state into specialized systems.
 - Twelve-Factor App (12factor.net) — factor VI "Processes: execute the app as one or more stateless processes"; the canonical statement of the pattern for cloud deployment.
 - AWS Builders' Library / Well-Architected Framework — guidance on stateless application tiers, session externalization (ElastiCache) and when to use sticky sessions on ALB (official ALB docs describe the affinity mechanisms and caveats).
 - Spring Session documentation (spring.io) — the concrete Redis-backed session externalization path for the reader's own framework.

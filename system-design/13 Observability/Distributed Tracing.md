@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How trace context propagates across services to show where a slow request actually spent its time — spans, W3C traceparent, OpenTelemetry, and head vs tail sampling.
 related: ["[[Logs Metrics and Traces]]", "[[Anatomy of a Web Request]]", "[[Communication Patterns Between Services]]"]
 ---
@@ -92,7 +92,7 @@ The honest verdict: a well-enforced correlation ID answers a surprising fraction
 
 ### Instrumentation: auto vs manual
 
-**OpenTelemetry (OTel)** is the vendor-neutral standard: one SDK, one wire protocol (OTLP), exporters to any backend (Jaeger, Tempo, vendor SaaS). Status matters when you plan a migration, and it is signal-by-signal, not project-wide: as of 2026, **traces and metrics are stable** in the specification and in every major language SDK; **logs are stable in the spec and OTLP** but SDK maturity still varies by language (Java is stable, several others are not); **profiles** are the newest signal and remain **alpha**. Treat "OTel supports X" as a claim to check against the spec's status page for your language, not a given.
+**OpenTelemetry (OTel)** is the vendor-neutral standard: one SDK, one wire protocol (OTLP), exporters to any backend (Jaeger, Tempo, vendor SaaS). Status matters when you plan a migration, and it is signal-by-signal, not project-wide: as of 2026, **traces and metrics are stable** in the specification and in the main backend SDKs (Java, Go, .NET, Python, JavaScript), though not yet stable everywhere (Ruby metrics are still in development, Rust traces still beta); **logs are stable in the spec and OTLP** but SDK maturity still varies by language (Java and .NET are stable, several others are not); **profiles** are the newest signal, in public **alpha** since March 2026 and still pre-stable. Treat "OTel supports X" as a claim to check against the spec's status page for your language, not a given.
 
 - **Auto-instrumentation**: for JVM services, the OTel Java agent (`-javaagent:opentelemetry-javaagent.jar`) instruments known libraries — Spring MVC/WebFlux, HTTP clients, JDBC, Mongo driver, Kafka clients — with zero code changes. It creates server/client spans and propagates context automatically. This gets you 80% of the value in an afternoon.
 - **Manual instrumentation**: adding spans around business logic ("risk-check", "ledger-write") and attributes that matter to *you* (amount bucket, bank, retry count). Auto-instrumentation shows *that* payment-service took 1.8 s; a manual span shows it was the signature verification inside it.

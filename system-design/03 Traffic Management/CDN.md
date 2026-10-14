@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How content delivery networks move content next to users — edge PoPs, cache hierarchies, push vs pull, TTL and purging, origin shield, dynamic acceleration, and signed URLs.
 related: ["[[Reverse Proxy vs Forward Proxy]]", "[[Caching Strategies]]", "[[Cache Invalidation]]", "[[How DNS Works]]"]
 ---
@@ -33,7 +33,7 @@ The CDN answer to both: place thousands of cache servers in cities around the wo
 
 ### Edge PoPs and the cache hierarchy
 
-A **PoP (point of presence)** is a CDN data center — racks of cache servers in an internet exchange in some city; large CDNs operate hundreds of PoPs (CloudFront: several hundred edge locations as of ~2025). User routing to the nearest PoP happens by **anycast** (one IP advertised everywhere — Cloudflare's model) or **DNS-based mapping** (the CDN's resolver returns a nearby PoP's address — CloudFront/Akamai style).
+A **PoP (point of presence)** is a CDN data center — racks of cache servers in an internet exchange in some city; large CDNs operate hundreds of PoPs (CloudFront: 750+ PoPs in 100+ cities plus 15 Regional Edge Caches, as of 2026). User routing to the nearest PoP happens by **anycast** (one IP advertised everywhere — Cloudflare's model) or **DNS-based mapping** (the CDN's resolver returns a nearby PoP's address — CloudFront/Akamai style).
 
 Caches form a **hierarchy** so that an edge miss doesn't automatically become an origin hit:
 
@@ -96,7 +96,7 @@ Cached content is served by edge nodes that never consult your application — s
 - **Cache poisoning** — a response generated for one context (wrong `Vary`, attacker-influenced header or query param in the cache key... or an error page) gets cached and served to everyone. Mitigation: strict, minimal cache keys; never cache `Set-Cookie` responses; careful `Vary` discipline.
 - **Private data cached publicly** — a per-user response (`/me`, authenticated API) marked cacheable serves user A's data to user B. Catastrophic in fintech. Mitigation: `Cache-Control: private/no-store` on personalized responses, audits of what the CDN caches, signed URLs for private objects.
 - **Origin stampede on mass expiry** — a global TTL expiry or purge turns every PoP into a concurrent origin fetcher. Mitigations: origin shield, request collapsing, staggered TTLs, `stale-while-revalidate`.
-- **CDN outage** — rare but global and famous (large CDN incidents have taken down swaths of the internet for minutes to an hour). Detected instantly by synthetic monitoring; mitigation at serious scale is multi-CDN with DNS steering, at normal scale is accepting the risk consciously.
+- **CDN outage** — rare but global and famous (large CDN incidents have taken down swaths of the internet for minutes to hours: Fastly in June 2021 for under an hour, Cloudflare on 18 November 2025 for about three hours of core impact). Detected instantly by synthetic monitoring; mitigation at serious scale is multi-CDN with DNS steering, at normal scale is accepting the risk consciously.
 - **Config-as-outage** — a bad behavior/rule push (wrong origin, overbroad caching rule) is functionally an outage with all infrastructure healthy. Treat CDN config like code: version it, review it, canary it.
 
 ## When NOT to use it
@@ -112,7 +112,7 @@ Cached content is served by edge nodes that never consult your application — s
 - **CloudFront fronts your edge** (CloudFront → ALB → Kong → EKS). Org convention places TLS and CORS at this layer. Static app assets and app-download binaries are the obvious cacheable set; API routes pass through with `no-store` semantics.
 - **Fintech caution dominates**: responses carrying account data, KYC status, or anything personalized must be explicitly non-cacheable — one wrong `Cache-Control` on an authenticated route is a data-leak incident, not a perf bug. Correctness beats latency, per the house rule.
 - **Signed URLs fit document delivery**: statements or KYC documents in S3, delivered via CloudFront signed URLs with short expiry — the app authorizes (authn + authz + ownership check, as always), the edge enforces, the object never becomes a shareable public link.
-- Cost shape to name in any proposal: CDN spend scales with *egress GB + requests + invalidation paths*, and origin-shield/miss traffic still bills origin egress. Offload ratio is the lever that moves the bill.
+- Cost shape to name in any proposal: CDN spend scales with *egress GB + requests + invalidation paths*, plus a per-request charge for Origin Shield. Transfer from AWS origins (ALB, S3) to CloudFront is free, so misses cost origin compute and requests rather than origin egress; a non-AWS origin pays its own egress. Offload ratio is the lever that moves the bill.
 - Your `x-correlation-id` convention starts at the CDN only if injected there; otherwise Kong is the first stamping point, since the ALB injects only its own `X-Amzn-Trace-Id` and will not mint your correlation header for you — relevant when tracing a request that may have been an edge hit (it never reached Kong at all).
 
 ## Interview angle

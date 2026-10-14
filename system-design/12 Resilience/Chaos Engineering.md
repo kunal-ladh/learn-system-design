@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Netflix's Chaos Monkey and Simian Army, and the discipline they grew into — steady-state hypotheses, blast-radius control, game days — plus right-sized chaos for small teams and the prerequisites that come first.
 related: ["[[Failure Modes in Distributed Systems]]", "[[Graceful Shutdown and Deployment Safety]]", "[[Netflix Architecture]]"]
 ---
@@ -15,9 +15,9 @@ Chaos engineering is deliberately injecting failures into a system to find out �
 
 ## The problem that created it
 
-Around 2010–2011, Netflix migrated from its own datacenter to AWS — trading hardware they controlled for commodity cloud instances that could be terminated, rebooted, or degraded at any time. Their architecture was *designed* for this: stateless services behind load balancers, redundancy across instances and zones ([[Netflix Architecture]]). But a design goal is a claim, not a fact. Engineers wrote failover logic, tested it once against a contrived scenario, and moved on; six months and forty deploys later, nobody could say whether it still worked. Resilience mechanisms share an awkward property: **they're only exercised during failures**, so they rot invisibly — the fallback that NPEs, the failover that depends on the thing that failed, the timeout nobody set ([[Failure Modes in Distributed Systems]]).
+Starting in 2008 — after a database corruption stopped DVD shipments for three days — Netflix migrated from its own datacenters to AWS, with most of streaming running there by 2010–2011 and the last datacenter pieces shut down in January 2016 — trading hardware they controlled for commodity cloud instances that could be terminated, rebooted, or degraded at any time. Their architecture was *designed* for this: stateless services behind load balancers, redundancy across instances and zones ([[Netflix Architecture]]). But a design goal is a claim, not a fact. Engineers wrote failover logic, tested it once against a contrived scenario, and moved on; six months and forty deploys later, nobody could say whether it still worked. Resilience mechanisms share an awkward property: **they're only exercised during failures**, so they rot invisibly — the fallback that NPEs, the failover that depends on the thing that failed, the timeout nobody set ([[Failure Modes in Distributed Systems]]).
 
-Netflix's answer was to make failure routine. **Chaos Monkey** (2011, later open-sourced) randomly terminated production instances. **Why production?** Because staging never matches prod's real traffic, data shapes, config, and emergent inter-service behavior — a pass in staging proves little about the system that matters. **Why business hours?** Because the point is cheap learning: engineers are at their desks, deploys are fresh in mind, and a weakness surfaces as a quick fix instead of a page at 3 a.m. Any team whose service couldn't survive a single instance death learned it with the full team awake — and fixed it, because the monkey would be back tomorrow. The cultural effect exceeded the technical one: within months, surviving random instance death was simply a property every Netflix service had, because it was tested continuously.
+Netflix's answer was to make failure routine. **Chaos Monkey** (described publicly in Netflix's December 2010 post "5 Lessons We've Learned Using AWS"; open-sourced July 2012) randomly terminated production instances. **Why production?** Because staging never matches prod's real traffic, data shapes, config, and emergent inter-service behavior — a pass in staging proves little about the system that matters. **Why business hours?** Because the point is cheap learning: engineers are at their desks, deploys are fresh in mind, and a weakness surfaces as a quick fix instead of a page at 3 a.m. Any team whose service couldn't survive a single instance death learned it with the full team awake — and fixed it, because the monkey would be back tomorrow. The cultural effect exceeded the technical one: within months, surviving random instance death was simply a property every Netflix service had, because it was tested continuously.
 
 ## What it solves
 
@@ -30,17 +30,19 @@ Netflix's answer was to make failure routine. **Chaos Monkey** (2011, later open
 
 ### The Simian Army
 
-Chaos Monkey got siblings, each targeting a failure class:
+Chaos Monkey got siblings, each targeting a failure class. The first four rows are from Netflix's July 2011 "Simian Army" post; Chaos Kong is a later addition:
 
 | Tool | Injects | Resilience claim tested |
 |---|---|---|
 | Chaos Monkey | Random instance termination | Any single instance is disposable |
 | Latency Monkey | Artificial delays/degradation in service calls | Callers survive a *slow* dependency — harder than a dead one ([[Timeouts Retries and Exponential Backoff]]) |
-| Conformity Monkey | Nothing — flags instances violating resilience best practices (not in an ASG, no health check, …) | The fleet stays structurally resilient |
+| Conformity Monkey | Finds instances violating best practices (e.g. not in an auto-scaling group) and, per the 2011 post, shuts them down so owners relaunch them properly | The fleet stays structurally resilient |
 | Chaos Gorilla | An entire availability zone's outage | Zone redundancy actually fails over |
-| Chaos Kong | An entire AWS **region** evacuation | Traffic shifts cross-region; Netflix ran these regularly at full production scale |
+| Chaos Kong | An entire AWS **region** evacuation | Traffic shifts cross-region; described in Netflix's September 2015 "Chaos Engineering Upgraded" post as a regular full-scale exercise |
 
-(Latency Monkey proved the most dangerous of the family — degrading a service *partially* can trip failure modes that clean termination never finds, which is exactly why it's valuable and why it needs the discipline below.)
+(Latency Monkey proved the hardest of the family to run safely — Netflix's 2014 FIT (Failure Injection Testing) post notes it occasionally caused unintended cascading failures, which motivated scoped injection. Degrading a service *partially* can trip failure modes that clean termination never finds, which is exactly why it's valuable and why it needs the discipline below.)
+
+Era note (2026): the 2011 roster also included Doctor, Janitor, Security, and 10–18 Monkeys. The Simian Army repository is no longer maintained; Chaos Monkey lives on as a standalone tool integrated with Spinnaker, and Janitor Monkey's job moved to Spinnaker's Swabbie. Cite the monkeys as history, not as current Netflix tooling.
 
 ### From monkeys to a discipline
 
@@ -106,6 +108,14 @@ Each stage earns trust for the next; skipping stages spends trust you haven't ea
 | On-call rehearsal and runbook validation | Cultural capital — leadership must accept controlled risk |
 | Continuous regression-testing of failure paths | Prerequisite investment (observability, rollback) before any payoff |
 
+## Failure modes
+
+- **Blast radius escapes its bound**: the "1% slice" shares a pool, cache, or queue with the other 99%, so the injected fault reaches everyone. *Signal*: steady state degrades outside the experiment cohort. Verify isolation of the slice before widening, the same way [[Bulkheads and Isolation]] are verified.
+- **Steady-state metric too coarse to deviate**: a fleet-wide success rate absorbs a fault confined to one route or tenant, and the experiment "passes" while real users fail. *Signal*: a passing run followed by support tickets naming the exact path you injected on. Pick a metric scoped to what the fault touches.
+- **No working abort**: the stop switch exists on a slide but was never exercised, or depends on the system under test. *Signal*: the experiment outlives the decision to stop it. Demonstrate the abort before every run.
+- **Chaos as theatre**: the same smallest experiment runs forever, always passes, and scope never widens — resilience is reported as verified when only one failure class ever was. *Signal*: months of green runs and zero tickets filed from them.
+- **Experimenting on a known-fragile system**: the result was predictable, so the run is an outage with paperwork — at 1 replica, killing the pod is exactly this case (below).
+
 ## When NOT to use it
 
 - **Known-fragile systems**: if the hypothesis is "this will fail", skip the experiment and fix the known weakness. Chaos is for testing things you *believe* are resilient.
@@ -123,7 +133,7 @@ Each stage earns trust for the next; skipping stages spends trust you haven't ea
 
 ## Interview angle
 
-- **60-second version**: "Chaos engineering is experimentally verifying resilience: define a measurable steady state, hypothesize it survives a specific failure, inject that failure with a controlled blast radius and an abort switch, and compare. Netflix's Chaos Monkey killed random prod instances in business hours — prod because staging can't represent prod, business hours because engineers are awake to learn cheaply; the Simian Army scaled the idea to latency injection, AZ kills (Chaos Gorilla) and region kills (Chaos Kong). Prerequisites first: observability, alerting, rollback — chaos verifies resilience, it doesn't create it."
+- **60-second version**: "Chaos engineering is experimentally verifying resilience: define a measurable steady state, hypothesize it survives a specific failure, inject that failure with a controlled blast radius and an abort switch, and compare. Netflix's Chaos Monkey killed random prod instances in business hours — prod because staging can't represent prod, business hours because engineers are awake to learn cheaply; the Simian Army scaled the idea to latency injection, AZ kills (Chaos Gorilla) and, later, region kills (Chaos Kong). Prerequisites first: observability, alerting, rollback — chaos verifies resilience, it doesn't create it."
 - Classic follow-ups: "Why production?" (fidelity); "Why is latency injection more dangerous than termination?" (partial degradation trips gray-failure paths clean kills never touch); "What's the first experiment you'd run here?" (smallest falsifiable one: kill one instance of a stateless service); "What do you need before starting?" (the prerequisites list).
 - Honest senior answer for small fleets: "at one replica, chaos-killing prod pods just measures MTTR — I'd run chaos in staging and spend the argument on a second replica for the services that deserve it."
 
@@ -143,8 +153,8 @@ Each stage earns trust for the next; skipping stages spends trust you haven't ea
 
 ## Sources
 
-- Netflix TechBlog: "The Netflix Simian Army" (2011) and "Chaos Monkey Released Into The Wild" (2012); ChAP and Chaos Kong posts for the later evolution.
+- Netflix TechBlog: "5 Lessons We've Learned Using AWS" (December 2010), "The Netflix Simian Army" (July 2011) and "Chaos Monkey Released Into The Wild" (July 2012); "FIT: Failure Injection Testing" (2014), "Chaos Engineering Upgraded" (2015) and ChAP posts for the later evolution.
 - "Principles of Chaos Engineering" — principlesofchaos.org (the community statement from the Netflix chaos team era).
 - Basiri et al., "Chaos Engineering", IEEE Software 2016; Rosenthal & Jones, *Chaos Engineering* (O'Reilly, 2020).
-- Google SRE Book, ch. 28 (DiRT-style disaster testing is Google's game-day lineage).
+- Google SRE Book, ch. 33 "Lessons Learned from Other Industries" (annual DiRT — Disaster Recovery Testing — drills, Google's game-day lineage) and ch. 28 ("Wheel of Misfortune" disaster role-play).
 - AWS Fault Injection Service and LitmusChaos documentation — the current tooling for cloud/K8s experiments.

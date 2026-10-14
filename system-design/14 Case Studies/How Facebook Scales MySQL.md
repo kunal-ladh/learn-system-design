@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: How Facebook serves billions of users on thousands of sharded MySQL instances with the TAO graph cache on top — the definitive counter to "MySQL doesn't scale".
 related: ["[[Why MySQL Does Scale]]", "[[Sharding]]", "[[Google Spanner Deep Dive]]", "[[Caching Strategies]]"]
 ---
@@ -43,7 +43,7 @@ The graph is [[Sharding|sharded]] into many **shards**, each assigned to a MySQL
 
 ### Layer 2: TAO, the graph-aware cache
 
-**TAO** ("The Associations and Objects", USENIX ATC 2013 paper) replaced direct memcache usage for the social graph. It is a write-through, read-through caching service ([[Caching Strategies]]) that speaks a graph API — `object_get`, `assoc_range` ("give me the latest N comments on this post") — rather than raw keys. Two cache tiers exist per region: many **followers** (which web servers hit) and a smaller **leader** tier per shard that coordinates: all writes for a shard flow through its leader, which writes through to MySQL and then sends invalidation/update messages to followers. This gives per-shard write serialization and keeps caches coherent without distributed locking. TAO absorbs the overwhelming majority of reads; MySQL sees only cache misses and writes. Consistency is deliberately modest: roughly eventual for most readers, read-your-own-writes for the writing user via their follower tier — not [[Consistency Models|linearizable]], by explicit design.
+**TAO** ("The Associations and Objects", USENIX ATC 2013 paper) replaced direct memcache usage for the social graph. It is a write-through, read-through caching service ([[Caching Strategies]]) that speaks a graph API — `object_get`, `assoc_range` ("give me the latest N comments on this post") — rather than raw keys. Two cache tiers exist per region: many **followers** (which web servers hit) and a smaller **leader** tier — one leader cache server per shard — that coordinates: all writes for a shard flow through its leader, which writes through to MySQL and then sends invalidation/update messages to followers. This gives per-shard write serialization and keeps caches coherent without distributed locking. TAO absorbs the overwhelming majority of reads; MySQL sees only cache misses and writes. Consistency is deliberately modest: roughly eventual for most readers, read-your-own-writes for the writing user via their follower tier — not [[Consistency Models|linearizable]], by explicit design.
 
 ### Layer 3: async cross-region replication
 
@@ -81,7 +81,7 @@ From the TAO paper (2013) and contemporaneous Facebook publications — dated, b
 | Cache hit rate cited for TAO followers | ~96%+ |
 | MyRocks space saving vs compressed InnoDB (reported ~2016–17) | ~50% |
 
-Current figures are not public; Meta's posts since then describe growth in fleet size and the MySQL 8.0 migration (2021) without refreshed request numbers.
+Current figures are not public; Meta's posts since then describe growth in fleet size, the MySQL 8.0 migration (2021) and the move to MySQL Raft (2023) without refreshed request numbers.
 
 ### MyRocks: changing the engine, not the system
 
@@ -105,7 +105,7 @@ Contrast deliberately with [[Google Spanner Deep Dive]]: Google *wanted* cross-s
 
 - **Pre-TAO memcache era:** web servers cached graph data in raw memcache with app-managed keys. Lists ("all likes on X") were cached as blobs, so one new like invalidated the whole list, and [[Cache Stampede and Thundering Herd|thundering herds]] followed popular invalidations. The "Scaling Memcache at Facebook" paper (NSDI 2013) documents the machinery (leases, pools) built to survive this; TAO was the structural fix for the graph workload.
 - **Hot shards:** celebrity objects concentrate load ([[Hot Partition Problem]]). TAO's follower tier absorbs read heat, and especially hot objects are handled with extra caching layers; write heat on one object remains fundamentally serialized at its shard leader.
-- **Replica lag anomalies:** async replication means remote regions run seconds behind under load; failover during lag risks losing acknowledged-but-unreplicated writes. Facebook invests heavily in binlog-based recovery tooling and semi-automated failover; [[Failover]] remains, as always, the dangerous part.
+- **Replica lag anomalies:** async replication means remote regions run seconds behind under load; failover during lag risks losing acknowledged-but-unreplicated writes. Facebook historically guarded the primary region with semi-synchronous replication to in-region log-only replicas ("logtailers") plus external promotion tooling; since 2023 (Meta's "Building and deploying MySQL Raft at Meta") a large portion of the fleet runs **MySQL Raft**, which moves replication and leader election into MySQL itself ([[Consensus and Raft]]) for faster, provably safe failover. Cross-region copies stay asynchronous, and [[Failover]] remains, as always, the dangerous part.
 - **Space growth:** compressed InnoDB still spent too many bytes per row at fleet scale — the economic forcing function behind MyRocks.
 
 ## Lessons you can reuse
@@ -135,7 +135,7 @@ Classic follow-ups: "Why not Cassandra/Spanner?" (operational maturity; the work
 > No single-node database "scales" to planet load — not MySQL, not Postgres, not anything. Facebook's point is that it doesn't need to: scaling concerns (partitioning, read offload, geo-distribution) are handled by layers above — sharding logic, TAO caching, async replication — while each MySQL node only does what single-node MySQL is excellent at: durable, transactional storage of one shard. The database is a unit of deployment, not the unit of scale.
 
 > [!question]- Q: What happens if a TAO shard's leader cache fails?
-> Writes for that shard stall or fail until a replacement leader takes over, because the leader serializes write-through and invalidation for the shard. Reads mostly survive — followers keep serving (possibly slightly stale) cached data, and misses can be routed to another leader or the DB. This is the standard trade of leader-per-partition designs: localized write unavailability during [[Failover]] in exchange for ordered, coherent invalidation the rest of the time.
+> Per the 2013 paper, TAO does not wait for a replacement: followers send their read misses directly to the database, and writes for that shard are rerouted to a random member of the leader tier, which performs the write-through and enqueues an asynchronous invalidation for the original leader to apply when it recovers. Followers keep serving (possibly slightly stale) cached data meanwhile. The cost is a short window of weaker coherence — the per-shard write serialization the leader normally provides is temporarily gone — repaired by the queued invalidations. This is the standard trade of leader-per-partition designs: keep serving during [[Failover]], accept briefly looser ordering, and make the repair path explicit.
 
 > [!question]- Q: A user in Mumbai writes a comment whose shard master is in a US region. Trace the write and the user's next read.
 > The write travels to the US master region: through local TAO to the shard's leader there, write-through to master MySQL, ack back. Async binlog replication carries it to the Mumbai replica over the next seconds; TAO machinery ensures the writing user's subsequent reads see their own comment (read-your-own-writes) even before the replica catches up. Other Mumbai users may not see the comment for a few seconds — accepted staleness, per [[PACELC]] choosing latency over consistency.
@@ -150,6 +150,6 @@ Classic follow-ups: "Why not Cassandra/Spanner?" (operational maturity; the work
 
 - Bronson et al., **"TAO: Facebook's Distributed Data Store for the Social Graph"**, USENIX ATC 2013 — the primary source for the cache architecture and 2013-era numbers.
 - Nishtala et al., **"Scaling Memcache at Facebook"**, NSDI 2013 — the pre-TAO caching machinery (leases, regional pools).
-- Meta Engineering blog — **"MyRocks: A space- and write-optimized MySQL database"** (2016) and **"Migrating Facebook to MySQL 8.0"** (2021).
+- Meta Engineering blog — **"MyRocks: A space- and write-optimized MySQL database"** (2016), **"Migrating Facebook to MySQL 8.0"** (2021) and **"Building and deploying MySQL Raft at Meta"** (May 2023).
 - MyRocks project documentation (myrocks.io) — LSM-on-MySQL specifics.
 - *Designing Data-Intensive Applications*, Kleppmann — Ch. 5 (replication), Ch. 6 (partitioning) for the general patterns TAO instantiates.

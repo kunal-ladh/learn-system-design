@@ -4,7 +4,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: What monoliths and microservices actually are, what each genuinely costs, and a decision framework that replaces the religious debate with organizational and technical criteria.
 related: ["[[Modular Monolith]]", "[[The Distributed Monolith Anti-Pattern]]", "[[Service Boundaries and Domain-Driven Design]]"]
 ---
@@ -205,7 +205,7 @@ Classic follow-ups:
 
 - James Lewis & Martin Fowler, "Microservices" (martinfowler.com, 2014) — the canonical definition.
 - Martin Fowler, "MonolithFirst" and "MicroservicePremium" (martinfowler.com, 2015).
-- Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021) — ch. 1 on what microservices are, ch. 3 on when to use them.
+- Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021) — ch. 1 on what microservices are and when to use them ("Should I Use Microservices?").
 - Sam Newman, *Monolith to Microservices* (O'Reilly, 2019).
 - Melvin Conway, "How Do Committees Invent?" (Datamation, 1968) — origin of Conway's law.
 - Frederick P. Brooks Jr., *The Mythical Man-Month* (Addison-Wesley, 1975) — coordination cost growing faster than headcount.

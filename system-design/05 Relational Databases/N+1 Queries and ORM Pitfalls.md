@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: The N+1 query shape, how ORM lazy loading hides it, the fixes (joins, batch fetch, projections), and the neighbouring ORM traps — chatty transactions, unbounded IN lists, entity-graph bloat.
 related: ["[[Database Indexes]]", "[[Connection Pooling]]", "[[Latency Numbers Every Engineer Should Know]]"]
 ---
@@ -15,7 +15,7 @@ An ORM maps rows to objects so well that database access disappears from view �
 
 ## Why this matters
 
-Each round trip to the database costs network latency plus parse/plan/execute overhead — call it 0.5–2 ms intra-VPC even for a trivial query ([[Latency Numbers Every Engineer Should Know]]). One query returning 100 rows: ~2 ms. One hundred and one queries: 100–200 ms, plus 101 borrow/return cycles against the [[Connection Pooling|connection pool]] and 101 units of database CPU on ceremony. The endpoint is now 50–100x slower *with perfectly indexed tables* — no `EXPLAIN` on any individual query will show a problem, which is exactly why N+1 survives code review and staging. It is probably the single most common database performance bug in production ORM applications.
+Each round trip to the database costs network latency plus parse/plan/execute overhead — call it ~1–2 ms intra-VPC even for a trivial query ([[Latency Numbers Every Engineer Should Know]]). One query returning 100 rows: ~2 ms. One hundred and one queries: 100–200 ms, plus 101 borrow/return cycles against the [[Connection Pooling|connection pool]] and 101 units of database CPU on ceremony. The endpoint is now 50–100x slower *with perfectly indexed tables* — no `EXPLAIN` on any individual query will show a problem, which is exactly why N+1 survives code review and staging. It is probably the single most common database performance bug in production ORM applications.
 
 ## How it works
 
@@ -57,7 +57,7 @@ JPA/Hibernate (like most ORMs) defaults collection associations (`@OneToMany`, `
 
 ### The fixes
 
-1. **Fetch the association in the same query — a join.** JPQL `JOIN FETCH` (`SELECT o FROM Order o JOIN FETCH o.items WHERE ...`) or an `@EntityGraph` on the repository method: one query, one round trip, ORM assembles the graph. Caveats: joining *multiple* collections multiplies rows (cartesian product; Hibernate refuses the worst cases with `MultipleBagFetchException`), and combining collection `JOIN FETCH` with pagination makes Hibernate paginate *in memory* (the infamous `HHH000104` warning) — a correctness-adjacent trap of its own.
+1. **Fetch the association in the same query — a join.** JPQL `JOIN FETCH` (`SELECT o FROM Order o JOIN FETCH o.items WHERE ...`) or an `@EntityGraph` on the repository method: one query, one round trip, ORM assembles the graph. Caveats: joining *multiple* collections multiplies rows (cartesian product; Hibernate refuses the worst cases with `MultipleBagFetchException`), and combining collection `JOIN FETCH` with pagination makes Hibernate paginate *in memory* (the infamous `HHH000104` warning in Hibernate 5; renumbered `HHH90003004` in Hibernate 6, which Spring Boot 3 ships) — a correctness-adjacent trap of its own. Hibernate 7.4 (2026, managed by Spring Boot 4.1) finally applies the limit in SQL via a subquery on every supported database except Sybase ASE, so the trap now bites on older versions only.
 2. **Batch fetching.** Hibernate `@BatchSize(size = 100)` or the global `hibernate.default_batch_fetch_size`: lazy loads coalesce into `SELECT ... WHERE order_id IN (?, ?, ..., ?)` — N+1 becomes 1 + N/100. Minimal code change, pagination-safe, and good enough for most cases; this is the pragmatic default fix.
 3. **Projections: stop loading entities you don't need.** If the endpoint needs three fields, select three fields into a DTO (JPQL constructor expression, interface projection, or plain SQL). No entities → no lazy proxies → no N+1 possible, plus less data moved and no accidental dirty-checking. For read-heavy list endpoints this is usually the *right* fix, not just a workaround — it's [[CQRS]] thinking at micro scale.
 
@@ -85,7 +85,7 @@ The three fixes side by side:
 
 | Fix | Queries issued | Best for | Watch out for |
 |---|---|---|---|
-| `JOIN FETCH` / `@EntityGraph` | 1 | detail views needing the real object graph | row multiplication with multiple collections; in-memory pagination (HHH000104) |
+| `JOIN FETCH` / `@EntityGraph` | 1 | detail views needing the real object graph | row multiplication with multiple collections; in-memory pagination (HHH000104) before Hibernate 7.4 |
 | `@BatchSize` / global batch fetch | 1 + N/batch | retrofitting existing lazy code cheaply | still loads full entities; batch size vs IN-list limits |
 | DTO projection | 1 | list/read endpoints — most endpoints | you give up entity features (dirty checking, lazy nav) — which is usually the point |
 
@@ -131,7 +131,7 @@ Classic probes: "how would you *detect* N+1 in production?" (latency linear in r
 > The loop triggers a lazy-loaded query per element: 1 query for N parents, then N child queries. Each round trip costs ~1 ms of network and overhead, so 200 parents means ~200 ms of accumulated trips — while no individual query is slow, which is why the slow-query log is empty. The database is healthy; the query *count* is the bug. Show them the SQL log with a counter: the fix is one join-fetched or batched query, or a projection that selects exactly the needed columns.
 
 > [!question]- Q: What happens if you "fix" an N+1 on a paginated endpoint with JOIN FETCH on a collection?
-> Hibernate cannot apply LIMIT/OFFSET to the SQL, because the join multiplies rows (one parent appears once per child) and row-level LIMIT would truncate mid-parent. It logs HHH000104, fetches the *entire* result set, and paginates in memory — correct output, but memory and latency now scale with the whole table. Correct fixes: two queries (page of parent ids, then fetch children for those ids), or `@BatchSize`, or a DTO projection with explicit pagination-safe SQL.
+> Hibernate cannot apply LIMIT/OFFSET to the SQL, because the join multiplies rows (one parent appears once per child) and row-level LIMIT would truncate mid-parent. Before Hibernate 7.4 it logs HHH000104, fetches the *entire* result set, and paginates in memory — correct output, but memory and latency now scale with the whole table. Correct fixes: two queries (page of parent ids, then fetch children for those ids), or `@BatchSize`, or a DTO projection with explicit pagination-safe SQL.
 
 > [!question]- Q: An endpoint's p99 degrades from 80 ms to 4 s during month-end, and the connection pool alarms fire — but the DB dashboard is calm. The handler loads a user's accounts and, per account, calls a balance API, all inside one transaction. Diagnose.
 > Two compounding chattiness bugs. Per-account remote calls inside the loop scale wall-clock time with account count — month-end users have more activity, so N grew. Because it's all one transaction, a DB connection is held for the full duration, so hold time exploded and the pool exhausted ([[Connection Pooling]]) — neighbours then starve, while the DB itself idles. Fix: move remote calls outside the transaction, batch them concurrently with a bounded executor and timeout, and make the DB work a single projection query.

@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: Redis's in-memory append-only log with consumer groups — XADD/XREADGROUP/PEL mechanics, its real durability and scaling limits, and what to verify before moving SQS workloads onto it.
 related: ["[[Redis Internals]]", "[[Redis Cluster and Sentinel]]", "[[SQS and SNS]]", "[[Kafka Architecture]]", "[[Choosing a Message Broker]]"]
 ---
@@ -22,7 +22,7 @@ Redis already had two messaging shapes, both broken for real work. **Pub/Sub** i
 - **Persistent-ish pub/sub** — late or restarted consumers read from where they left off, unlike Redis Pub/Sub ([[Redis Beyond Caching]]).
 - **Competing consumers with redelivery** — groups + PEL + claiming give the receive/ack loop SQS gives you ([[Delivery Semantics]]).
 - **Bounded replay** — any consumer can re-read from any ID still in the stream; new consumers can bootstrap from retained history ([[Message Queues vs Event Logs]]).
-- **Very low latency, trivial ops increment** — microsecond-to-millisecond delivery from infrastructure you already operate.
+- **Very low latency, trivial ops increment** — sub-millisecond-to-millisecond delivery (a same-DC Redis round trip, ~0.2–1 ms) from infrastructure you already operate.
 - **Cheap fan-out** — multiple groups on one stream each see every entry, without SNS-style topology.
 
 ## How it works
@@ -43,7 +43,7 @@ When `XREADGROUP` hands entry E to consumer C, E goes into the group's **PEL (pe
 Recovery is explicit:
 
 - **`XPENDING`** — inspect: which entries, which consumer, idle how long, delivered how many times.
-- **`XCLAIM`** / **`XAUTOCLAIM`** (6.2+) — transfer ownership of entries idle longer than a threshold to a live consumer, incrementing their delivery counter. `XAUTOCLAIM` iterates the PEL for you; every consumer typically runs a periodic "claim anything idle > N seconds" sweep.
+- **`XCLAIM`** / **`XAUTOCLAIM`** (6.2+) — transfer ownership of entries idle longer than a threshold to a live consumer, incrementing their delivery counter. `XAUTOCLAIM` iterates the PEL for you; every consumer typically runs a periodic "claim anything idle > N seconds" sweep (Redis 8.4+ `XREADGROUP ... CLAIM` folds that sweep into the read itself, and 8.8 adds `XNACK` to release an entry for immediate redelivery).
 - A delivery counter that keeps climbing is your poison-message signal — there is **no built-in DLQ**; you check the counter and `XADD` the entry to a dead-letter stream yourself ([[Dead Letter Queues and Poison Messages]]).
 
 ```mermaid
@@ -63,7 +63,7 @@ sequenceDiagram
 
 ### Trimming: MAXLEN and MINID
 
-Nothing expires by itself; unbounded `XADD` eventually eats all memory. You cap streams with `XADD ... MAXLEN ~ 1000000` (the `~` makes trimming approximate — whole macro-nodes — and much cheaper) or `XTRIM` with `MAXLEN`/`MINID`. Critically, **trimming ignores consumer groups**: entries are evicted by count/ID even if the slowest group never read them — the same silent-loss race as Kafka retention vs lag ([[Kafka Operations]]), with a much smaller window because RAM is the disk.
+Nothing expires by itself; unbounded `XADD` eventually eats all memory. You cap streams with `XADD ... MAXLEN ~ 1000000` (the `~` makes trimming approximate — whole macro-nodes — and much cheaper) or `XTRIM` with `MAXLEN`/`MINID`. Critically, **trimming ignores consumer groups by default**: entries are evicted by count/ID even if the slowest group never read them — the same silent-loss race as Kafka retention vs lag ([[Kafka Operations]]), with a much smaller window because RAM is the disk. (Redis 8.2, 2025, added an `ACKED` trim option and `XACKDEL` that respect groups; Valkey gains them only in 9.2, at release candidate as of Sep 2026 — check whether your Redis/ElastiCache engine version has them.)
 
 ### Monitoring it — the commands that replace CloudWatch
 
@@ -71,13 +71,13 @@ Nothing here is emitted for free; you export it yourself (e.g., via a Prometheus
 
 - **`XLEN stream`** — stream length; with MAXLEN trimming this mostly confirms the cap.
 - **`XINFO STREAM stream`** — first/last entry IDs, length, groups count; `last-generated-id` vs consumers' progress is your lag numerator.
-- **`XINFO GROUPS stream`** — per group: `last-delivered-id` (consumption frontier), `pending` (PEL size), `lag` (entries not yet delivered, Redis 7.0+). **PEL size per group is your consumer-lag equivalent** — alert on growth trend.
+- **`XINFO GROUPS stream`** — per group: `last-delivered-id` (consumption frontier), `pending` (PEL size), `lag` (entries not yet delivered, Redis 7.0+). **`lag` is your consumer-lag equivalent; PEL size is in-flight work** — alert on the growth trend of both.
 - **`XPENDING stream group`** — the drill-down: per-consumer pending counts, min/max idle times, delivery counters (poison-message detection).
 - Plus ordinary Redis vitals: memory used vs maxmemory, and replication lag — because here they are *broker durability* metrics, not cache metrics.
 
 ### What it is NOT — the honest limits
 
-**Durability is Redis durability.** Redis acknowledges `XADD` once it's in memory. Persistence is [[Redis Internals|RDB or AOF]]: RDB loses everything since the last snapshot; AOF with `everysec` (the common setting) loses up to ~1 second of acked writes on crash; `appendfsync always` survives but costs most of Redis's speed. Replication to a replica is asynchronous, so [[Failover]] (Sentinel or Cluster) can lose acked-but-unreplicated entries. Compare: Kafka `acks=all`/min.insync=2 means an acked write is on two brokers' disks before the producer proceeds. **If losing an acked message is unacceptable, Redis Streams alone is the wrong primitive** — in fintech terms: fine for notification jobs, not fine as the only record of a money movement.
+**Durability is Redis durability.** Redis acknowledges `XADD` once it's in memory. Persistence is [[Redis Internals|RDB or AOF]]: RDB loses everything since the last snapshot; AOF with `everysec` (the common setting) loses up to ~1 second of acked writes on crash; `appendfsync always` survives but costs most of Redis's speed. Replication to a replica is asynchronous, so [[Failover]] (Sentinel or Cluster) can lose acked-but-unreplicated entries. Compare: Kafka `acks=all`/min.insync=2 means an acked write is on at least two brokers before the producer proceeds. **If losing an acked message is unacceptable, Redis Streams alone is the wrong primitive** — in fintech terms: fine for notification jobs, not fine as the only record of a money movement.
 
 **One stream = one key = one shard.** [[Redis Cluster and Sentinel|Redis Cluster]] shards by key, so a stream never spans nodes: its throughput and memory ceiling is one shard, and a busy stream is a textbook [[Hot Key Problem|hot key]]. There is no partition concept, no key-based fan-out, and no equivalent of Kafka's partition rebalancing (see [[Consumer Groups and Rebalancing]]). Want partitions? You build them: N streams (`orders:0`…`orders:N-1`), client-side hashing, per-stream groups — i.e., you re-implement a slice of Kafka, by hand, including resharding pain ([[Sharding]]).
 
@@ -106,7 +106,7 @@ Nothing here is emitted for free; you export it yourself (e.g., via a Prometheus
 - **Must-not-lose-acked-messages workloads** (ledger postings, payment instructions as sole record) — durability ceiling is disqualifying.
 - **Long retention or large backlogs** — days of replay or multi-GB queues belong on disk-based logs ([[Kafka Architecture]]) or SQS's 14 days.
 - **Throughput beyond one shard** — if a single stream can't carry peak load, you're signing up to hand-build partitioning; at that point Kafka/MSK is less work, not more.
-- **When you need broker features** — delays, per-message TTL, DLQ, FIFO-with-dedup: SQS has them built; Streams makes you their maintainer.
+- **When you need broker features** — delays, per-message TTL, DLQ, FIFO-with-dedup: SQS has them built; Streams makes you their maintainer (Redis 8.6 added producer-side dedup via `XADD IDMP`, but not the rest).
 - **Teams without Redis operational depth** — "it's just Redis" is only cheap if someone already owns Redis persistence, failover, and memory management properly.
 
 ## In your stack
@@ -133,10 +133,10 @@ Classic probes:
 ## Check yourself
 
 > [!question]- Q: Explain the journey of one entry through XADD → XREADGROUP → crash → recovery → XACK.
-> XADD appends it with ID ms-seq. A consumer in group g calls XREADGROUP with `>`; the entry is delivered and recorded in g's PEL under that consumer (delivery count 1). The consumer crashes pre-XACK: the entry sits pending indefinitely. Another consumer's periodic XAUTOCLAIM (idle > threshold) takes ownership, delivery count 2, reprocesses, XACKs — removing it from the PEL. The entry itself stays in the stream until trimmed; ack ≠ delete, unlike SQS.
+> XADD appends it with ID ms-seq. A consumer in group g calls XREADGROUP with `>`; the entry is delivered and recorded in g's PEL under that consumer (delivery count 1). The consumer crashes pre-XACK: the entry sits pending indefinitely. Another consumer's periodic XAUTOCLAIM (idle > threshold) takes ownership, delivery count 2, reprocesses, XACKs — removing it from the PEL. The entry itself stays in the stream until trimmed; ack ≠ delete, unlike SQS (unless you use 8.2's `XACKDEL`).
 
 > [!question]- Q: What happens to acked-but-recent XADDs if the Redis master dies, under AOF everysec with one async replica?
-> Up to ~1 second of writes may be missing from the AOF if the node restarts from its own disk; if Sentinel instead promotes the replica, everything not yet replicated (async, so an unbounded-but-usually-small window) is lost — even though producers got successful replies. This is the structural gap vs Kafka acks=all, where the ack itself waits for replication. WAIT narrows but doesn't close it (WAIT confirms replica receipt, and still isn't a fsync guarantee on the replica).
+> Up to ~1 second of writes may be missing from the AOF if the node restarts from its own disk; if Sentinel instead promotes the replica, everything not yet replicated (async, so an unbounded-but-usually-small window) is lost — even though producers got successful replies. This is the structural gap vs Kafka acks=all, where the ack itself waits for replication. WAIT narrows but doesn't close it (WAIT confirms replica receipt, not fsync; WAITAOF, Redis 7.2+, adds the fsync half at further latency cost).
 
 > [!question]- Q: Why does a single very busy stream threaten unrelated Redis keys, and what's the mitigation?
 > The stream is one key, pinned to one shard, and Redis processes that shard's commands on effectively one thread — heavy XADD/XREADGROUP traffic consumes the thread and starves other keys on the shard (latency spikes on your cache). Mitigations: dedicated Redis instance/cluster for streams, and if one stream's volume is itself too much, client-side partitioning across N streams — accepting you now maintain a mini-Kafka.

@@ -4,7 +4,7 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: Kills the "MySQL doesn't scale" myth — Facebook, YouTube, and Shopify run some of the largest OLTP footprints on earth on sharded MySQL, with scaling layered on top by infrastructure, not inside the database.
 related: ["[[Sharding]]", "[[How Facebook Scales MySQL]]", "[[Replication]]", "[[Database Scaling Patterns]]"]
 ---
@@ -27,16 +27,16 @@ A small, boring, battle-tested core (MySQL/InnoDB) used as a **reliable storage 
 |---|---|---|---|---|
 | Storage brick | Durable single-node OLTP | MySQL (InnoDB, later MyRocks) | MySQL | MySQL |
 | Sharding | Split data across bricks ([[Sharding]]) | Application-level, by user ID, thousands of shards | **Vitess** middleware | **Pods**: shop-sharded, full stacks |
-| Caching | Absorb read volume ([[Caching Strategies]]) | memcached fleet + **TAO** graph cache | Vitess query cache + app caches | App caches / Redis-tier |
+| Caching | Absorb read volume ([[Caching Strategies]]) | memcached fleet + **TAO** graph cache | App-level memcached (Vitess caches query *plans*, not results) | App caches / Redis-tier |
 | Replication | Survive failures, serve regions ([[Replication]]) | Async/semi-sync, cross-region replicas | MySQL replication managed by Vitess | Per-pod replicas and failover |
 
 ### Facebook: sharded MySQL + TAO
 
-Facebook's social graph lives in MySQL sharded by ID across thousands of instances — but almost no application code talks to MySQL. Reads hit **TAO** (The Associations and Objects — their 2013 paper), a write-through graph-aware cache layered over memcached-style infrastructure that serves the overwhelming majority of reads; MySQL is the durable system of record underneath. Facebook also invested heavily in the brick itself (their own MySQL branch; **MyRocks**, an LSM-based storage engine ([[B-Tree vs LSM-Tree]]) that roughly halved storage vs compressed InnoDB for their workload) and in failover tooling. The division of labour is total: MySQL does per-shard durability and transactions; distribution, caching, and graph semantics are infrastructure. Full story: [[How Facebook Scales MySQL]].
+Facebook's social graph lives in MySQL sharded by ID across thousands of instances — but almost no application code talks to MySQL. Reads hit **TAO** (The Associations and Objects — their 2013 paper), a write-through, graph-aware cache tier that replaced the earlier memcache lookaside layer for graph data and serves the overwhelming majority of reads; MySQL is the durable system of record underneath. Facebook also invested heavily in the brick itself (their own MySQL branch; **MyRocks**, an LSM-based storage engine ([[B-Tree vs LSM-Tree]]) that roughly halved storage vs compressed InnoDB for their workload) and in failover tooling. The division of labour is total: MySQL does per-shard durability and transactions; distribution, caching, and graph semantics are infrastructure. Full story: [[How Facebook Scales MySQL]].
 
 ### YouTube: Vitess — the sharding middleware that became infrastructure
 
-YouTube hit MySQL's single-box and operational limits during hyper-growth (~2010) and built **Vitess**: a proxy layer (`vtgate`) that speaks the MySQL protocol to applications, routes queries by shard key (vindexes), manages connection pooling (killing MySQL's thundering-herd connection problem — [[Connection Pooling]]), and automates [[Rebalancing Partitions|resharding]] via VReplication (backfill + change-replay + cutover). Applications see "one giant MySQL"; Vitess sees thousands of shards. It was open-sourced and is now a **CNCF-graduated project** (graduated 2019) running at Slack, Cash App (Square), HubSpot, and others, and it is the engine inside PlanetScale's managed MySQL service — the strongest possible evidence that "MySQL at planet scale" is a solved, packaged problem rather than a Facebook-only art. (GitHub, notably, scales MySQL *without* Vitess: their own application-level functional + horizontal partitioning, with `orchestrator` for failover and `freno` for replication-lag-aware throttling — a reminder that the layering pattern matters more than any one tool.)
+YouTube hit MySQL's single-box and operational limits during hyper-growth (~2010) and built **Vitess**: a proxy layer (`vtgate`) that speaks the MySQL protocol to applications, routes queries by shard key (vindexes), manages connection pooling (killing MySQL's thundering-herd connection problem — [[Connection Pooling]]), and automates [[Rebalancing Partitions|resharding]] via VReplication (backfill + change-replay + cutover). Applications see "one giant MySQL"; Vitess sees thousands of shards. It was open-sourced and is now a **CNCF-graduated project** (graduated 2019) running at Slack, Cash App (Square), HubSpot, and others (as of 2026), and it is the engine inside PlanetScale's managed MySQL service — the strongest possible evidence that "MySQL at planet scale" is a solved, packaged problem rather than a Facebook-only art. (GitHub, notably, scales MySQL mainly through its own application-level functional partitioning — using Vitess at first only to move table groups between clusters, per its 2021 post, and by its 2023 MySQL 8.0 post also for horizontally sharded clusters where a domain outgrew one primary — with `orchestrator` for failover and `freno` for replication-lag-aware throttling — a reminder that the layering pattern matters more than any one tool.)
 
 ```mermaid
 graph TD
@@ -59,7 +59,7 @@ Shopify shards by shop into **pods** — self-contained units (MySQL + Redis + m
 
 ### The tooling timeline that closed the gap
 
-The myth froze in people's heads around 2008; here is what changed underneath it. Dates are MySQL GA releases:
+The myth froze in people's heads around 2008; here is what changed underneath it. Dates are MySQL GA releases (8.0 itself reached end of life in April 2026; the supported LTS lines are now 8.4 and 9.7):
 
 | Era | What you had | What it meant operationally |
 |---|---|---|

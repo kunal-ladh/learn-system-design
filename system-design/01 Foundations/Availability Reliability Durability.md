@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Precise definitions of availability, reliability, and durability; the nines table computed correctly; series vs redundant availability math; and why S3 can promise 11 nines of durability but only 4 of availability.
 related: ["[[SLA SLO SLI and Error Budgets]]", "[[Replication]]", "[[How S3 Works]]"]
 ---
@@ -84,7 +84,7 @@ graph LR
 
 ### Durability vs availability — the S3 lesson
 
-The sharpest illustration that these are different promises: **Amazon S3 is designed for 99.999999999% (11 nines) durability of objects, but offers ~99.99% availability design / 99.9% SLA** (S3 Standard). Eleven nines durability means statistically ~1 object lost per 10 million objects per 10,000 years — the arithmetic being a per-object annual loss probability of 10⁻¹¹ applied to 10⁷ objects, giving an expected 10⁻⁴ losses per year, i.e. one every ten thousand years — achieved by [[How S3 Works|erasure-coding each object across devices in ≥3 AZs]]. Yet on any given day S3 can be unreachable for minutes without breaking that promise: **your data exists; you just can't reach it right now.**
+The sharpest illustration that these are different promises: **Amazon S3 is designed for 99.999999999% (11 nines) durability of objects, but offers ~99.99% availability design / 99.9% SLA** (S3 Standard, as of 2026). Eleven nines durability means statistically ~1 object lost per 10 million objects per 10,000 years — the arithmetic being a per-object annual loss probability of 10⁻¹¹ applied to 10⁷ objects, giving an expected 10⁻⁴ losses per year, i.e. one every ten thousand years — achieved by [[How S3 Works|erasure-coding each object across devices in ≥3 AZs]]. Yet on any given day S3 can be unreachable for minutes without breaking that promise: **your data exists; you just can't reach it right now.**
 
 The decoupling works both ways:
 
@@ -135,7 +135,7 @@ That last claim is an identity, not a rule of thumb. Since A = M / (M + R), halv
 - Services pinned at 1 replica make the redundancy formula explicit: N = 1, so there is no (1 − A)ᴺ term at all — availability is just that pod × its node × its AZ. Deploys are the part people state too broadly: a surge-then-terminate rolling update can be gapless even at one replica ([[Graceful Shutdown and Deployment Safety]]), so the real exposure is **unplanned** loss — eviction, OOM kill, node drain, AZ event — where nothing covers the gap and MTTR is "how long a new pod takes to become ready". The honest statement is "this service targets ~99.5–99.9%, by design, for cost", which is fine *if* chosen per service; a 1-replica service sitting synchronously in a money-movement path donates its entire ceiling to the whole flow by series math.
 - Your chain through CloudFront → ALB → Kong → service → Mongo is five components in series, and the product is worth computing once rather than arguing about. Taking illustrative but plausible figures — CloudFront 99.99%, ALB 99.99%, Kong 99.95%, the service 99.9%, Mongo 99.95% — the product is 0.9999 × 0.9999 × 0.9995 × 0.999 × 0.9995 ≈ **99.78%**, about **19.3 hours a year**, before anyone deploys anything. Now add one synchronous call to a downstream 99.9% service: the product falls to ≈ **99.68%**, about **28.0 hours a year**. That single hop cost **8.7 hours annually** — the 0.1% × 8,760 h rule of thumb landing exactly where the formula predicts.
 - Making that same downstream call asynchronous — publish to SQS, let a consumer do the work — removes it from the series product entirely and the chain returns to ~99.78%. The dependency now donates *staleness* instead of *unavailability*. For anything that does not have to be resolved inside the user's request — notifications, downstream KYC propagation, analytics writes — this is the cheapest availability in the catalogue ([[Why Async Messaging Exists]], [[The Outbox Pattern]]).
-- MongoDB replica sets buy both durability (majority write concern = data on 2+ nodes before ack) and availability (automatic [[Failover|primary election]]) — but only if you *use* `w:majority` for ledger-class writes; `w:1` trades durability back for latency silently ([[MongoDB Architecture]], [[Replication]]).
+- MongoDB replica sets buy both durability (majority write concern = data on 2+ nodes before ack) and availability (automatic [[Failover|primary election]]) — but only if ledger-class writes actually run at `w:majority` (the implicit default since MongoDB 5.0, except in replica sets with an arbiter where data-bearing voters do not exceed the voting majority — there it is `w:1`); a `w:1` override in a connection string or driver config trades durability back for latency silently ([[MongoDB Architecture]], [[Replication]]).
 - Durability tiering you already live: Redis = available, not durable (cache only — anything that must survive goes to Mongo); S3 for documents/KYC artifacts = durable, with availability handled by retry logic; RBI audit expectations push ledger data to the top durability tier with immutable/backup copies ([[Disaster Recovery]]).
 
 ### Quick reference — composition formulas
@@ -177,6 +177,6 @@ That last claim is an identity, not a rule of thumb. Since A = M / (M + R), halv
 ## Sources
 
 - *Designing Data-Intensive Applications*, Kleppmann — ch. 1 (reliability definitions, fault vs failure) and ch. 5 (replication's role in durability and availability).
-- Google SRE Book (O'Reilly, 2016) — "Embracing Risk": availability tables, the cost-per-nine argument, MTBF/MTTR framing.
+- Google SRE Book (O'Reilly, 2016) — ch. 3 "Embracing Risk": time- vs request-based availability and the cost-per-nine argument; Appendix A: the availability table; ch. 1 frames reliability as a function of MTTF and MTTR.
 - AWS S3 official documentation & FAQs — the 11-nines durability design statement, S3 Standard availability design (99.99%) and SLA (99.9%); mechanism detail in [[How S3 Works]].
 - AWS Builders' Library — "Static stability" and related articles on correlated failure and multi-AZ design.

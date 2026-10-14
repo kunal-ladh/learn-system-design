@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: What CAP actually states — during a network partition you must choose between availability and linearizable consistency — and why "pick 2 of 3" is a misreading.
 related: ["[[PACELC]]", "[[Consistency Models]]", "[[Network Partitions and Timeouts]]", "[[Replication]]"]
 ---
@@ -68,7 +68,7 @@ Gilbert and Lynch's argument is short enough to carry in your head, and holding 
 
 The structure of the argument is what matters: the impossibility comes from **information, not implementation**. It is not that engineers have failed to build the clever system; it is that the node in G2 does not possess the fact it would need, and no code can conjure it. This is the same shape as the Two Generals argument in [[Exactly-Once Delivery Is a Lie]] — both are theorems about what a node can *know* when messages are lost.
 
-Two corollaries fall straight out. First, **the proof needs only one lost message**, so "we have redundant links" changes probability, not possibility. Second, the proof says nothing about how *long* the partition lasts, which is why the only real levers are the detection timeout and what you do in partition mode — not avoidance.
+Two corollaries fall straight out. First, **the proof needs no exotic fault — only the messages around one write and one read lost**, so "we have redundant links" changes probability, not possibility. Second, the proof says nothing about how *long* the partition lasts, which is why the only real levers are the detection timeout and what you do in partition mode — not avoidance.
 
 ### The three phases of a partition
 
@@ -122,7 +122,7 @@ The diagnostic move is to stop asking "is the service up?" and start asking **"u
 - SQS and Kafka don't escape CAP — they make the broker someone else's CP/AP problem and give you at-least-once delivery as the interface; see [[Delivery Semantics]].
 - Your timeout settings are CAP decisions you have already made without calling them that. Every client timeout, every readiness probe period, every Mongo `serverSelectionTimeoutMS` is a rule for *how long we tolerate silence before declaring a partition* — and declaring one early is choosing availability-affecting behaviour over waiting. Reviewing those numbers as a set, rather than one service at a time, is more valuable than any amount of CAP vocabulary.
 - A sharp consequence of 1-replica services: a partition that isolates one node takes *that service* out entirely, regardless of how your databases behave. The database's CP/AP posture only matters for data correctness; your service-tier availability during a partition is decided by replica count and placement, which is a separate and currently deliberate cost trade ([[Bulkheads and Isolation]]).
-- Where the CP choice is most likely to bite you in practice is not the database but the **gateway and IAM path**: if Kong cannot reach the central IAM service to validate a token, every downstream request fails even though the downstream services are healthy. That is a CAP decision about *authentication* — fail closed — and it is the right one for money movement, but it means IAM's availability is a ceiling on everything ([[Designing an IAM Service]]).
+- Where the CP choice is most likely to bite you in practice is not the database but the **gateway and IAM path**: if Kong must reach the central IAM service to validate a token — introspection, a revocation check, or a signing-key fetch it cannot serve from cache — and cannot, every downstream request fails even though the downstream services are healthy. That is a CAP decision about *authentication* — fail closed — and it is the right one for money movement, but it means IAM's availability is a ceiling on everything ([[Designing an IAM Service]]).
 
 ## Interview angle
 

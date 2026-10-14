@@ -4,7 +4,7 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: The four NoSQL families — key-value, document, wide-column, graph — what data shape and access pattern each models, and what "NoSQL" actually meant.
 related: ["[[Choosing a Database]]", "[[MongoDB Architecture]]", "[[Cassandra and Wide-Column Stores]]", "[[Normalization vs Denormalization]]"]
 ---
@@ -132,7 +132,7 @@ The fair verdict: NoSQL delivered **horizontal scale as a design property**, the
 **The application becomes the schema registry.** There is no `CREATE TABLE`, so the only authoritative statement of what a `User` document contains is the code that deserializes it. When one collection is read by four services, there are four partial, privately-maintained definitions, and they drift. Nobody can answer "what fields does a KYC case have?" without grepping. Two concrete MongoDB consequences, both of which produce *successful queries with wrong results* — the worst failure shape there is:
 
 - **Missing is not false.** A query `{ isKycVerified: false }` matches documents where the field is explicitly `false`, and **not** documents where the field is absent. Ship a new boolean in release 12, run the "users not yet verified" report, and it silently excludes every user created before release 12. The correct form is `{ isKycVerified: { $ne: true } }`. Note the matching asymmetry that catches people the other way round: `{ field: null }` *does* match both explicit null and missing.
-- **Type drift.** The v1 service wrote `amount` as a string, the v2 service writes it as a number. BSON orders values across types, so `{ amount: { $gt: 1000 } }` quietly skips every string-typed document. No error, no warning, a shorter result set.
+- **Type drift.** The v1 service wrote `amount` as a string, the v2 service writes it as a number. MongoDB comparison operators apply *type bracketing* — `$gt` with a numeric operand only matches numeric values — so `{ amount: { $gt: 1000 } }` quietly skips every string-typed document. No error, no warning, a shorter result set.
 
 **Migrations become code you own forever.** The three options and their real costs:
 

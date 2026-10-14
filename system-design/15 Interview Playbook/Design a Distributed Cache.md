@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Building a mini Redis Cluster from first principles — consistent hashing with virtual nodes, per-shard async replication, LRU eviction, smart clients, gossip membership, and hot keys.
 related: ["[[The System Design Interview Framework]]", "[[Consistent Hashing]]", "[[Redis Cluster and Sentinel]]", "[[Cache Eviction Policies]]"]
 ---
@@ -43,9 +43,9 @@ graph TD
     N1 -->|"async replication"| R1["Replica of 1"]
     N2 -->|"async replication"| R2["Replica of 2"]
     N3 -->|"async replication"| R3["Replica of 3"]
-    N1 ---|gossip| N2
-    N2 ---|gossip| N3
-    N3 ---|gossip| N1
+    N1 ---|"gossip"| N2
+    N2 ---|"gossip"| N3
+    N3 ---|"gossip"| N1
     A -.->|"miss then fill"| DB["Backing database"]
 ```
 
@@ -62,7 +62,7 @@ graph TD
 
 Everything from [[Consistent Hashing]] applies verbatim — this is that note deployed:
 
-- Naive `hash(key) mod N` remaps ~(N−1)/N of all keys when N changes — a cluster-wide cache wipe per scaling event, and the +125K/s DB-load math above, multiplied by every shard at once ([[Cache Stampede and Thundering Herd]] by your own hand).
+- Naive `hash(key) mod N` remaps ~N/(N+1) of all keys when N grows to N+1 — a cluster-wide cache wipe per scaling event, and the +125K/s DB-load math above, multiplied by every shard at once ([[Cache Stampede and Thundering Herd]] by your own hand).
 - The **ring**: hash nodes and keys into the same space; a key belongs to the first node clockwise. Adding a node steals only ~1/N of the keyspace — the rest of the cluster is untouched.
 - **Virtual nodes** (each physical node appears at ~100–500 ring positions): smooths the variance of random placement (few physical nodes = wildly unequal arcs), spreads a dead node's load across *all* survivors instead of dumping it on one clockwise neighbor, and lets heterogeneous hardware take proportional vnode counts. Redis Cluster achieves the same ends with 16,384 fixed **hash slots** instead of a ring — slots are explicit and make manual rebalancing/migration first-class ([[Redis Cluster and Sentinel]]); mention both and note they solve the identical placement problem.
 - Rebalancing on scale-out: the new node's slots/arcs migrate key-by-key in the background ([[Rebalancing Partitions]]); during migration both nodes answer with redirects for in-flight keys (Redis's ASK/MOVED mechanic is the production reference). For a pure cache there's a lazy alternative — let stolen ranges simply miss-and-refill — trading a temporary hit-rate dip for zero migration machinery; name the trade.
@@ -167,7 +167,7 @@ No central coordinator — the nodes govern themselves ([[Redis Cluster and Sent
 ## Sources
 
 - Redis Cluster specification and Redis documentation (cluster bus, gossip, MOVED/ASK, approximated LRU, maxmemory policies) — the production system this design mirrors.
-- Alex Xu, *System Design Interview Vol. 2*, chapter "Distributed Message Queue"-adjacent patterns and Vol. 1 cache chapters; "Design a distributed cache" appears across both volumes' framework examples.
+- Alex Xu, *System Design Interview Vol. 1*, chapters "Design Consistent Hashing" and "Design a Key-Value Store" — the placement and replication building blocks (neither volume has a dedicated distributed-cache chapter).
 - Karger et al., "Consistent Hashing and Random Trees" (1997) — the original ring paper behind [[Consistent Hashing]].
 - DeCandia et al., "Dynamo: Amazon's Highly Available Key-Value Store" (SOSP 2007) — gossip membership and the AP design stance; see [[The Dynamo Paper]].
 - *Designing Data-Intensive Applications* (Kleppmann), ch. 5–6 — replication modes and partitioning foundations.

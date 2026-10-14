@@ -4,7 +4,7 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: A decision framework for picking a datastore — data shape, read/write ratio, consistency, scale horizon, query flexibility, ops budget, team skill — plus the boring-technology principle and the real costs of polyglot persistence.
 related: ["[[NoSQL Taxonomy]]", "[[CAP Theorem]]", "[[Time Series and Analytics Stores]]", "[[MongoDB Architecture]]"]
 ---
@@ -104,14 +104,6 @@ Question 4 asks for the *credible* curve rather than the comfortable one because
 
 Budget that before choosing, not after. "We can migrate later" is true, and it is a quarters-scale commitment of the same engineers who would otherwise be shipping product — see [[Strangler Fig Migration]] for the pattern and [[Discord Message Storage Evolution]] for a team that did it twice.
 
-### Anti-patterns worth naming
-
-- **Resume-driven choice** — the inverse of boring technology.
-- **Scale cosplay** — adopting planet-scale machinery at startup scale; you inherit Google's costs without Google's traffic.
-- **One database to rule them all** — forcing analytics onto the OLTP primary or queues into Cassandra because "we already have it" ([[Time Series and Analytics Stores]], tombstone queues).
-- **Benchmark shopping** — vendor benchmarks measure the vendor's workload; only your access pattern on your data counts.
-- **Deciding by CAP label alone** — CAP is one axis of several, and most products sit in configurable middles ([[PACELC]] is the more useful lens).
-
 ### A worked example of the framework
 
 "Store support tickets: agents search by customer, status, date and free text; ~50K tickets/month; strong consistency unnecessary beyond read-your-writes; 5-person team already running MongoDB and MySQL."
@@ -124,6 +116,16 @@ Budget that before choosing, not after. "We can migrate later" is true, and it i
 6/7. Ops and skill: team runs MongoDB and MySQL — either wins over anything new.
 
 Answer: MongoDB or MySQL, whichever the owning team knows better; revisit *only* when a measured limit appears. Most real decisions deflate exactly like this — the framework's main output is permission to be boring.
+
+## Common misconceptions
+
+### Anti-patterns worth naming
+
+- **Resume-driven choice** — the inverse of boring technology.
+- **Scale cosplay** — adopting planet-scale machinery at startup scale; you inherit Google's costs without Google's traffic.
+- **One database to rule them all** — forcing analytics onto the OLTP primary or queues into Cassandra because "we already have it" ([[Time Series and Analytics Stores]], tombstone queues).
+- **Benchmark shopping** — vendor benchmarks measure the vendor's workload; only your access pattern on your data counts.
+- **Deciding by CAP label alone** — CAP is one axis of several, and most products sit in configurable middles ([[PACELC]] is the more useful lens).
 
 ### Red flags in a database proposal
 

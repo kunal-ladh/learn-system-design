@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: What scalability actually means — describing load with concrete parameters, finding the current bottleneck, and why systems are rearchitected rather than merely enlarged as load grows.
 related: ["[[Vertical vs Horizontal Scaling]]", "[[Back of the Envelope Estimation]]", "[[Twitter Timeline Design]]"]
 ---
@@ -129,7 +129,7 @@ The table's real use is *placing yourself*: most systems — including most fint
 
 ## In your stack
 
-- Your fan-out lives in messaging: one domain event (say, a KYC status change) reaches several services at once — in Kafka because every consumer group reads the same log independently at its own offset, in SQS only if you deliberately fan it out through SNS or EventBridge into one queue per consumer, since a single SQS queue hands each message to exactly one receiver. Either way each consumer then does its own writes, so the external request count understates true system load — the fan-out multiplier is a load parameter worth knowing per event type. Worked illustratively: if one KYC-status event is consumed by 4 services and each performs 3 Mongo writes, that is **12 writes per event**; at 200 events/sec during a campaign, the "200/sec" headline is really **2,400 writes/sec** on a shared datastore. Nobody sees that number unless somebody multiplies it out.
+- Your fan-out lives in messaging: one domain event (say, a KYC status change) reaches several services at once — in Kafka because every consumer group reads the same log independently at its own offset, in SQS only if you deliberately fan it out through SNS or EventBridge into one queue per consumer, since a single SQS queue hands each message to one competing receiver, not to every consumer. Either way each consumer then does its own writes, so the external request count understates true system load — the fan-out multiplier is a load parameter worth knowing per event type. Worked illustratively: if one KYC-status event is consumed by 4 services and each performs 3 Mongo writes, that is **12 writes per event**; at 200 events/sec during a campaign, the "200/sec" headline is really **2,400 writes/sec** on a shared datastore. Nobody sees that number unless somebody multiplies it out.
 - MongoDB is your stateful bottleneck-in-waiting: the escalation ladder above (index → Redis cache → replica reads → [[MongoDB Architecture|sharded cluster]]) is the realistic sequence, and each rung should be climbed on evidence, not anticipation.
 - Services pinned at 1 replica have a hard throughput ceiling — one pod's worth. Concretely: a Spring Boot pod with a 200-thread Tomcat pool and a 50 ms mean service time tops out near 200 / 0.05 = **4,000 RPS** by Little's Law, and lower in practice because that 50 ms is not a constant: as the pod's CPU limit binds and downstream queues build, service time rises and the ceiling falls with it ([[Latency vs Throughput vs Bandwidth]]). The ceiling is real and knowable; what matters is knowing which single-replica service meets it first during salary-day bursts or a marketing-campaign OTP storm ([[Autoscaling]], [[Capacity Planning]]).
 - Because the app tier is already stateless and JWT-authenticated, relieving an app-tier bottleneck is an HPA setting rather than a redesign ([[Vertical vs Horizontal Scaling]]) — which is precisely why the *interesting* bottlenecks in your stack are Mongo, Redis, and the broker, not the pods.
@@ -148,7 +148,7 @@ The table's real use is *placing yourself*: most systems — including most fint
 > Scalability is relative to specific load parameters — a design can scale beautifully with RPS but fail when data size outgrows RAM, or handle average fan-out but die on outliers. The well-posed questions: "If parameter X grows 10x, what is the first bottleneck, and what would we change?" asked for each parameter that realistically grows (RPS, data volume, concurrency, fan-out).
 
 > [!question]- Q: In the Twitter example, what exactly breaks if you use pure fan-out on write, and for whom?
-> A tweet triggers one timeline-insert per follower. For a median user (~75 followers) that's trivial; for a 30M-follower celebrity one tweet becomes 30M writes, creating a huge write burst, delaying timeline delivery for everyone sharded onto the same infrastructure, and hammering whichever partition holds hot data ([[Hot Partition Problem]]). The fix is a hybrid: precompute for normal accounts, pull celebrity tweets at read time and merge.
+> A tweet triggers one timeline-insert per follower. For an average user (~75 followers) that's trivial; for a 30M-follower celebrity one tweet becomes 30M writes, creating a huge write burst, delaying timeline delivery for everyone sharded onto the same infrastructure, and hammering whichever partition holds hot data ([[Hot Partition Problem]]). The fix is a hybrid: precompute for normal accounts, pull celebrity tweets at read time and merge.
 
 > [!question]- Q: What happens if you double your app-server pods while the database is at 95% CPU?
 > Throughput barely moves — the database was the bottleneck and still is. It can get *worse*: twice the pods means up to twice the DB connections and more concurrent queries, adding contention and connection-pool pressure ([[Connection Pooling]]). Latency stays flat or degrades. Correct moves target the actual bottleneck: indexes, caching, replicas, or query fixes.
@@ -170,4 +170,4 @@ The table's real use is *placing yourself*: most systems — including most fint
 - *Designing Data-Intensive Applications*, Martin Kleppmann — ch. 1, "Scalability": load parameters, the Twitter fan-out worked example (figures are Twitter's 2012-era published numbers), and percentile thinking.
 - Raffi Krikorian, "Timelines at Scale" (QCon talk, 2012) — the primary source for Twitter's hybrid timeline architecture, expanded on in [[Twitter Timeline Design]].
 - *The Art of Scalability*, Abbott & Fisher — the AKF scale cube: a vocabulary for scaling by cloning, splitting by function, and splitting by data.
-- Google SRE Book — ch. on capacity planning: measured demand, organic vs spike growth, and why provisioning follows measurement.
+- Google SRE Book — ch. 1, section "Demand Forecasting and Capacity Planning": organic vs inorganic (launch- or campaign-driven) growth, and load testing to tie raw capacity to service capacity.

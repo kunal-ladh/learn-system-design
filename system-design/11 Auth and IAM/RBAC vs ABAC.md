@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: The two main authorization models — role-based (simple, auditable, prone to role explosion) and attribute/policy-based (flexible, harder to audit) — plus where permission checks should happen (token vs lookup) and maker-checker as fintech authorization.
 related: ["[[Designing an IAM Service]]", "[[JWT Pitfalls]]", "[[How JWT Works]]"]
 ---
@@ -75,7 +75,7 @@ The engineering decision you'll actually make, and it's a staleness-vs-latency t
 
 | | Roles/permissions embedded in JWT | Lookup at request time |
 |---|---|---|
-| Latency | zero — claims already parsed | +1 lookup (cacheable to ~sub-ms with Redis) |
+| Latency | zero — claims already parsed | +1 lookup (cacheable to ~0.2–1 ms with Redis) |
 | Freshness | stale until token expiry — revoked admin keeps admin ([[JWT Pitfalls]]) | current to within cache TTL |
 | Token size | grows with permissions — header bloat | token stays minimal (`sub`, scopes) |
 | Availability | none beyond token verification | authz store/cache joins the request path |
@@ -120,7 +120,7 @@ Authorization failures share one nasty property: the successful attack and the c
 
 ### What this looks like at 3am
 
-Not a page — a finding. 02:50, during a routine quarterly access review, someone notices that an offboarded contractor's `sub` appears in the back-office audit trail at 01:12, eleven hours after their role was removed. No alert fired. Every request they made returned 200, because from the system's point of view every request was legitimate.
+Not a page — a finding. 02:50, during a routine quarterly access review, someone notices that an offboarded contractor's `sub` appears in the back-office audit trail at 01:12, four hours after their role was removed at 21:12. No alert fired. Every request they made returned 200, because from the system's point of view every request was legitimate.
 
 The permissions design was the sensible-looking one: permissions cached in Redis keyed by `sub`, invalidated by event — a role change publishes a message, a consumer evicts the key — with a 24-hour TTL as a backstop. Invalidate-on-event is the right instinct; the 24-hour TTL is where the trap was set, because it quietly declares that the event pipeline is never allowed to be late by more than a day.
 
@@ -128,7 +128,7 @@ The pipeline broke at 20:00. A producer release added a field to the role-change
 
 How you confirm it: dead-letter depth on the role-change queue, climbing steadily since 20:00 with nobody watching, and the DLQ messages themselves, one of which names this contractor; then `TTL` on their cache key in Redis, where a value near the full 24 hours means the key was repopulated after the role change while an original value means the eviction never happened; then the role table's own `updated_at` against the cached document. Three checks, five minutes — and the DLQ depth answers the question your compliance team asks next, which the audit trail alone cannot: *how many other people are in this state right now?* Every message in there is one authorization change the system believes it applied and did not.
 
-Two fixes, and you want both. Alert on consumer lag for the authorization-invalidation topic as a **security** alert routed to a human, not as a capacity metric on a dashboard nobody opens — this pipeline's liveness is part of the access-control system. And set the TTL to the longest access delay you are willing to defend to a regulator, because the TTL is your fail-safe and the event is merely your fast path. A 24-hour backstop said "a day of stale privilege is acceptable" in config, long before anyone said it in a meeting ([[Cache Invalidation]]).
+Two fixes, and you want both. Alert on dead-letter depth and consumer lag for the authorization-invalidation queue as a **security** alert routed to a human, not as a capacity metric on a dashboard nobody opens — this pipeline's liveness is part of the access-control system. And set the TTL to the longest access delay you are willing to defend to a regulator, because the TTL is your fail-safe and the event is merely your fast path. A 24-hour backstop said "a day of stale privilege is acceptable" in config, long before anyone said it in a meeting ([[Cache Invalidation]]).
 
 ## When NOT to use it
 
@@ -170,7 +170,7 @@ Two fixes, and you want both. Alert on consumer lag for the authorization-invali
 
 ## Sources
 
-- NIST RBAC model (Sandhu et al., 1996; INCITS 359 standard) — the formal role model.
+- NIST RBAC model (Sandhu, Ferraiolo and Kuhn, 2000; standardised as INCITS 359-2004) — the formal role model.
 - NIST SP 800-162 — *Guide to Attribute Based Access Control (ABAC) Definition and Considerations*.
 - Google, "Zanzibar: Google's Consistent, Global Authorization System" (USENIX ATC 2019) — the ReBAC reference.
 - Open Policy Agent documentation (openpolicyagent.org) — Rego, PDP/PEP architecture, testing.

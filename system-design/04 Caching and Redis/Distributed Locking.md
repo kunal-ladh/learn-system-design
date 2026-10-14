@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How to do a Redis lock right — unique token, Lua release, TTL — why even that can't guarantee mutual exclusion under pauses and failover, the Redlock debate, fencing tokens, and when to use DB locks or idempotency instead.
 related: ["[[Redis Beyond Caching]]", "[[Split Brain and Fencing]]", "[[Idempotency]]", "[[Redis Cluster and Sentinel]]"]
 ---
@@ -41,7 +41,7 @@ else
 end
 ```
 
-The compare-and-delete must be atomic (Lua executes in one event-loop turn — [[Redis Internals]]). Without it, this interleaving corrupts the system: A's lock expires mid-work → B acquires → A finishes and runs plain `DEL` → A just deleted **B's** lock → C acquires while B still works. Two holders, caused by the *release* path.
+The compare-and-delete must be atomic (Lua executes in one event-loop turn — [[Redis Internals]]; Redis 8.4+ also offers it as one native command, `DELEX key IFEQ <token>`, while Lua remains the portable form). Without it, this interleaving corrupts the system: A's lock expires mid-work → B acquires → A finishes and runs plain `DEL` → A just deleted **B's** lock → C acquires while B still works. Two holders, caused by the *release* path.
 
 ### The whole skeleton, so you can audit yours against it
 
@@ -166,7 +166,7 @@ Each of these has a signal that distinguishes it from the others — which matte
 
 ## In your stack
 
-- Audit existing Redis locks against the recipe: `SET NX PX` in one command, UUID token, Lua compare-and-delete release, release in `finally`. Spring/Redisson users: Redisson's RLock automates token + watchdog renewal, but renewal still can't outrun a paused JVM — classify each lock as efficiency or correctness anyway.
+- Audit existing Redis locks against the recipe: `SET NX PX` in one command, UUID token, Lua compare-and-delete release, release in `finally`. Spring/Redisson users: Redisson's RLock automates token + watchdog renewal (Redisson now marks its multi-node `RedLock` object deprecated in favour of `RLock`/`RFencedLock`), but renewal still can't outrun a paused JVM — classify each lock as efficiency or correctness anyway.
 - **Services pinned at 1 replica** quietly protect you today — one JVM means in-process locks suffice for many paths. Every scale-out to 2 replicas silently converts those into distributed-locking problems; make that a checklist item on replica-count changes.
 - Fintech rule, aligned with the org's working agreements: Redis locks may *reduce* duplicate work on money paths, but the deterministic control is mandatory — unique index on the idempotency key in MongoDB, conditional state transitions, immutable audit rows. "The Redis lock usually prevents it" does not survive an RBI audit; fail closed where value is at stake.
 - Scheduled-job dedup (the most common lock at Niyo-shaped shops): prefer a claim document in Mongo (`findOneAndUpdate` with a lease timestamp, unique job+date key) over a Redis lock — same Redis-free determinism, visible in the primary datastore, auditable.

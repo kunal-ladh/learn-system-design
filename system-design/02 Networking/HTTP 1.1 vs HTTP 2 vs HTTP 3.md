@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: The three HTTP generations as three attacks on the same enemy — head-of-line blocking — and what to actually run browser-facing vs inside the cluster.
 related: ["[[TCP vs UDP]]", "[[TLS and HTTPS]]", "[[REST vs gRPC vs GraphQL]]", "[[CDN]]"]
 ---
@@ -63,7 +63,7 @@ graph TD
 | Browser → edge (CDN/ALB) | **h2 baseline, h3 where offered** | high-latency, lossy last mile is exactly what h2/h3 were built for; CDNs/ALBs make it a checkbox |
 | Edge → services, service → service | **h1.1 over pooled keep-alive connections — still common and fine; h2 where it earns its keep** | datacenter links are fast and nearly loss-free, so HOL blocking rarely bites; a connection *pool* already provides parallelism; h1.1 is trivially debuggable (`curl`, tcpdump, readable wire format) |
 | gRPC between services | **h2 — required** | gRPC is built on h2 streams and trailers ([[REST vs gRPC vs GraphQL]]); AWS ALB only gained native gRPC support in 2020 and simpler L7 proxies still mishandle trailers — check each hop's gRPC support explicitly |
-| Inside cluster, h3 | rarely, as of ~2024–2026 | QUIC's wins (lossy links, migration, handshake RTTs) mostly don't apply between pods; its costs (CPU, tooling) do |
+| Inside cluster, h3 | rarely, as of 2026 | QUIC's wins (lossy links, migration, handshake RTTs) mostly don't apply between pods; its costs (CPU, tooling) do |
 
 The index's phrasing is exactly right: **HTTP/2 to the browser, often 1.1 inside the cluster** — asymmetry by design, because the two environments have opposite loss and latency profiles.
 
@@ -78,7 +78,7 @@ A capsule history of why each transition took the shape it did:
 
 - **SPDY → h2 (2009–2015)**: Google shipped SPDY in Chrome and its own servers, proved multiplexing wins on real traffic, and the IETF standardized it as h2 with HPACK swapped in post-CRIME. Lesson: transport evolution now happens by a browser+server owner deploying first and standardizing after.
 - **gQUIC → h3 (2013–2022)**: same playbook, bigger ambition — Google ran QUIC between Chrome and Google properties for years before IETF QUIC (RFC 9000) diverged and h3 landed. The UDP choice was forced by **ossification**: middleboxes drop or mangle anything that isn't TCP-or-UDP-shaped, and kernels take a decade to update, so the only deployable place for a new transport was userspace atop UDP. QUIC even encrypts its own transport headers specifically so middleboxes *can't* grow dependencies on them.
-- As of ~2024, HTTP/3 carries roughly a quarter to a third of web requests measured at large CDNs (Cloudflare's published radar numbers), with h2 carrying most of the rest — h1.1 persists mainly on APIs, internal hops, and old clients.
+- In Cloudflare Radar's 2024 Year in Review, HTTP/3 carried about a fifth of requests (20.5%), h2 about half (49.6%), and HTTP/1.x still ~30%; the 2025 edition was nearly flat at 21% / 50% / 29% — h1.1 persists mainly on APIs, bots, internal hops, and old clients.
 
 ## Trade-offs
 

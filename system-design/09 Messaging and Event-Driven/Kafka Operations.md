@@ -1,10 +1,10 @@
 ---
 title: Kafka Operations
-tags: [system-design, messaging]
+tags: [system-design, messaging, aws]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: What running Kafka actually costs — self-managed vs AWS MSK vs Confluent Cloud, the monitoring that matters, common incidents, and rough capacity rules.
 related: ["[[Kafka Architecture]]", "[[Choosing a Message Broker]]", "[[Consumer Groups and Rebalancing]]", "[[Capacity Planning]]"]
 ---
@@ -45,7 +45,7 @@ Operating Kafka *well* solves, concretely:
 
 ### AWS MSK: what AWS takes vs what stays yours
 
-MSK runs the brokers (and, pre-KRaft versions, ZooKeeper) for you: provisioning, broker VM patching, broker-failure replacement, encryption, IAM integration, and (on newer tiers) tiered storage. **What stays yours is most of what actually pages:** topic design, partition counts, replication/min.insync configs, client tuning, consumer lag, rebalance storms, partition skew — MSK has no opinion about your partitions. You also still choose broker counts/sizes and trigger version upgrades (MSK orchestrates the roll). MSK Serverless shifts capacity management to AWS for spiky/small workloads at a per-throughput price. Honest summary: MSK converts "run the servers" to a line item; it does not convert Kafka into [[SQS and SNS|SQS]].
+MSK runs the brokers (and, pre-KRaft versions, ZooKeeper) for you: provisioning, broker VM patching, broker-failure replacement, encryption, IAM integration, and tiered storage on Standard brokers — or Express brokers, whose storage is pay-as-you-go and never sized (3-AZ only; Kafka 3.6/3.8/3.9/4.2 as of 2026). **What stays yours is most of what actually pages:** topic design, partition counts, replication/min.insync configs, client tuning, consumer lag, rebalance storms, partition skew — MSK has no opinion about your partitions. You also still choose broker counts/sizes and trigger version upgrades (MSK orchestrates the roll). MSK Serverless shifts capacity management to AWS for spiky/small workloads at a per-throughput price. Honest summary: MSK converts "run the servers" to a line item; it does not convert Kafka into [[SQS and SNS|SQS]].
 
 ### Confluent Cloud: what the premium buys
 
@@ -62,7 +62,7 @@ Confluent sells Kafka-as-a-utility plus the ecosystem: elastic capacity (scale w
 
 ### Tiered storage — how it changes the retention math
 
-Classic Kafka couples retention to broker disks: 30-day retention means 30 days × write rate × RF sitting on expensive attached storage, and every broker replacement re-replicates all of it. **Tiered storage** (KIP-405 in Apache Kafka, marked production-ready in 3.9; long offered by Confluent, and available on MSK for supported versions) splits each partition into a hot local tail and a cold remote tier (S3-class object storage). Consequences: retention stops being a disk-sizing problem (the `disk = rate × RF × retention` rule above shrinks to the local hot window), historical reads come back slower but no longer evict page cache for tail readers, and broker recovery/reassignment only moves the local tail — the single biggest reduction in self-managed Kafka's operational pain in years. The catch: reads from the cold tier add latency and object-store request costs, and compacted topics are not tierable. This is a large part of what Confluent's "infinite retention" premium actually is.
+Classic Kafka couples retention to broker disks: 30-day retention means 30 days × write rate × RF sitting on expensive attached storage, and every broker replacement re-replicates all of it. **Tiered storage** (KIP-405 in Apache Kafka, marked production-ready in 3.9; long offered by Confluent, and available on MSK for supported versions) splits each partition into a hot local tail and a cold remote tier (S3-class object storage). Consequences: retention stops being a disk-sizing problem (the `disk = rate × RF × retention` rule below shrinks to the local hot window), historical reads come back slower but no longer evict page cache for tail readers, and broker recovery/reassignment only moves the local tail — the single biggest reduction in self-managed Kafka's operational pain in years. The catch: reads from the cold tier add latency and object-store request costs, and compacted topics are not tierable. This is a large part of what Confluent's "infinite retention" premium actually is.
 
 ### Common incidents (the ones you'll actually see)
 
@@ -71,7 +71,7 @@ Classic Kafka couples retention to broker disks: 30-day retention means 30 days 
 3. **Retention-caused data loss.** Lag quietly crosses the retention window; segments age out unread; nothing errors. Weeks later reconciliation finds the hole. Mitigate: alert when `lag (in time) > retention × 0.5`; size retention against worst-case consumer outage, not disk comfort.
 4. **Too many partitions.** Thousands of partitions per broker → longer leader elections, slow restarts/failover, metadata bloat, file-handle exhaustion. KRaft raised the ceilings dramatically vs ZooKeeper, but clients and brokers still pay per-partition costs. Symptom: controlled restart of one broker takes tens of minutes to clear URP.
 
-### Capacity rules of thumb — **all rough, verify against your own benchmarks**
+### Capacity rules of thumb — **all rough (2026), verify against your own benchmarks**
 
 - A partition sustains on the order of **single-digit to low-tens of MB/s** writes in typical setups — benchmark yours; message size and compression dominate.
 - Partition count ≈ `max(target throughput ÷ measured per-partition producer rate, target consumer parallelism)`, then add ~2× headroom because raising it later breaks ordering.
@@ -94,7 +94,7 @@ The through-line: **money buys away broker ops, never client correctness.** Part
 - **Silent durability erosion**: URP ignored → one failure from loss while dashboards look green.
 - **The 3 a.m. disk-full**: retention sized to disk instead of disk to retention; brokers crash on full disks and recovery is slow and manual.
 - **Upgrade-triggered instability**: rolling a broker before ISR recovered from the previous one → min.insync violations → produce failures platform-wide.
-- **Cost surprise on managed tiers**: cross-AZ replication traffic and consumer fan-out egress often exceed the broker line item on MSK; throughput-priced tiers punish chatty, uncompressed producers.
+- **Cost surprise on managed tiers**: cross-AZ traffic can rival the broker line item — inter-broker replication on self-managed EC2 (MSK does not bill replication between brokers), and producer/consumer traffic crossing AZs to partition leaders on every AWS option, multiplied by consumer fan-out; throughput-priced tiers punish chatty, uncompressed producers.
 - **"Managed" complacency**: teams stop watching lag because "AWS runs Kafka now" — but lag was never AWS's job.
 
 ## When NOT to use it
@@ -103,7 +103,7 @@ The through-line: **money buys away broker ops, never client correctness.** Part
 
 - Throughput measured in hundreds of msgs/sec with no replay requirement: [[SQS and SNS|SQS]] deletes this entire note from your life.
 - No one owns the pager: self-managed Kafka without an owning team is an outage subscription.
-- Self-managing to "save money" below roughly mid-single-digit MB/s sustained: people-time swamps the infra savings — the cost shape of self-managing is dominated by humans, not instances.
+- Self-managing to "save money" at low sustained throughput: people-time swamps the infra savings — the cost shape of self-managing is dominated by humans, not instances.
 
 ## In your stack
 
@@ -111,7 +111,7 @@ The through-line: **money buys away broker ops, never client correctness.** Part
 - On EKS, remember a Kafka broker is the opposite of your stateless services: it can't be treated like a 1-replica pod that reschedules freely; every broker move triggers re-replication traffic.
 - The lag-vs-retention alert is the one to carry forward regardless of broker: the equivalent failure exists in [[Redis Streams]] (MAXLEN trimming past the slowest group) and in SQS (14-day max retention, DLQ expiry).
 - Fintech angle: retention-caused loss isn't an ops blemish, it's an audit finding. If an event stream feeds reconciliation or regulatory reporting, retention sizing is a compliance control, not a disk setting.
-- Cost-shape summary for an infra recommendation: self-managed scales with instances + storage + engineer-hours; MSK with broker-hours + storage + cross-AZ transfer (watch transfer — it's the sneaky line); Confluent with throughput units + retention. Fan-out multiplies egress on all three.
+- Cost-shape summary for an infra recommendation: self-managed scales with instances + storage + engineer-hours; MSK with broker-hours + storage (+ per-GB written on Express) + client cross-AZ transfer (replication between brokers is not billed on MSK, but client traffic is — watch it, it's the sneaky line); Confluent with throughput units + retention. Fan-out multiplies egress on all three.
 - If Kafka returns to your stack, the realistic default given team size is MSK (AWS-native IAM/VPC, brokers managed) with tiered storage enabled — Confluent's premium starts paying off when you'd otherwise run Connect clusters and Schema Registry yourselves.
 
 ## Interview angle

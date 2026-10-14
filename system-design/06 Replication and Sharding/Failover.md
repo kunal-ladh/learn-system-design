@@ -4,7 +4,7 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: How systems detect a dead leader and promote a replica — and why this handover is the most dangerous moment in a database's life (lost writes, split brain, false positives).
 related: ["[[Replication]]", "[[Split Brain and Fencing]]", "[[Consensus and Raft]]", "[[Redis Cluster and Sentinel]]"]
 ---
@@ -41,7 +41,7 @@ The timeout is a dial between two failure modes:
 - **Too short** → false positives: a GC pause, a load spike, or a transient network blip triggers failover against a *healthy* leader. Now you've taken an unnecessary failover risk (lost writes, client churn) during a load spike — the worst time. Failovers triggered by overload can also cascade: the promotion adds load, which times out the next leader.
 - **Too long** → every real failure costs that much extra downtime.
 
-There is no correct value; there is only a chosen trade-off (commonly single-digit seconds to ~30 s). Quorum-based detection (a majority of observers must agree the leader is dead) filters single-observer network issues — Redis Sentinel requires a configurable quorum of sentinels to agree before starting failover for exactly this reason.
+There is no correct value; there is only a chosen trade-off (commonly single-digit seconds to ~30 s). Quorum-based detection (several observers must agree the leader is dead — not necessarily a majority; the majority gate is the election that follows) filters single-observer network issues — Redis Sentinel requires a configurable quorum of sentinels to agree before starting failover for exactly this reason.
 
 ### Step 2 — Election: choosing the new leader
 
@@ -51,9 +51,9 @@ The safest candidate is the follower with the **most complete copy of the leader
 
 With asynchronous replication, even the best follower may be missing the leader's last moments of **acknowledged** writes. Promote it, and those writes are gone — the clients that received "success" hold receipts for transactions that no longer exist. Worse, if the old leader later rejoins, its extra writes conflict with the new timeline and are typically **discarded**.
 
-A famous real-world shape of this: GitHub's 2012 incident where an automated failover promoted a lagging MySQL replica, and recovery required reconciling writes that existed on only one side. The standard mitigations:
+A famous real-world shape of this: GitHub's September 2012 incident, where an automated failover promoted a lagging MySQL replica whose auto-increment counter was behind the old leader's — it reissued primary keys already handed out, Redis still referenced the old rows under those keys, and some private data was shown to the wrong users (the case DDIA cites). The standard mitigations:
 
-- **Semi-synchronous replication** (MySQL semi-sync): the leader acks a transaction only after at least one replica has received it, so a replica with every acked write always exists. MySQL 5.7+'s `AFTER_SYNC` mode (sometimes called "lossless semi-sync") waits *before* committing locally, closing the window where the leader commits but no replica has the event; the older `AFTER_COMMIT` mode still has a small loss window. Price: write latency includes a replica round trip, and if no replica responds within the timeout, semi-sync degrades to async (announce and alert on that).
+- **Semi-synchronous replication** (MySQL semi-sync): the leader acks a transaction only after at least one replica has received it, so a replica with every acked write always exists. MySQL 5.7+'s `AFTER_SYNC` mode (sometimes called "lossless semi-sync") waits *before* committing locally, closing the window where the leader commits but no replica has the event; the older `AFTER_COMMIT` mode commits locally first, so other sessions can read a transaction that a leader crash plus failover then loses. Price: write latency includes a replica round trip, and if no replica responds within the timeout, semi-sync degrades to async (announce and alert on that).
 - **Majority write concern** (MongoDB `w: "majority"`): an acked write exists on a majority, and elections only choose from the majority — acked writes survive any single failure.
 - **Accepting the loss**: for data where the last N seconds are genuinely expendable, async + fast failover is a legitimate choice. Make it a *decision*, not a surprise.
 
@@ -92,9 +92,9 @@ The mature position: automate aggressively for stateless tiers and caches; for s
 
 ### Worked examples
 
-- **MySQL + semi-sync + orchestrator**: orchestrator (the failover tool used at GitHub) detects failure via multiple observers, picks the most-advanced replica, repoints the others, and can be configured for fully-automatic or human-approved promotion.
+- **MySQL + semi-sync + orchestrator**: orchestrator (the failover tool used at GitHub; the upstream openark repo was archived in February 2025 and lives on as Percona's fork) detects failure via multiple observers, picks the most-advanced replica, repoints the others, and can be configured for fully-automatic or human-approved promotion.
 - **Redis Sentinel**: N sentinel processes monitor the primary; quorum agreement marks it objectively down; sentinels elect a sentinel-leader to run the failover; clients discover the new primary by asking sentinels. Remember Redis replication is async — Sentinel failover can lose acked writes by design ([[Redis Cluster and Sentinel]]).
-- **MongoDB replica sets**: built-in Raft-like elections, typically electing within ~12 s of primary loss (default timeouts, as of recent versions); with `w: "majority"` writes, failover does not lose acknowledged data.
+- **MongoDB replica sets**: built-in Raft-like elections, typically electing within ~12 s of primary loss (MongoDB's documented median with the default 10 s `electionTimeoutMillis`, as of 2026); with `w: "majority"` writes, failover does not lose acknowledged data.
 
 ## Trade-offs
 

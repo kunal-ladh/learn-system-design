@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Why message delivery can only be at-most-once or at-least-once, what Kafka's "exactly-once semantics" really is and isn't, and why consumer-side dedup is the correct mental model.
 related: ["[[Idempotency]]", "[[Delivery Semantics]]", "[[Kafka Architecture]]", "[[The Fallacies of Distributed Computing]]"]
 ---
@@ -67,7 +67,7 @@ So Kafka EOS = **exactly-once stream processing within Kafka's own ecosystem**: 
 
 ### What it doesn't cover
 
-The boundary is **side effects to external systems**. The moment your consumer calls a bank API, writes MongoDB, sends an email, or pushes to SQS, Kafka's transaction cannot enclose that effect — the external system doesn't participate in Kafka's commit protocol. Crash after the HTTP call but before the offset commit → redelivery → the call happens again. Kafka's own documentation is explicit that EOS applies to Kafka-to-Kafka processing. For external effects, you're back to the only general answer: **at-least-once delivery + consumer-side dedup** — idempotency keys, conditional writes, or transactional "process + record offset" in the *destination* datastore (store the consumed offset in Mongo in the same transaction as the business write, and skip already-recorded offsets on replay). That last pattern is sometimes called the "transactional inbox" — the mirror image of [[The Outbox Pattern]].
+The boundary is **side effects to external systems**. The moment your consumer calls a bank API, writes MongoDB, sends an email, or pushes to SQS, Kafka's transaction cannot enclose that effect — the external system doesn't participate in Kafka's commit protocol. (Since Kafka 4.1, KIP-939 lets a transactional producer join an *externally* coordinated two-phase commit via `transaction.two.phase.commit.enable` — useful only when something else runs a 2PC coordinator, and still no help for an email or a partner API call.) Crash after the HTTP call but before the offset commit → redelivery → the call happens again. Kafka's own documentation is explicit that EOS applies to Kafka-to-Kafka processing. For external effects, you're back to the only general answer: **at-least-once delivery + consumer-side dedup** — idempotency keys, conditional writes, or transactional "process + record offset" in the *destination* datastore (store the consumed offset in Mongo in the same transaction as the business write, and skip already-recorded offsets on replay). That last pattern is sometimes called the "transactional inbox" — the mirror image of [[The Outbox Pattern]].
 
 ### What each mechanism actually covers
 
@@ -127,7 +127,7 @@ The instinct to resist is treating this as a bug in the broker. Nothing in the t
 - If you run Kafka-to-Kafka enrichment (e.g., Streams jobs on MSK), EOS v2 is worth enabling — modest overhead for real atomicity. The moment the pipeline's last hop writes Mongo or calls a partner API, that hop needs inbox/idempotency regardless ([[Kafka Architecture]], [[Kafka Operations]]).
 - Fintech framing: a duplicated "debit customer" event that reaches a non-idempotent consumer is customer harm with a regulator attached. Design reviews at Niyo should ask one question of every consumer: *"show me the dedup."* An auditor-friendly answer is a keyed `processed_events` record written in the same Mongo transaction as the effect.
 - Your migration history is a tour of this note. RabbitMQ gave per-message acks and redelivery on channel loss; Kafka gave offsets whose commit timing you control; SQS gives visibility timeouts and redrive. **The duplicate sources changed names at every hop, but at-least-once never changed** — which is the argument for putting dedup in your own Mongo-backed code rather than re-deriving it per broker. Code written against the operation's identity survives the next migration unchanged.
-- Sizing matters more than it looks: SQS's visibility timeout defaults to 30 seconds and can extend to 12 hours, and standard-queue retention defaults to 4 days with a 14-day maximum (AWS documented values). If a handler's p99 exceeds the visibility timeout, you have *configured* concurrent duplicates — either raise it, or extend it from inside the handler via a heartbeat ([[SQS and SNS]]).
+- Sizing matters more than it looks: SQS's visibility timeout defaults to 30 seconds and can extend to 12 hours, and standard-queue retention defaults to 4 days with a 14-day maximum (AWS documented values, as of 2026). If a handler's p99 exceeds the visibility timeout, you have *configured* concurrent duplicates — either raise it, or extend it from inside the handler via a heartbeat ([[SQS and SNS]]).
 - Deploys are a duplicate generator in your environment specifically: with services at 1 replica, every rollout is a consumer stop-and-start, so any in-flight message is redelivered to the new pod. Graceful shutdown that finishes in-flight work before exiting narrows the window but never closes it ([[Graceful Shutdown and Deployment Safety]]) — the pod can still be killed after the effect and before the ack.
 
 ## Interview angle

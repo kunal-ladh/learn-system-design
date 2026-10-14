@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How systems know which instances exist and which are safe to send traffic to — liveness/readiness/startup probes, shallow vs deep checks, registries, and Kubernetes Services as discovery.
 related: ["[[Load Balancers]]", "[[Graceful Shutdown and Deployment Safety]]", "[[Failure Modes in Distributed Systems]]", "[[How DNS Works]]"]
 ---
@@ -45,7 +45,7 @@ Kubernetes made precise a distinction older systems blurred. Each probe answers 
 
 Key semantics: readiness is *continuous*, not just for boot — a pod can become unready mid-life (overloaded, dependency lost) and later recover; it's taken out of rotation and put back, never restarted for it. Liveness should test only "is the process fundamentally stuck" — the classic correct implementation is a trivial handler that proves the event loop/thread pool responds. Startup exists because one timeout can't fit both "boots in 3 minutes once" and "should answer probes in 1 second forever after": the startup probe covers boot, then hands off. Note what it is *not*: an infinitely patient waiter. While it runs, liveness and readiness never fire — but if it exhausts `periodSeconds × failureThreshold`, the kubelet kills the container exactly as a failed liveness probe would. Sizing that budget above the real worst-case boot is the whole job.
 
-A failure budget is `period × failureThreshold` — a readiness probe every 5 s with threshold 3 means ~15 s worst-case detection. Know *both* numbers, and know that platforms differ on them. Kubernetes' own defaults are `periodSeconds: 10`, `failureThreshold: 3`, `successThreshold: 1`, and `timeoutSeconds: 1` — that last one catches people, because a probe handler that occasionally takes 1.2 s behind a GC pause is already recording failures. Managed platforms can hardcode their own values; yours hardcodes `failureThreshold: 10`, see below.
+A failure budget is `period × failureThreshold` — a readiness probe every 5 s with threshold 3 means ~15 s worst-case detection. Know *both* numbers, and know that platforms differ on them. Kubernetes' own defaults (unchanged through v1.37, 2026) are `periodSeconds: 10`, `failureThreshold: 3`, `successThreshold: 1`, and `timeoutSeconds: 1` — that last one catches people, because a probe handler that occasionally takes 1.2 s behind a GC pause is already recording failures. Managed platforms can hardcode their own values; yours hardcodes `failureThreshold: 10`, see below.
 
 ### Shallow vs deep checks — and the cascading-ejection trap
 
@@ -65,13 +65,13 @@ Outside Kubernetes, discovery is a **registry**: a database of `service name →
 
 - **Registration**: instances self-register on boot (Eureka model) or are registered by an agent (Consul runs a local agent that also executes health checks). Deregistration on shutdown; **TTL/heartbeat expiry** reaps instances that died without saying goodbye — miss heartbeats, get dropped.
 - **Lookup**: clients fetch (and cache) the instance list — via HTTP API (Eureka), or DNS/HTTP (Consul serves discovery over plain DNS, which any client speaks).
-- **The registry's own availability problem**: it's infrastructure for finding infrastructure, so it must be a clustered, replicated system itself — and it faces a [[CAP Theorem|CP-vs-AP choice]]. Consul chose consistency (Raft consensus); Eureka deliberately chose availability — its **self-preservation mode** stops expiring instances when too many heartbeats disappear at once, on the reasoning that a network blip hiding heartbeats is likelier than 80% of the fleet dying, and a stale instance list beats an empty one. That philosophical split — *stale data vs no data* — is the registry design question.
+- **The registry's own availability problem**: it's infrastructure for finding infrastructure, so it must be a clustered, replicated system itself — and it faces a [[CAP Theorem|CP-vs-AP choice]]. Consul chose consistency (Raft consensus); Eureka deliberately chose availability — its **self-preservation mode** stops expiring instances when heartbeat renewals fall below 85% of the expected rate (the default `renewalPercentThreshold`), on the reasoning that a network blip hiding heartbeats is likelier than a large share of the fleet dying at once, and a stale instance list beats an empty one. That philosophical split — *stale data vs no data* — is the registry design question.
 
 ### DNS-based vs client-side discovery
 
 - **DNS-based**: the registry publishes instances as DNS records; callers resolve a name per [[How DNS Works]]. Universal (every language speaks DNS) — but client-side DNS caching means ejected instances keep receiving traffic until caches expire (the JVM caches successful lookups for `networkaddress.cache.ttl` — historically *forever* when a SecurityManager was installed, 30 s otherwise, and both outlive a fast ejection), and plain DNS carries no port/health metadata (SRV records help; few clients use them).
 - **Server-side discovery**: callers hit a stable VIP/[[Load Balancers|load balancer]] that does discovery for them. Simplest clients, one more hop, LB must stay current.
-- **Client-side discovery**: the caller fetches the instance list and picks an instance itself (Eureka + Ribbon-style, gRPC client-side LB, mesh sidecars). No extra hop, per-caller balancing choice, instant reaction to pushed updates — at the cost of discovery logic in every client (or a sidecar to hold it).
+- **Client-side discovery**: the caller fetches the instance list and picks an instance itself (Eureka + Spring Cloud LoadBalancer, which replaced the Netflix Ribbon client after Netflix put Ribbon in maintenance mode in 2016, with Spring Cloud following in 2018; gRPC client-side LB; mesh sidecars). No extra hop, per-caller balancing choice, instant reaction to pushed updates — at the cost of discovery logic in every client (or a sidecar to hold it).
 
 ### Kubernetes Services as discovery
 
@@ -83,13 +83,13 @@ graph TD
     D --> P2["Pod B not ready"]
     S["Service label selector"] --> EP["EndpointSlice marks only ready pod IPs routable"]
     P1 --> EP
-    P2 -. excluded until ready .-> EP
+    P2 -.->|"excluded until ready"| EP
     C["Caller resolves service DNS name"] --> S
     EP --> KP["kube-proxy routes connection to a ready pod"]
 ```
 
 - A **Service** selects pods by label; the control plane maintains **EndpointSlices** listing each matching pod IP alongside a `ready` condition, and only ready endpoints receive traffic (readiness probes feed discovery directly — this is the integration's elegance). Note the mechanism precisely: a not-ready pod stays *listed* and flagged rather than vanishing, which is what lets controllers tell "unready" from "gone".
-- **Discovery** = DNS: `payments.prod.svc.cluster.local` resolves to the Service's stable ClusterIP; **kube-proxy** (iptables/IPVS) routes connections to a ready endpoint. Registration, health, reaping: all automatic via the kubelet and controllers.
+- **Discovery** = DNS: `payments.prod.svc.cluster.local` resolves to the Service's stable ClusterIP; **kube-proxy** (iptables by default, or nftables, stable since v1.33; IPVS mode is deprecated since v1.35) routes connections to a ready endpoint. Registration, health, reaping: all automatic via the kubelet and controllers.
 - Honest limits: kube-proxy balances per-*connection* (L4) — long-lived HTTP/2 or gRPC connections pin to one pod and skew load ([[Load Balancers|see L4 vs L7]]); headless Services (`clusterIP: None`) return pod IPs directly for client-side discovery; DNS caching inside the app can still serve stale answers.
 
 ## Trade-offs
@@ -147,7 +147,7 @@ Interviewers probe:
 **Q2 (scenario):** Mongo has a 15-second election. Your service's readiness probe pings Mongo. Walk through what happens at 1 replica, and what the caller experience is versus a shallow probe.
 
 > [!question]- Q: Mongo blips, readiness is deep, 1 replica — what happens?
-> Probe failures accumulate during the election; after `period × failureThreshold` the only pod is marked unready and removed from EndpointSlices — the Service has zero endpoints. Callers get connection-refused/empty-upstream errors (at the gateway: 502/503 with no useful detail), which look like "service is gone," not "database electing." After Mongo recovers, the pod must pass probes again before traffic returns, so the outage outlives the blip. With a shallow probe the pod stays in rotation and returns interpretable 500s/503s for the few seconds queries actually fail — shorter, more debuggable degradation. This is why readiness must not gate on shared datastores at 1 replica.
+> First do the probe arithmetic: ejection needs the election to outlast `period × failureThreshold`. At Kubernetes defaults that is 10 s × 3 = 30 s, and on the Facets fleet with `readiness_period: 5` it is 5 s × 10 = 50 s, so a 15-second election ejects nothing there. It does eject with a tight budget such as 3 s × 3 = 9 s, or with any election that runs long. When it does, the only pod is marked unready and removed from EndpointSlices — the Service has zero endpoints. Callers get connection-refused/empty-upstream errors (at the gateway: 502/503 with no useful detail), which look like "service is gone," not "database electing." After Mongo recovers, the pod must pass probes again before traffic returns, so the outage outlives the blip. With a shallow probe the pod stays in rotation and returns interpretable 500s/503s for the few seconds queries actually fail — shorter, more debuggable degradation. This is why readiness must not gate on shared datastores at 1 replica.
 
 **Q3 (scenario):** A service passes liveness and readiness yet serves 100% errors for an hour before anyone notices. How is that possible, and what closes the gap?
 

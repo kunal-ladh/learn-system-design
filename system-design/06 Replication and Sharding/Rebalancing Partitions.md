@@ -4,7 +4,7 @@ tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 summary: How sharded systems move data between machines without downtime — fixed partition counts, dynamic splitting, dual-write migrations — and why hash-mod-N makes rebalancing catastrophic.
 related: ["[[Sharding]]", "[[Consistent Hashing]]", "[[Hot Partition Problem]]", "[[Kafka Architecture]]"]
 ---
@@ -17,7 +17,7 @@ related: ["[[Sharding]]", "[[Consistent Hashing]]", "[[Hot Partition Problem]]",
 
 Your 4-shard cluster needs to become 5. Three requirements collide:
 
-1. **Move no more data than necessary** — data transfer costs network, disk IO, and time; at terabytes, moving 80% of the data is weeks of degraded performance.
+1. **Move no more data than necessary** — data transfer costs network, disk IO, and time; at terabytes, moving 80% of the data is days to weeks of degraded performance (8 TB at a throttled 20–100 MB/s is ~1–5 days of copy alone, before verification).
 2. **Stay online** — reads and writes continue against keys that are mid-flight between owners.
 3. **End balanced** — roughly even data *and* load per node afterwards.
 
@@ -37,16 +37,16 @@ The naive scheme fails requirement 1 instantly: with `hash(key) mod N`, changing
 Create far more partitions than nodes on day one — say 1024 partitions for a 10-node cluster (~100 each). Keys map to partitions by hash (**partition count never changes**, so the mapping is stable forever); *partitions* map to nodes by an assignment table that the operator or system edits. Rebalancing = reassigning whole partitions and copying them — key→partition never changes, only partition→node.
 
 - Add a node: it *steals* a few partitions from each existing node until even; ~1/N of data moves in node-sized chunks.
-- This is Elasticsearch (shard count fixed per index at creation), Redis Cluster (16384 hash slots moved explicitly via `MIGRATE`), Couchbase vBuckets, and effectively [[Kafka Architecture]] (partition count set per topic; partition reassignment moves replicas between brokers).
+- This is Elasticsearch (primary shard count fixed at index creation; the `_split`/`_shrink` APIs change it only by writing a new index), Redis Cluster (16384 hash slots moved explicitly via `MIGRATE`), Couchbase vBuckets, and effectively [[Kafka Architecture]] (partition count set per topic; partition reassignment moves replicas between brokers).
 - **The catch**: choosing the count. Too few = ceiling on future nodes (can't have more nodes than partitions) and huge per-partition size (slow moves/recovery); too many = per-partition overhead (file handles, metadata, recovery bookkeeping) on day one. You're sizing for a future you can't see. Kafka's related sharp edge: you *can* add partitions to a topic, but that changes key→partition mapping and breaks per-key ordering, so in practice the count is sacred once keyed data flows ([[Message Ordering]]).
 
 ### Scheme 2 — Dynamic splitting (HBase/MongoDB/Bigtable style)
 
-Start with few (even one) partitions; when a partition exceeds a size threshold (e.g. HBase region ~10 GB, MongoDB chunk 128 MB — the 6.0+ default; 64 MB in older versions), **split** it into two at a key midpoint; a balancer process migrates chunks/regions to even out nodes. Merging handles shrinkage.
+Start with few (even one) partitions; when a partition exceeds a size threshold (e.g. HBase region ~10 GB), **split** it into two at a key midpoint; a balancer process migrates regions/chunks to even out nodes. Merging handles shrinkage. MongoDB was the textbook example until 6.0.3, which stopped auto-splitting: its balancer now evens out *data size* per shard, migrating a range (default 128 MB since 5.2; 64 MB before) once two shards differ by three range sizes — 384 MB at the default.
 
 - Partition count tracks data volume automatically — no up-front guess.
 - MongoDB: config servers hold the chunk→shard map; the balancer moves chunks while `mongos` routers follow the versioned map ([[MongoDB Architecture]]).
-- **Catches**: a fresh collection starts as *one* chunk on *one* shard — cold-start writes all hit one node until splits happen (Mongo answers with pre-splitting); split/migrate storms can ignite under load exactly when you least want IO spent on housekeeping; and a single never-ending-growth key value can't be split below one chunk (hot whale — [[Hot Partition Problem]]).
+- **Catches**: a fresh collection with a *ranged* key starts as *one* chunk on *one* shard — cold-start writes all hit one node until the balancer catches up (Mongo answers with pre-splitting; hashed keys on an empty collection are pre-split across shards automatically); split/migrate storms can ignite under load exactly when you least want IO spent on housekeeping; and a single never-ending-growth key value can't be split below one chunk (hot whale — [[Hot Partition Problem]]).
 
 ### Scheme 3 — Consistent hashing with virtual nodes (Cassandra/Dynamo style)
 
@@ -119,14 +119,14 @@ sequenceDiagram
 - **MongoDB does scheme 2 for you**: chunks, balancer, versioned `mongos` routing. Your levers: shard key quality, pre-splitting for new hot collections, and balancer windows aligned to Indian-traffic off-hours.
 - **Kafka/MSK is scheme 1**: topic partition counts are near-permanent once keyed data flows; broker-level rebalancing is `kafka-reassign-partitions` (or Cruise Control) with throttles — human-planned, as it should be.
 - **Redis Cluster**: 16384 slots moved explicitly (`CLUSTER SETSLOT` + `MIGRATE`) — operator-driven scheme 1; during a slot move Redis bounces clients with `ASK`/`MOVED` redirects, its version of versioned routing.
-- **Consumer-group rebalancing** (Kafka/Redis Streams) is the same word for a different thing — reassigning *partitions to consumers*, not data to nodes ([[Consumer Groups and Rebalancing]]); it still exhibits the storm failure mode (rebalance loops).
+- **Consumer-group rebalancing** (Kafka; Redis Streams groups have no partitions to reassign — entries are handed out per read) is the same word for a different thing — reassigning *partitions to consumers*, not data to nodes ([[Consumer Groups and Rebalancing]]); it still exhibits the storm failure mode (rebalance loops).
 - **Fintech angle**: a resharding cutover that can lose a tail of acked ledger writes is an auditable event; the fence-pause-verify step isn't optional polish, it's the control. Favour CDC-replay over app dual-writes for the audit trail.
 
 ## Interview angle
 
 The 60-second version: *"Rebalancing is moving partitions between nodes as a cluster grows, shrinks, or skews — while serving traffic. Hash-mod-N is catastrophic because changing N remaps almost every key, so real systems decouple key→partition from partition→node: either a fixed large partition count with partitions reassigned as units — Kafka, Elasticsearch, Redis Cluster's 16384 slots — or dynamic splitting where partitions split at a size threshold and a balancer moves them — HBase, MongoDB — or consistent hashing with virtual nodes — Cassandra. Live moves follow snapshot, backfill, change replay, verify, then a versioned-map cutover with the tail fenced. Guardrails: throttle movement, one migration at a time, ownership checks for stale routers, humans approving large plans."*
 
-Classic follow-ups: "Why not mod N?" (near-total reshuffle). "How does Mongo move a chunk while it's being written?" (backfill + oplog catch-up + brief commit-point handoff, routers follow chunk versions). "Fixed count: how do you pick it?" (bound future node count × headroom vs per-partition overhead; err high within reason). "Can you rebalance a Kafka topic from 12 to 24 partitions?" (you can add, but key mapping and ordering break — treat as migration).
+Classic follow-ups: "Why not mod N?" (near-total reshuffle). "How does Mongo move a chunk while it's being written?" (backfill + catch-up of writes made during the copy + a brief critical section and commit on the config servers, routers follow chunk versions). "Fixed count: how do you pick it?" (bound future node count × headroom vs per-partition overhead; err high within reason). "Can you rebalance a Kafka topic from 12 to 24 partitions?" (you can add, but key mapping and ordering break — treat as migration).
 
 ## Check yourself
 
@@ -140,7 +140,7 @@ Classic follow-ups: "Why not mod N?" (near-total reshuffle). "How does Mongo mov
 > Migration IO competes with production reads/writes: latency rises, timeouts fire, and in systems with automatic failure detection, slow nodes get declared dead, triggering *more* re-replication — a rebalancing storm that can cascade into an outage. Hence rate limits, migration windows, and damping are first-class guardrails, not nice-to-haves.
 
 > [!question]- Q: Mini-design — your hand-sharded MySQL fleet (mod 8, app-level routing) must go to 12 shards with zero downtime. Plan it.
-> Don't mod-12 (would remap ~2/3 of keys). Introduce an indirection: define 4096 logical buckets, `bucket = hash(key) mod 4096` (stable forever), with a bucket→shard map in config; initially recreate the current layout (buckets 0–511 → shard 0, etc.). Then migrate bucket groups to the 4 new shards one group at a time: backfill + binlog replay ([[Change Data Capture]]), checksum, flip that group's map entry with a brief write fence, keep source read-only for rollback. Throttle to one group per shard-pair at a time. This is Vitess's resharding model in miniature ([[Why MySQL Does Scale]]).
+> Don't mod-12 (would remap ~2/3 of keys). Introduce an indirection: define 4096 logical buckets, `bucket = hash(key) mod 4096` (stable forever), with a bucket→shard map in config; initially recreate the current layout: bucket b → shard b mod 8, valid because 8 divides 4096 (so buckets 0, 8, 16, … → shard 0 — contiguous ranges like 0–511 → shard 0 would not match mod-8 placement and would move 7/8 of the data). Then migrate bucket groups to the 4 new shards one group at a time: backfill + binlog replay ([[Change Data Capture]]), checksum, flip that group's map entry with a brief write fence, keep source read-only for rollback. Throttle to one group per shard-pair at a time. This is Vitess's resharding model in miniature ([[Why MySQL Does Scale]]).
 
 ## Sources
 

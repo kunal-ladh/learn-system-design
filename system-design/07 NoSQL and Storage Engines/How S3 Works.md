@@ -1,17 +1,17 @@
 ---
 title: How S3 Works
-tags: [system-design, nosql]
+tags: [system-design, nosql, aws]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Object storage explained through S3 — flat namespace, prefix-based scaling, how 11 nines of durability are engineered with replication and erasure coding, the 2020 strong-consistency change, and multipart upload.
 related: ["[[S3 Deep Dive]]", "[[Availability Reliability Durability]]", "[[Consistency Models]]", "[[CDN]]"]
 ---
 
 # How S3 Works
 
-Amazon S3 (Simple Storage Service, launched 2006) is **object storage**: you PUT a blob of bytes under a key in a bucket and GET it back later, over HTTP, with no filesystem, no servers, and effectively no capacity limit. It has become the de-facto data plane of the cloud — the place where backups, data lakes, ML training sets, static sites, log archives and media all end up — because it made two hard promises cheap: near-perfect durability and unbounded scale. This note explains the model and the engineering behind those promises.
+Amazon S3 (Simple Storage Service, launched 2006) is **object storage**: you PUT a blob of bytes under a key in a bucket and GET it back later, over HTTP, with no filesystem, no servers, and effectively no capacity limit. It has become the de-facto data plane of the cloud — the place where backups, data lakes, ML training sets, static sites, log archives and media all end up — because it made two hard promises cheap: near-perfect durability and unbounded scale. AWS put the scale at more than 500 trillion objects and over 200 million requests per second in March 2026. This note explains the model and the engineering behind those promises.
 
 ## The problem that created it
 
@@ -28,9 +28,9 @@ Before S3, storing large amounts of data meant filesystems on servers (NFS/SAN a
 
 ### Objects, buckets, keys — and the flat namespace
 
-An **object** = key + bytes (up to 5 TB) + metadata. A **bucket** is a namespace for keys. Crucially, the namespace is **flat**: `invoices/2026/01/inv-123.pdf` is just a key containing slashes. There are no directories — the console merely renders prefixes as folders. Consequences: no rename (a "move" is copy + delete), no atomic directory operations, and LIST works by prefix scan.
+An **object** = key + bytes (up to 50 TB since December 2025; 5 TB before) + metadata. A **bucket** is a namespace for keys. Crucially, the namespace is **flat** (for general purpose buckets; S3 Express One Zone's directory buckets are hierarchical and, since June 2025, support an atomic `RenameObject`): `invoices/2026/01/inv-123.pdf` is just a key containing slashes. There are no directories — the console merely renders prefixes as folders. Consequences: no rename (a "move" is copy + delete), no atomic directory operations, and LIST works by prefix scan.
 
-Objects are **immutable**: you cannot append to or edit byte 5,000 of an object — you overwrite the whole key with a new version. This immutability is a scaling feature, not a limitation: it makes replication, caching and erasure coding radically simpler.
+Objects are **immutable**: you cannot append to or edit byte 5,000 of an object — you overwrite the whole key with a new version. (One exception since November 2024: the S3 Express One Zone storage class supports appending to an existing object; the standard storage classes still do not.) This immutability is a scaling feature, not a limitation: it makes replication, caching and erasure coding radically simpler.
 
 ### Prefix-based request-rate scaling
 
@@ -68,15 +68,15 @@ For its first 14 years S3 was eventually consistent for overwrites and lists —
 
 ### Multipart upload
 
-Objects above ~100 MB should upload in parts: initiate, upload N parts in parallel (each 5 MB–5 GB, up to 10,000 parts), complete. Benefits: parallel bandwidth, per-part retry (a dropped connection costs one part, not the whole file), and pause/resume. The 5 TB maximum object size is a separate service limit, not a consequence of these numbers — 10,000 parts at 5 GB would arithmetically allow far more. Incomplete multipart uploads invisibly accrue storage cost — a lifecycle rule to abort them after N days is standard hygiene.
+Objects above ~100 MB should upload in parts: initiate, upload N parts in parallel (each 5 MB–5 GB, up to 10,000 parts), complete. Benefits: parallel bandwidth, per-part retry (a dropped connection costs one part, not the whole file), and pause/resume. Since December 2025 the maximum object size *is* a consequence of these numbers: 10,000 parts × 5 GiB = 50,000 GiB, about 48.8 TiB, which AWS rounds to "50 TB" (the earlier 5 TB cap was a separate service limit). Incomplete multipart uploads invisibly accrue storage cost — a lifecycle rule to abort them after N days is standard hygiene.
 
-The part-count cap is also a sizing constraint people meet late. Uploading a full 5 TB object within 10,000 parts requires each part to be at least 5 × 1,048,576 ÷ 10,000 ≈ **524 MB**; a client hard-coded to 8 MB parts tops out at 8 MB × 10,000 = 80,000 MB, roughly 78 GB, and fails on anything larger. Production uploaders therefore choose part size from the object size rather than from a constant.
+The part-count cap is also a sizing constraint people meet late. Uploading a 5 TB object within 10,000 parts requires each part to be at least 5 × 1,048,576 ÷ 10,000 ≈ **524 MB**, and an object at the 50 TB ceiling needs every part at the full 5 GiB; a client hard-coded to 8 MB parts tops out at 8 MB × 10,000 = 80,000 MB, roughly 78 GB, and fails on anything larger. Production uploaders therefore choose part size from the object size rather than from a constant.
 
 ### Storage classes and lifecycle
 
 One API, several price/latency tiers: **Standard** (hot), **Intelligent-Tiering** (auto-moves objects between tiers by access pattern), **Standard-IA / One Zone-IA** (infrequent access, retrieval fees; One Zone drops the multi-AZ redundancy), **Glacier Instant / Flexible / Deep Archive** (archival; Deep Archive retrieval takes hours, costs roughly 20–25x less than Standard per GB stored). **Lifecycle rules** transition or expire objects by age/prefix/tag automatically — the mechanism that turns "keep everything forever" from a cost disaster into a policy line.
 
-The colder tiers carry billing floors that quietly invert the saving if you ignore them: the infrequent-access classes bill a **minimum of 30 days** per object and a **minimum billable size of 128 KB**, Glacier Flexible Retrieval bills a minimum of 90 days, and Deep Archive 180. So a lifecycle rule that moves 20 KB thumbnails to Standard-IA after 10 days bills each one as 128 KB for 30 days, plus a transition request per object — reliably more expensive than leaving them in Standard. Tiering pays on large, genuinely cold objects; it loses on small, short-lived ones.
+The colder tiers carry billing floors that quietly invert the saving if you ignore them: the infrequent-access classes bill a **minimum of 30 days** per object and a **minimum billable size of 128 KB**, Glacier Flexible Retrieval bills a minimum of 90 days, and Deep Archive 180. So a lifecycle rule that moves 20 KB thumbnails to Standard-IA at 30 days (until July 2026 the earliest transition to an IA class a lifecycle rule allowed; the 30-day minimum *billing* still applies) bills each one as 128 KB for at least 30 more days, plus a transition request per object — reliably more expensive than leaving them in Standard. Since September 2024 lifecycle rules skip objects under 128 KB by default for exactly this reason; an explicit object-size filter overrides that. Tiering pays on large, genuinely cold objects; it loses on small, short-lived ones.
 
 ### Object vs file vs block — the three storage interfaces
 
@@ -95,18 +95,18 @@ Databases sit on block storage because they update bytes in place ([[How Databas
 | You gain | You pay |
 |---|---|
 | 11-nines durability, zero storage ops | No filesystem semantics: no append, no rename, no partial update |
-| Unlimited capacity, per-prefix scalable throughput | First-byte latency in tens of ms — not a database, not a cache |
+| Unlimited capacity, per-prefix scalable throughput | First-byte latency of tens to hundreds of ms — not a database, not a cache |
 | HTTP-native: presigned URLs, IAM, static hosting, [[CDN]] origin | Request pricing: millions of tiny objects cost more in PUTs than in storage; LIST at scale is slow and costly |
 | Tiering cuts cold-storage cost ~10–25x | Retrieval fees and latency on cold tiers; egress bandwidth is the famous bill shock |
 
 ## Common misconceptions
 
-- **"Buckets have folders."** The namespace is flat; the console invents folders from prefixes. Consequences that surprise people: deleting a "folder" is N individual DELETE operations (free of request charge, but N round trips and N chances to fail halfway), moving a "folder" is a billed COPY plus a DELETE for every object, and there is no atomic operation over a prefix at all.
+- **"Buckets have folders."** The namespace is flat; the console invents folders from prefixes. Consequences that surprise people: deleting a "folder" is N object deletions (free of request charge, batchable up to 1,000 keys per `DeleteObjects` call, but never atomic — it can fail halfway), moving a "folder" is a billed COPY plus a DELETE for every object, and there is no atomic operation over a prefix at all.
 - **"11 nines means I don't need backups."** Eleven nines describes S3 losing your bytes to hardware failure. It says nothing about *you* deleting them, an application bug overwriting them, or a stolen credential wiping them — all of which are far likelier than the hardware event. Versioning, Object Lock and replication into a separate account exist precisely because the durability number does not cover the realistic threat model.
 - **"S3 is cheap."** Storage per GB is cheap; S3 bills on three independent axes — bytes stored, requests made, bytes egressed. A million 10 KB objects is only about 10 GB of storage but a million PUTs plus a million GETs, and the request line can dwarf the storage line. "Cheap" is a property of a usage pattern, not of the service.
 - **"Strong consistency means transactional."** Since December 2020 a successful write is immediately visible to subsequent reads and lists. It does not make writes atomic across multiple keys, does not order concurrent writers to one key, and does not lock anything.
-- **"S3 is slow."** First-byte latency is tens of milliseconds and will not improve — but aggregate throughput is effectively unbounded through parallel ranged requests across prefixes. Confusing those two is the classic [[Latency vs Throughput vs Bandwidth]] error; S3 is a high-throughput, moderate-latency system, which is a different thing from a slow one.
-- **"One Zone-IA is just cheaper Standard."** It stores one copy in a single Availability Zone. The 11-nines figure does not apply; losing that AZ loses the data. It is correct only for data you can regenerate.
+- **"S3 is slow."** First-byte latency on the standard classes is tens to low hundreds of milliseconds (AWS's performance guide cites roughly 100–200 ms for small objects, as of 2026; S3 Express One Zone, launched November 2023, trades multi-AZ storage for single-digit-millisecond access) — but aggregate throughput is effectively unbounded through parallel ranged requests across prefixes. Confusing those two is the classic [[Latency vs Throughput vs Bandwidth]] error; S3 is a high-throughput, moderate-latency system, which is a different thing from a slow one.
+- **"One Zone-IA is just cheaper Standard."** It stores data redundantly, but only within a single Availability Zone. Its 11-nines design figure covers device failures inside that AZ and excludes the loss of the AZ itself; losing that AZ loses the data. It is correct only for data you can regenerate.
 
 ## Failure modes
 
@@ -119,10 +119,10 @@ Databases sit on block storage because they update bytes in place ([[How Databas
 
 ## When NOT to use it
 
-- As a **database**: no queries, no transactions, latency too high for OLTP point reads (S3 Select has been closed to new customers since mid-2024; use real stores, or Athena over the bucket).
+- As a **database**: no queries, no transactions, latency too high for OLTP point reads (S3 Select has been closed to new customers since 25 July 2024; use real stores, or Athena over the bucket).
 - For **high-frequency small updates** to the same logical record — immutability makes each "update" a full-object rewrite.
 - As a **filesystem** for software that needs POSIX (locking, append, rename) — adapters exist (Mountpoint, EFS is the actual product for that).
-- For **sub-10 ms serving** without a cache/CDN in front.
+- For **sub-10 ms serving** without a cache/CDN in front (S3 Express One Zone aside, which gives up multi-AZ storage to get there).
 
 ## In your stack
 
@@ -151,7 +151,7 @@ Classic follow-ups: *explain erasure coding vs replication* (same fault toleranc
 > A job writes `output/part-0001.csv`, then a downstream job LISTs `output/` — and may not see the object yet, silently processing a partial dataset. Or step A overwrites a manifest and step B GETs the stale version. Pipelines carried manifest files, retries and "consistency layers" (e.g. EMRFS consistent view backed by DynamoDB) purely to paper over this. Strong read-after-write made LIST/GET reflect completed writes immediately, deleting that failure class.
 
 > [!question]- Q: A nightly export writes 40,000 objects per second under keys like `exports/2026-10-01/part-000001`. It starts clean, then returns `503 SlowDown` on a growing fraction of PUTs. What is happening, and how many prefixes does the fix need?
-> Every key in that run shares one prefix, so every PUT lands on one index partition, which sustains about 3,500 PUT/s. S3 does repartition automatically, but it reacts to sustained load — a burst that arrives at ten times the per-prefix rate outruns the adaptation and gets `503 SlowDown` in the meantime. The fix is spreading the keys: 40,000 ÷ 3,500 ≈ 11.4, so at least **12 prefixes** are required just to meet the rate, and you would design for comfortably more. Putting a short hash first — `exports/<2 hex>/2026-10-01/part-...` — gives 256 prefixes from a one-line change, with no effect on how the objects are later read, since consumers read by manifest rather than by listing a date. Keep the retry-with-backoff as well: it is the correct response to `SlowDown` even once the key design is right.
+> Every key in that run shares one prefix, so every PUT lands on one index partition, which sustains about 3,500 PUT/s. S3 does repartition automatically, but it reacts to sustained load — a burst that arrives at more than ten times the per-prefix rate outruns the adaptation and gets `503 SlowDown` in the meantime. The fix is spreading the keys: 40,000 ÷ 3,500 ≈ 11.4, so at least **12 prefixes** are required just to meet the rate, and you would design for comfortably more. Putting a short hash first — `exports/<2 hex>/2026-10-01/part-...` — gives 256 prefixes from a one-line change, with no effect on how the objects are later read, since consumers read by manifest rather than by listing a date. Keep the retry-with-backoff as well: it is the correct response to `SlowDown` even once the key design is right.
 
 > [!question]- Q: Mini-design — Niyo must store KYC documents for 10 years: written once, read occasionally for 90 days, then almost never, but must be producible for audit and provably untampered. Sketch the S3 design.
 > Bucket in ap-south-1 (data localisation), SSE-KMS encryption, versioning + **Object Lock in compliance mode** (WORM — nobody, including admins, can delete within retention). Keys like `kyc/<hash-prefix>/<userId>/<docId>` to spread prefixes. Upload via presigned URLs; multipart for large files with an abort-incomplete lifecycle rule. Lifecycle: Standard → Standard-IA at 90 days → Glacier Flexible/Deep Archive later; retention expiry at 10 years. Access logging + CloudTrail data events for the audit trail; cross-account replication of the audit copy guards against account compromise. Cost shape: dominated by retained bytes, so the lifecycle policy is the main cost lever.

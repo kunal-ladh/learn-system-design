@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: The two proxy directions — who each one represents, what each is used for, and why CDNs and API gateways are just specialized reverse proxies.
 related: ["[[API Gateway]]", "[[CDN]]", "[[Load Balancers]]", "[[TLS and HTTPS]]"]
 ---
@@ -92,7 +92,7 @@ That last cost deserves emphasis because it bites everyone once: behind a revers
 - **The proxy as single point of failure** — both directions. A dead forward proxy cuts the office off the internet; a dead reverse proxy is a full outage. Mitigation is the usual [[Load Balancers|HA layering]] (multiple nodes, health-checked DNS/VIP).
 - **Connection exhaustion** — the reverse proxy holds every client connection; file-descriptor or memory limits hit at the proxy before backends feel anything. Detected via proxy-level connection metrics; mitigated by tuning limits, timeouts on idle clients.
 - **Buffering surprises** — proxies often buffer whole requests/responses (to shield backends from slow clients). Large uploads/downloads spike proxy memory or disk; streaming/SSE endpoints break or stall if buffering isn't disabled for them (a classic NGINX + [[WebSockets Server-Sent Events and Long Polling|SSE]] gotcha).
-- **Timeout mismatch in the chain** — proxy timeout < backend processing time ⇒ client gets 502/504 while the backend finishes anyway, work done but reported failed; see [[Timeouts Retries and Exponential Backoff]]. Every hop in CDN → LB → gateway → app needs coherent, increasing-inward timeouts.
+- **Timeout mismatch in the chain** — proxy timeout < backend processing time ⇒ client gets 502/504 while the backend finishes anyway, work done but reported failed; see [[Timeouts Retries and Exponential Backoff]]. Every hop in CDN → LB → gateway → app needs coherent timeouts that shrink inward: each outer hop's timeout must exceed the inner chain's worst case.
 - **Header spoofing** — trusting `X-Forwarded-For` from the open internet lets clients forge their IP; auth or limits keyed on it are bypassable. Mitigation: have your outermost trusted proxy *overwrite* the header with the real peer address rather than append to it. If you must append, count from the **right**: strip the entries your own proxies added and take the next value — the leftmost entry is entirely client-supplied and must never be trusted.
 - **Forward-proxy TLS interception breakage** — corporate MITM proxies break certificate pinning and confuse CLI tools (the familiar "works at home, SSL error in office" bug; `HTTPS_PROXY` env vars and corporate CA bundles are the fix).
 
@@ -141,7 +141,7 @@ Interviewers probe:
 **Q4 (mini design):** A regulated fintech needs: fixed egress IPs for partner allowlisting, inspection-free TLS to partners, and a public API behind a CDN. Which proxies go where?
 
 > [!question]- Q: Proxy placement for egress allowlisting + public API?
-> Egress: route partner-bound traffic through a forward proxy/NAT layer with a small set of static IPs the partners allowlist; use CONNECT-style tunneling (no TLS interception) so partner TLS stays end-to-end, and log connection metadata for audit. Ingress: public API behind CDN (reverse proxy #1, caching + edge TLS) → L7 LB (reverse proxy #2, HA + balancing) → API gateway (reverse proxy #3, auth/quota) → services. Client IP forwarded via X-Forwarded-For with trust anchored at the CDN; coherent timeouts increasing inward.
+> Egress: route partner-bound traffic through a forward proxy/NAT layer with a small set of static IPs the partners allowlist; use CONNECT-style tunneling (no TLS interception) so partner TLS stays end-to-end, and log connection metadata for audit. Ingress: public API behind CDN (reverse proxy #1, caching + edge TLS) → L7 LB (reverse proxy #2, HA + balancing) → API gateway (reverse proxy #3, auth/quota) → services. Client IP forwarded via X-Forwarded-For with trust anchored at the CDN; coherent timeouts shrinking inward, outer hops longest.
 
 ## Sources
 

@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing an Uber-class ride-sharing backend — high-rate location ingestion, geo-indexing with H3/geohash cells, race-free matching, the trip state machine, and surge pricing.
 related: ["[[The System Design Interview Framework]]", "[[Uber Architecture]]", "[[WebSockets Server-Sent Events and Long Polling]]", "[[Cassandra and Wide-Column Stores]]"]
 ---
@@ -38,7 +38,7 @@ related: ["[[The System Design Interview Framework]]", "[[Uber Architecture]]", 
 
 **Matching volume**
 
-- 10M requests/day ≈ 115/s average, peak ~5× in commute hours → **~600 matches/s** — three orders of magnitude below location ingest. Matching is not a throughput problem; it is a *correctness-under-concurrency* problem.
+- 10M requests/day ≈ 115/s average, peak ~5× in commute hours → **~600 matches/s** — ~400× below location ingest, between two and three orders of magnitude. Matching is not a throughput problem; it is a *correctness-under-concurrency* problem.
 
 ## High-level design
 
@@ -134,7 +134,7 @@ stateDiagram-v2
 
 - **Shard by geography** (city/region) end to end: location shards, matchers, surge aggregation all partition cleanly because riders and drivers interact only locally. Cross-shard concerns are rare (airport boundaries) and handled by querying two shards.
 - **Live location loss is self-healing**: if a location shard dies, the next 4-second ping wave repopulates a replacement from scratch within seconds; only matching in that region degrades briefly. This is why keeping it in memory is safe — and why the *durable* stream (Kafka → Cassandra) exists separately for anything that must survive.
-- **Trip DB** is the component that gets real durability engineering: synchronous replication, backups, per-trip serialization ([[Replication]]); 600 writes/s makes this easy — the correctness-critical core is deliberately the low-throughput one.
+- **Trip DB** is the component that gets real durability engineering: synchronous replication, backups, per-trip serialization ([[Replication]]); ~600 new trips/s at peak — a few thousand state-transition writes/s — makes this easy — the correctness-critical core is deliberately the low-throughput one.
 - **Matching under partition**: if the matcher can't reach the live store for a region, fail the request fast with a retry hint ([[Load Shedding and Graceful Degradation]]) rather than matching on stale positions — a stale match wastes a driver and strands a rider.
 - **Offer reaper redundancy**: expired-offer reclamation must survive matcher crashes — leases with TTLs in the store itself, not timers in a process's memory.
 - **Degraded modes**: surge unavailable → default multiplier 1.0 (lose revenue, keep rides); ETA service down → rank by distance (worse matches, still matches). Enumerate what degrades versus what stops: trips and money never run in degraded mode.
@@ -155,7 +155,7 @@ stateDiagram-v2
 > Locations are high-rate (250K/s), ephemeral (superseded every 4 s), and self-healing (the stream repopulates any loss within one ping interval) — durability would buy nothing and cost everything at that write rate. Trips are low-rate (~hundreds/s), long-lived, legally and financially binding, and not reconstructible from thin air — they need transactions, replication, and audit trails. Reversed, you'd have a trip record that vanishes on a node restart (money lost, disputes unresolvable) and a location store grinding disks to durably record positions that are stale before the fsync completes.
 
 > [!question]- Q: What happens if two ride requests arrive 50 ms apart and the same driver is the best candidate for both?
-> Both matchers rank the driver first. Both attempt the reserve CAS on the driver's status key. The CAS is atomic on the single shard owning that driver: one request flips `available → offered` and proceeds to push the offer; the other's CAS fails (state is no longer `available`) and it immediately moves to its next-ranked candidate. No lock is held across the network; the loser lost microseconds, not seconds. If the first driver declines, they return to `available` and may legitimately be offered the second trip later.
+> Both matchers rank the driver first. Both attempt the reserve CAS on the driver's status key. The CAS is atomic on the single shard owning that driver: one request flips `available → offered` and proceeds to push the offer; the other's CAS fails (state is no longer `available`) and it immediately moves to its next-ranked candidate. No lock is held across the network; the loser lost about one store round trip (~1 ms), not seconds. If the first driver declines, they return to `available` and may legitimately be offered the second trip later.
 
 > [!question]- Q: A region's live-location shard crashes at peak hour. Walk the next 30 seconds.
 > Sockets and ping writes to that shard fail; the ingest gateway buffers briefly or drops (pings are lossy by contract). Matching in that region fails fast — riders see "finding drivers" slightly longer. A replacement shard (standby or respawned) starts empty; within one ping interval (~4 s) most online drivers have written their position into it; within ~10 s coverage is effectively full because every driver pings continuously. Matching resumes on fresh data. Trips in progress were never touched — their state is in the trip DB, and the driver/rider channels reconnect to gateways independently. Total user-visible damage: a few seconds of delayed matching in one region.

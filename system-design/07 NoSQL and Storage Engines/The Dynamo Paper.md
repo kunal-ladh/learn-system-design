@@ -4,7 +4,7 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Amazon's 2007 Dynamo paper — the always-writable key-value store whose toolkit (consistent hashing, quorums, hinted handoff, vector clocks, Merkle trees, gossip) became the shared vocabulary of AP databases.
 related: ["[[Consistent Hashing]]", "[[Quorum Reads and Writes]]", "[[DynamoDB Design]]", "[[Logical Clocks and Ordering]]", "[[Design a Key-Value Store]]"]
 ---
@@ -93,7 +93,7 @@ graph TD
 
 | Problem | Mechanism | Lives on in |
 |---|---|---|
-| Where does a key live? | Consistent hashing + virtual nodes | Cassandra, Riak, Redis Cluster (hash slots) |
+| Where does a key live? | Consistent hashing + virtual nodes | Cassandra, Riak (Redis Cluster solves the same problem with 16384 fixed hash slots instead — not a ring; see [[Consistent Hashing]]) |
 | How many replicas confirm an op? | N/R/W quorums | Cassandra consistency levels, [[Quorum Reads and Writes]] |
 | Staying writable when replicas die? | Sloppy quorum + hinted handoff | Cassandra hints |
 | Detecting conflicting versions? | Vector clocks | Riak; Cassandra swapped in last-write-wins |

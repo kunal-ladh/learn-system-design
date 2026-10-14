@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: How autoscaling actually works — HPA mechanics, why CPU is often the wrong signal for IO-bound Java services, custom metrics, cluster-level scaling, and why headroom is still required.
 related: ["[[Capacity Planning]]", "[[Backpressure and Flow Control]]", "[[Vertical vs Horizontal Scaling]]"]
 ---
@@ -40,7 +40,7 @@ Example: 4 pods at 80% average CPU with a 50% target → `ceil(4 × 80/50)` = 7 
 
 Three defaults that the formula alone hides, and that decide how the loop actually feels:
 
-- **A 10% dead band.** If `currentMetric / targetMetric` falls between 0.9 and 1.1, the HPA does nothing at all — that is the `--horizontal-pod-autoscaler-tolerance` default of `0.1`, and it exists so a fleet hovering near target doesn't twitch every 15 seconds.
+- **A 10% dead band.** If `currentMetric / targetMetric` falls between 0.9 and 1.1, the HPA does nothing at all — that is the `--horizontal-pod-autoscaler-tolerance` default of `0.1` (overridable per HPA via a `tolerance` field in `behavior`, stable since v1.37 in 2026), and it exists so a fleet hovering near target doesn't twitch every 15 seconds.
 - **Up and down are asymmetric on purpose.** The default `behavior` allows scale-*up* with a 0-second stabilization window and a policy of +100% or +4 pods per 15 s, whichever is larger; scale-*down* gets a **300-second stabilization window** during which the controller takes the *highest* desired count it computed, so brief lulls can't tear capacity out.
 - **CPU/memory targets are a fraction of each pod's `resources.requests`**, not of the node or the limit — so a wrong request silently rescales every percentage you reason about.
 
@@ -64,7 +64,7 @@ CPU is the *right* signal for genuinely CPU-bound work (encoding, crypto, serial
 
 ### The other two autoscalers
 
-- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, and still awkward alongside HPA-on-CPU since both react to the same signal. Its other historic cost, a pod restart to apply new requests, is era-specific: in-place pod resize graduated to beta in Kubernetes v1.33 (2025) and VPA 1.4+ can use it.
+- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, and still awkward alongside HPA-on-CPU since both react to the same signal. Its other historic cost, a pod restart to apply new requests, is era-specific: in-place pod resize graduated to beta in Kubernetes v1.33 (2025) and to stable in v1.35 (December 2025), and VPA's `InPlaceOrRecreate` mode uses it (alpha in VPA 1.4, GA in 1.6).
 - **Cluster Autoscaler**: pods are scheduled onto nodes, and when new pods don't fit, they sit `Pending` until the cluster autoscaler provisions a node — adding **minutes** to scale-up latency on top of pod startup. **Pod priority and preemption** decide who waits when capacity is tight: give user-facing services higher `priorityClass` so a scale-up evicts batch/cron pods instead of queueing behind them. A common trick is a low-priority "balloon" deployment of placeholder pods that reserve warm node capacity and get evicted the instant real workloads need it.
 
 ### Scaling lag vs bursts: why headroom survives
@@ -79,8 +79,8 @@ graph LR
     B --> C["HPA computes new count"]
     C --> D["Pods scheduled"]
     D --> E{"Node capacity free?"}
-    E -->|yes| F["Container starts"]
-    E -->|no| G["Cluster autoscaler adds node minutes"]
+    E -->|"yes"| F["Container starts"]
+    E -->|"no"| G["Cluster autoscaler adds node minutes"]
     G --> F
     F --> H["JVM warmup seconds to minutes"]
     H --> I["Capacity actually added"]

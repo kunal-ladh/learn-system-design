@@ -4,7 +4,7 @@ tags: [system-design, traffic]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: What an API gateway does at the edge — authn, rate limiting, routing, transformation — how it differs from a load balancer and reverse proxy, and why business logic must not live there.
 related: ["[[Load Balancers]]", "[[Rate Limiting]]", "[[Reverse Proxy vs Forward Proxy]]", "[[How JWT Works]]"]
 ---
@@ -88,7 +88,7 @@ The end state is the **ESB problem** reborn: a central component that encodes bu
 
 | You gain | You pay |
 |---|---|
-| Auth, quotas, TLS implemented once | An extra hop — typically ~1 ms-order added latency, more if plugins call out (e.g. Redis for rate limits) |
+| Auth, quotas, TLS implemented once | An extra hop — typically ~1 ms to single-digit ms added latency, more if plugins call out (e.g. Redis for rate limits) |
 | Stable public contract hiding topology | A critical single choke point: gateway down = every API down |
 | Per-consumer policy as configuration | Config sprawl: hundreds of routes/plugins become their own codebase needing review and testing |
 | Smaller public attack surface | Services may go lax internally ("the gateway checks auth") — dangerous if an attacker gets inside the perimeter |
@@ -153,6 +153,6 @@ Interviewers probe:
 
 - Kong official documentation — gateway concepts (Services, Routes, Consumers, Plugins), DB-less mode.
 - Martin Fowler / James Lewis, *Microservices* (martinfowler.com, 2014) — origin of "smart endpoints and dumb pipes".
-- Chris Richardson, microservices.io — "API Gateway" and "Backends for Frontends" patterns.
+- Chris Richardson, microservices.io — the "API Gateway" pattern, which documents backends-for-frontends as a variation on it (one gateway per kind of client) rather than as a standalone pattern page. See [[Backend for Frontend]].
 - AWS documentation: Amazon API Gateway concepts.
 - Sam Newman, *Building Microservices* (2nd ed., 2021), ch. on service communication and edge.

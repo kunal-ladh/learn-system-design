@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: OAuth 2.0 as delegated authorization (the four roles, authorization code + PKCE as the one flow to know, client credentials for machines) and OIDC as the identity layer on top — id_token, userinfo, discovery — plus scopes vs claims.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[Single Sign-On]]"]
 ---
@@ -15,7 +15,7 @@ related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[Singl
 
 ## The problem that created it
 
-Mid-2000s web: you want a photo-printing site to print your photos stored on another service. The only mechanism was handing the printing site **your actual password** — the "password anti-pattern." That gave it *total* access (read, delete, change password), forever, unrevocable except by changing the password everywhere, and trained users to type credentials into random sites. Twitter/Google/Flickr each invented proprietary delegation protocols; OAuth (1.0 in 2010, then 2.0 in 2012) standardized the idea: the user authenticates **only to the service that owns the data**, approves a *scoped* grant, and the third party receives a limited-power, revocable token — never the password.
+Mid-2000s web: you want a photo-printing site to print your photos stored on another service. The only mechanism was handing the printing site **your actual password** — the "password anti-pattern." That gave it *total* access (read, delete, change password), forever, unrevocable except by changing the password everywhere, and trained users to type credentials into random sites. Google (AuthSub), Yahoo (BBAuth) and Flickr each invented proprietary delegation protocols; OAuth (1.0 as a community spec in 2007, published as RFC 5849 in 2010; then 2.0 as RFC 6749 in 2012) standardized the idea: the user authenticates **only to the service that owns the data**, approves a *scoped* grant, and the third party receives a limited-power, revocable token — never the password.
 
 Then everyone immediately bent it into a login mechanism ("if Google gives this app a token, the app knows the user has a Google account — so, login!"). But OAuth proves *authorization to access resources*, not *identity* — an access token says what you can do, not verifiably who you are, and homegrown "login with OAuth" patterns had real holes (token substitution: an app accepting any valid-looking access token as proof of identity). OIDC (2014) standardized the identity layer properly: a signed **id_token** that *asserts who authenticated, when, and how*.
 
@@ -53,24 +53,25 @@ sequenceDiagram
     participant R as Resource server
 
     C->>C: generate code verifier and its SHA256 challenge
-    C->>U: redirect to authorize endpoint with client id, scope, redirect uri, challenge
+    C->>U: redirect to authorize endpoint with response type code, client id, redirect uri, scope, state, challenge and method S256
     U->>A: authorize request
     A->>U: login page plus consent screen
     U->>A: credentials and consent
     A->>U: redirect back with one time authorization code
-    U->>C: code delivered to redirect uri
-    C->>A: POST /token with code and code verifier
+    U->>C: code and state delivered to redirect uri
+    C->>C: check state matches the value it sent
+    C->>A: POST /token with code, code verifier, redirect uri, client id
     A->>A: hash verifier, compare with stored challenge
     A-->>C: access token, refresh token, id token if OIDC
     C->>R: API call with access token
     R-->>C: data
 ```
 
-The code is single-use and short-lived (minutes); tokens travel only on the direct back-channel POST, never through the browser. From here, token lifecycle is [[Refresh Tokens and Token Rotation]].
+The code is single-use and short-lived (minutes); tokens travel only in the response to the direct token-endpoint POST, never through a redirect URL — for a SPA that POST is a `fetch` from the page, so tokens do reach browser memory, just not the URL bar, history, or referrers. From here, token lifecycle is [[Refresh Tokens and Token Rotation]].
 
 ### Why implicit died
 
-The **implicit flow** skipped the code exchange: tokens came back *in the URL fragment* of the redirect, because 2012-era browsers couldn't make cross-origin POSTs from JavaScript. That put bearer tokens in browser history, referrer leakage paths, and JS-visible URLs, with no PKCE-style binding and no refresh tokens. CORS removed the only reason it existed; RFC 9700 says don't use it, and the OAuth 2.1 draft deletes it outright (along with the password grant, which had apps collecting passwords again — the exact anti-pattern OAuth was built to end). SPAs use authorization code + PKCE like everything else.
+The **implicit flow** skipped the code exchange: tokens came back *in the URL fragment* of the redirect, because cross-origin requests from JavaScript (CORS) were not yet reliably supported across 2012-era browsers. That put bearer tokens in browser history, referrer leakage paths, and JS-visible URLs, with no PKCE-style binding and no refresh tokens. CORS removed the only reason it existed; RFC 9700 says don't use it, and the OAuth 2.1 draft deletes it outright (along with the password grant, which had apps collecting passwords again — the exact anti-pattern OAuth was built to end). SPAs use authorization code + PKCE like everything else.
 
 ### Client credentials — machines
 
@@ -150,5 +151,5 @@ Rule of thumb: **access token = what you may do** (resource servers read it); **
 - RFC 6749 — *The OAuth 2.0 Authorization Framework*; RFC 6750 — bearer token usage.
 - RFC 7636 — *PKCE*; RFC 8628 — device authorization grant.
 - RFC 9700 — *Best Current Practice for OAuth 2.0 Security*; OAuth 2.1 draft (draft-ietf-oauth-v2-1) — the consolidated modern ruleset.
-- OpenID Connect Core 1.0 specification (openid.net) — id_token, userinfo, discovery.
+- OpenID Connect Core 1.0 (openid.net) — id_token, userinfo; OpenID Connect Discovery 1.0 — `/.well-known/openid-configuration`.
 - oauth.net and Aaron Parecki's *OAuth 2.0 Simplified* — the most readable flow-by-flow walkthroughs.

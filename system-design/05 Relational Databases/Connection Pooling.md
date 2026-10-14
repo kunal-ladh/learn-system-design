@@ -4,7 +4,7 @@ tags: [system-design, databases]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: Why opening a database connection per request doesn't survive production, how to size a pool (small is usually faster), HikariCP defaults, PgBouncer/ProxySQL, and pool exhaustion as a classic outage shape.
 related: ["[[How Databases Store Data]]", "[[Timeouts Retries and Exponential Backoff]]", "[[Load Shedding and Graceful Degradation]]"]
 ---
@@ -17,7 +17,7 @@ A connection pool keeps a small set of long-lived database connections open and 
 
 A young service opens a connection per request: connect, query, close. It works in dev. Under production load, three walls appear in sequence.
 
-First, **connection setup cost**: a TCP handshake, a TLS handshake, authentication, and server-side session setup — several network round trips plus real server work before the first byte of your actual query. For a 2 ms query, tens of milliseconds of ceremony.
+First, **connection setup cost**: a TCP handshake, a TLS handshake, authentication, and server-side session setup — several network round trips plus real server work before the first byte of your actual query. For a 2 ms query, several milliseconds of ceremony — often more than the query itself.
 
 Second, **per-connection server cost**: PostgreSQL forks an **operating-system process per connection**, each with its own memory (and `work_mem` multiplies per sort/hash operation within it). MySQL uses a thread per connection — lighter, but far from free. Either way the server spends RAM and scheduler effort just *keeping* connections, idle or not. Postgres ships with `max_connections = 100` by default for a reason.
 
@@ -52,7 +52,7 @@ What a bigger pool actually buys you above that point: nothing but memory burn a
 
 The fleet-level trap: pool size is **per instance**. 30 microservices × 3 replicas × 20 connections = 1,800 connections at a Postgres that comfortably runs 100–300. Kubernetes autoscaling multiplies this silently ([[Autoscaling]]). Budget: `instances × pool_size` per service, summed across services, must fit the database's connection budget with headroom for admins and failover churn.
 
-### HikariCP defaults (the JVM standard, and Spring Boot's default pool)
+### HikariCP defaults (the JVM standard, and Spring Boot's default pool; unchanged in HikariCP 7.x as of 2026)
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -78,7 +78,7 @@ Two defaults worth overriding consciously: `connectionTimeout` of 30 s is far to
 
 A client-side pool bounds *one process*. When many services (or many instance replicas, or serverless functions) share one database, you also want a server-side pooler in front of it:
 
-- **PgBouncer** (PostgreSQL): thousands of client connections multiplexed onto a few dozen real backend connections. Modes: **session** (one backend per client session — safe, least sharing), **transaction** (backend lent per transaction — the high-leverage mode), **statement** (per statement — most aggressive, breaks multi-statement transactions). Transaction mode historically breaks session state — session-level prepared statements, `SET` parameters, advisory locks; PgBouncer added protocol-level prepared-statement support in v1.21 (2023), which removed the biggest sharp edge, but session-state assumptions must still be audited.
+- **PgBouncer** (PostgreSQL): thousands of client connections multiplexed onto a few dozen real backend connections. Modes: **session** (one backend per client session — safe, least sharing), **transaction** (backend lent per transaction — the high-leverage mode), **statement** (per statement — most aggressive, breaks multi-statement transactions). Transaction mode historically breaks session state — session-level prepared statements, `SET` parameters, advisory locks; PgBouncer added protocol-level prepared-statement support in v1.21 (2023) and turned it on by default in v1.24 (2025, `max_prepared_statements = 200`), which removed the biggest sharp edge, but session-state assumptions must still be audited.
 - **ProxySQL** (MySQL): connection multiplexing plus query routing (e.g. reads to replicas), query caching and firewalling.
 - Managed equivalents exist (e.g. AWS RDS Proxy) with the same conceptual role.
 
@@ -119,7 +119,7 @@ A pool is observable with four metrics; alert on the first two:
 ## In your stack
 
 - Spring Boot services get HikariCP by default — which means every service has these exact defaults unless someone changed them. An audit of `connectionTimeout`, `maxLifetime` vs infra idle timeouts, and pool metrics exposure is cheap and usually overdue.
-- The same discipline applies to the MongoDB Java driver (`maxPoolSize` default 100, `waitQueueTimeoutMS`) and your Redis clients (Lettuce multiplexes on few connections; Jedis pools) — every datastore client in the stack has a pool with defaults someone chose for a different company.
+- The same discipline applies to the MongoDB Java driver (`maxPoolSize` default 100; `waitQueueTimeoutMS`, deprecated in the v5.x driver in favour of the client-level `timeoutMS`) and your Redis clients (Lettuce multiplexes on few connections; Jedis pools) — every datastore client in the stack has a pool with defaults someone chose for a different company.
 - Services pinned at 1 replica make per-instance sizing easier (one pool per service) but concentrate the blast radius: one leaked-connection bug = that whole capability down. Leak detection and pool alarms matter *more* at 1 replica, not less.
 - Remote calls inside `@Transactional` methods are the Niyo-shaped version of the exhaustion outage: a slow partner-bank API inside a transaction holds a connection for the full call. Keep transactions datastore-only; publish via [[The Outbox Pattern]] rather than calling brokers in-transaction.
 - Kong/edge rate limits ([[Rate Limiting]]) are your upstream pressure valve: it is better to reject at the edge than to queue into an exhausted pool.
@@ -142,7 +142,7 @@ Classic probes: "why does a small pool outperform a big one?" (fixed parallel ca
 > Each new pod brings its own full pool; total fleet connections crossed `max_connections`. Fix one: budget — size per-instance pools so `services × replicas × pool_size` fits the DB with headroom, enforced as config review. Fix two: structural — put PgBouncer (or RDS Proxy) in front so client connections multiplex onto a bounded backend set, decoupling fleet size from DB session count.
 
 > [!question]- Q: Mini design: sizing for a 16-core Postgres serving 3 services × 2 replicas, p95 query 10 ms, peak 600 req/s total. Sketch the arithmetic.
-> Needed concurrent connections ≈ arrival × hold = 600/s × 0.010 s = 6 active on average; allow for bursts and transactions spanning a few queries → per-instance pools of 8–10 give 48–60 total, comfortably under a 16-core box's healthy range (formula ≈ 16 × 2 = 32 *active*; pools slightly above that are fine since not all are active simultaneously) and under max_connections with headroom. If p95 hold time ever grows 10x, the math breaks — which is the argument for alerting on pool wait, not just query time.
+> Needed concurrent connections ≈ arrival × hold = 600/s × 0.010 s = 6 active on average; allow for bursts and transactions spanning a few queries → per-instance pools of 8–10 give 48–60 *configured* slots. That is above the formula's ≈ 16 × 2 = 32 *active* sessions, which is fine: only ~6 are active on average, so the database never sees more concurrency than it can serve — and 60 sits well under `max_connections` with headroom. If p95 hold time ever grows 10x, the math breaks — which is the argument for alerting on pool wait, not just query time.
 
 ## Sources
 

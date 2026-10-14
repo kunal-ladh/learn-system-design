@@ -4,7 +4,7 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Google's storage lineage — GFS to Bigtable to Spanner — and how TrueTime's bounded clock uncertainty bought externally consistent global SQL, with CockroachDB and YugabyteDB as open descendants.
 related: ["[[Google Spanner Deep Dive]]", "[[CAP Theorem]]", "[[Consensus and Raft]]", "[[Consistency Models]]", "[[Logical Clocks and Ordering]]"]
 ---
@@ -49,9 +49,9 @@ On top: real **SQL, schemas, and secondary indexes** — the 2017 "Spanner: Beco
 
 The hard problem for a *global* database is ordering: if transaction T1 commits in Mumbai and T2 later commits in Virginia, every observer should agree T1 precedes T2 — **external consistency** (linearizability for transactions, the strictest point on the [[Consistency Models]] spectrum). Wall clocks can't promise this — they skew. Logical clocks order only *communicating* events.
 
-**TrueTime** attacks the physics: GPS receivers and atomic clocks in every datacenter, with an API that returns not a timestamp but an **interval**: `TT.now() → [earliest, latest]`, guaranteed to contain true time. The uncertainty **ε** is typically small — on the order of a few milliseconds (the paper reports averages around 4 ms in 2012; it has shrunk since).
+**TrueTime** attacks the physics: GPS receivers and atomic clocks in every datacenter, with an API that returns not a timestamp but an **interval**: `TT.now() → [earliest, latest]`, guaranteed to contain true time. The uncertainty **ε** is typically small — on the order of a few milliseconds (the paper reports averages around 4 ms in 2012; Google reported under 1 ms at the 99th percentile in April 2023).
 
-The trick is **commit wait**: a transaction takes its commit timestamp `s = TT.now().latest`, then *deliberately waits* until `TT.now().earliest > s` before releasing locks and acknowledging. After the wait, every clock everywhere agrees `s` is in the past — so any transaction that starts afterwards necessarily gets a later timestamp. Real-time order equals timestamp order, globally, at the price of ~ε extra commit latency. Bounded uncertainty is *paid for in waiting*, converting a clock guarantee into an ordering guarantee.
+The trick is **commit wait**: a transaction takes its commit timestamp `s = TT.now().latest`, then *deliberately waits* until `TT.now().earliest > s` before releasing locks and acknowledging. After the wait, every clock everywhere agrees `s` is in the past — so any transaction that starts afterwards necessarily gets a later timestamp. Real-time order equals timestamp order, globally, at the price of roughly 2ε extra commit latency (the wait runs from `latest` until `earliest` passes it; the paper puts the expected wait at at least 2ε̄ and overlaps it with Paxos communication). Bounded uncertainty is *paid for in waiting*, converting a clock guarantee into an ordering guarantee.
 
 The paper describes ε as a **sawtooth**: it grows between polls of the time masters at an assumed worst-case drift rate of 200 microseconds per second, and resets when a poll succeeds — roughly 1 to 7 ms across a 30-second poll interval, averaging around 4 ms in 2012.
 
@@ -69,7 +69,7 @@ The practical reading: serializable is enough when every causal path runs throug
 
 Commit wait is the famous part of Spanner's write cost and the smaller part. Physics dominates. Light in fibre travels at roughly 200,000 km/s — about two-thirds of its vacuum speed — so a round trip between regions 4,000 km apart covers 8,000 km and cannot complete faster than 8,000 ÷ 200,000 = **40 ms**, before any routing, queueing or processing is counted. A write replicated to a majority spread across such regions pays that floor on every commit.
 
-Against that, commit wait adds the clock-uncertainty term — single-digit milliseconds with the 2012 paper's figures. So the honest summary of "Spanner is slow for writes" is that it is *distance* that is slow, and TrueTime's contribution is a few milliseconds on top in exchange for an ordering guarantee. This is also why single-region Spanner-class deployments feel unremarkable and multi-region ones feel expensive: the same software, a different value of distance.
+Against that, commit wait adds the clock-uncertainty term — about 2ε, so roughly 8 ms at the 2012 paper's 4 ms average, and partly hidden because it overlaps the Paxos round. So the honest summary of "Spanner is slow for writes" is that it is *distance* that is slow, and TrueTime's contribution is a few milliseconds on top in exchange for an ordering guarantee. This is also why single-region Spanner-class deployments feel unremarkable and multi-region ones feel expensive: the same software, a different value of distance.
 
 ```mermaid
 sequenceDiagram
@@ -77,10 +77,11 @@ sequenceDiagram
   participant L as Paxos leader
   participant R as Replicas
   C->>L: commit T1
-  L->>R: Paxos replicate write
-  R-->>L: majority ack
   Note over L: pick s = TT.now latest
-  Note over L: commit wait until earliest > s
+  L->>R: Paxos replicate write
+  Note over L: commit wait runs alongside replication
+  R-->>L: majority ack
+  Note over L: ack only once earliest > s
   L-->>C: ack with timestamp s
   Note over C: any later transaction gets timestamp greater than s
 ```
@@ -91,8 +92,8 @@ Spanner is, formally, **CP**: during a partition that separates a Paxos group's 
 
 ### Open descendants
 
-- **CockroachDB** and **YugabyteDB** copy the architecture — ranges/tablets replicated by [[Consensus and Raft|Raft]] groups, distributed SQL, serializable transactions — but *without* TrueTime hardware. They use hybrid logical clocks with an assumed max clock offset (default 500 ms in CockroachDB): correctness degrades if clocks actually exceed the bound, and they deliver serializable isolation while renouncing Spanner's full external-consistency guarantee (CockroachDB documents the gap as the price of commodity clocks; reads may pay "uncertainty restarts" instead of commit waits).
-- **Cloud Spanner** is the GCP product; AWS's **Aurora DSQL** and others continue the genre. The genre name "NewSQL" simply means: distributed, replicated, horizontally scalable — and unapologetically SQL.
+- **CockroachDB** and **YugabyteDB** copy the architecture ("open" by lineage more than licence: YugabyteDB's core is Apache 2.0, while CockroachDB retired its free Core edition in November 2024 and stopped publishing new source in September 2026) — ranges/tablets replicated by [[Consensus and Raft|Raft]] groups, distributed SQL, serializable transactions — but *without* TrueTime hardware. They use hybrid logical clocks with an assumed max clock offset (default 500 ms in CockroachDB): correctness degrades if clocks actually exceed the bound, and they deliver serializable isolation while renouncing Spanner's full external-consistency guarantee (CockroachDB documents the gap as the price of commodity clocks; reads may pay "uncertainty restarts" instead of commit waits).
+- **Cloud Spanner** is the GCP product; AWS's **Aurora DSQL** (GA May 2025) and others continue the genre. The genre name "NewSQL" simply means: distributed, replicated, horizontally scalable — and unapologetically SQL.
 
 | | Spanner | CockroachDB | YugabyteDB |
 |---|---|---|---|
@@ -101,7 +102,7 @@ Spanner is, formally, **CP**: during a partition that separates a Paxos group's 
 | Replication unit | Split, replicated by Paxos | Range, replicated by Raft | Tablet, replicated by Raft |
 | Where uncertainty is paid | Commit wait, on writes | Read restarts when a timestamp lands in the uncertainty window | The same restart mechanism |
 | Strongest guarantee | External consistency | Serializable | Serializable |
-| Client interface | SQL | PostgreSQL wire protocol | PostgreSQL wire protocol |
+| Client interface | SQL — GoogleSQL or a PostgreSQL dialect | PostgreSQL wire protocol | PostgreSQL wire protocol |
 
 Read the table as one trade repeated: Google spent hardware to turn uncertainty into a *measured* quantity it could wait out on the write path; the open descendants spend nothing on hardware and pay instead on the read path, in retries, under an assumption they must monitor rather than observe.
 
@@ -129,7 +130,7 @@ Each system exists because real teams hit the previous one's "still lacked" colu
 
 - **"Spanner disproves CAP."** It doesn't, and Brewer (CAP's author) says so explicitly: under an actual partition Spanner chooses consistency and loses availability on the minority side. The claim is that partitions are engineered to be rare enough that the choice almost never activates.
 - **"TrueTime makes clocks perfectly synchronized."** The opposite — TrueTime's contribution is *admitting* desynchronization as a measured interval. Correctness comes from waiting out the uncertainty, not eliminating it.
-- **"Commit wait makes every query slow."** It delays *write acknowledgments* by roughly ε (milliseconds); reads — the bulk of most workloads — are snapshot reads that never commit-wait, and can be served by local replicas.
+- **"Commit wait makes every query slow."** It delays *write acknowledgments* by roughly 2ε (milliseconds, overlapped with replication); reads — the bulk of most workloads — are snapshot reads that never commit-wait, and can be served by local replicas.
 - **"CockroachDB = open-source Spanner."** Architecturally close; guarantee-wise weaker (serializable, not externally consistent) because commodity NTP can't bound uncertainty the way GPS + atomic clocks do. For most applications the difference never bites — but it exists.
 
 ## In your stack
@@ -143,12 +144,12 @@ Each system exists because real teams hit the previous one's "still lacked" colu
 
 The 60-second version: *"Bigtable, 2006: a sorted key-value map in tablets on GFS, SSTables and memtables, atomic only per row — it scaled but exported the transaction problem to every team; Megastore patched transactions on top and was slow. Spanner, 2012: splits replicated by per-split Paxos groups, 2PC across splits, full SQL and schemas. The new idea is TrueTime — GPS and atomic clocks exposing a bounded uncertainty interval — plus commit wait: take the latest bound as your timestamp and wait out the uncertainty before acking, so timestamp order equals real-time order globally: external consistency. It's formally CP, but on Google's network partitions are so rare it's 'effectively CA' — Brewer's own framing. CockroachDB and YugabyteDB rebuild it on commodity clocks with weaker ordering guarantees."*
 
-Classic follow-ups: *why can't vector clocks give external consistency?* (they order only causally related events; two independent transactions through different coordinators need a global arbiter — see [[Logical Clocks and Ordering]]); *what breaks if TrueTime's ε is violated?* (ordering — external consistency silently fails; Google treats clock integrity as an engineering invariant); *why did Google bother with SQL again?* (the Spanner paper's famous line is that it's better to have application programmers deal with performance problems as bottlenecks arise, rather than always coding around the lack of transactions).
+Classic follow-ups: *why can't vector clocks give external consistency?* (they order only causally related events; two independent transactions through different coordinators need a global arbiter — see [[Logical Clocks and Ordering]]); *what breaks if TrueTime's ε is violated?* (ordering — external consistency silently fails; Google treats clock integrity as an engineering invariant); *why did Google bother with transactions again?* (the Spanner paper's famous line is that it's better to have application programmers deal with performance problems as bottlenecks arise, rather than always coding around the lack of transactions).
 
 ## Check yourself
 
 > [!question]- Q: Explain commit wait to a teammate in three sentences, including what it buys.
-> TrueTime gives an interval guaranteed to contain true time, so a committing leader picks its timestamp as the interval's upper bound. It then holds the acknowledgment until TrueTime's lower bound everywhere has passed that timestamp — a wait of roughly the uncertainty ε. After that, any transaction starting anywhere on Earth will receive a strictly later timestamp, so ordering timestamps equals ordering by real time: external consistency, bought with a few milliseconds of deliberate waiting.
+> TrueTime gives an interval guaranteed to contain true time, so a committing leader picks its timestamp as the interval's upper bound. It then holds the acknowledgment until TrueTime's lower bound everywhere has passed that timestamp — a wait of roughly twice the uncertainty, 2ε, overlapped with Paxos replication. After that, any transaction starting anywhere on Earth will receive a strictly later timestamp, so ordering timestamps equals ordering by real time: external consistency, bought with a few milliseconds of deliberate waiting.
 
 > [!question]- Q: What happens to a Spanner split during a network partition that isolates its Paxos leader with only one of five replicas?
 > The leader's side has no majority: it cannot replicate writes and its leader lease expires; writes on that side fail — CP behavior. The majority side (three replicas) elects a new leader and continues serving reads and writes. Clients routed to the minority see unavailability for that split until the partition heals, whereupon the old leader's side rejoins and catches up via Paxos. No split-brain: at most one side ever holds a valid majority ([[Split Brain and Fencing]]).

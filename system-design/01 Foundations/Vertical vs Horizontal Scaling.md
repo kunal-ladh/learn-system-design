@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Scale up versus scale out — the cost curves, why vertical scaling always runs out, and the distributed-systems problems (state, sessions, consistency) that horizontal scaling forces you to solve.
 related: ["[[Scalability]]", "[[Stateless vs Stateful Services]]", "[[Replication]]"]
 ---
@@ -27,7 +27,7 @@ Replace the machine with a bigger one: more cores, more RAM, faster disks (NVMe)
 
 **Why it's attractive:**
 - Zero architectural work. A single-node system keeps its simplest properties: local function calls, single-machine [[ACID Transactions|ACID transactions]], no network partitions between components, trivial debugging.
-- It goes further than folklore says. As of the mid-2020s a single cloud instance can offer hundreds of vCPUs and tens of TB of RAM (AWS high-memory instances exceed 20 TB). "We outgrew one machine" is false for the vast majority of businesses — a point the [[Why MySQL Does Scale]] and [[WhatsApp and the Small-Team Scale Story]] stories both make.
+- It goes further than folklore says. As of 2026 a single cloud instance can offer hundreds to nearly two thousand vCPUs and tens of TB of RAM (AWS's largest high-memory instance, u7inh-32tb, has 1,920 vCPUs and 32 TiB). "We outgrew one machine" is false for the vast majority of businesses — a point the [[Why MySQL Does Scale]] and [[WhatsApp and the Small-Team Scale Story]] stories both make.
 
 **Why it runs out anyway:**
 1. **A hard ceiling exists.** At any moment there is a biggest buyable machine; demand beyond it has nowhere to go.
@@ -124,7 +124,7 @@ Two readings. First, the ceiling is 1/s = **20×** no matter what you spend; pas
 ### How real systems actually decide
 
 - **Stateless tiers: always out.** There is no reason to scale up an app server past the point where one more pod is cheaper — which is almost immediately. This is Kubernetes' default worldview.
-- **Databases: up first, then out.** Because scaling a database out is so expensive in engineering terms, the standard ladder is: bigger instance → read [[Replication|replicas]] → [[Caching Strategies|caching]] → [[Sharding]] last ([[Database Scaling Patterns]]). Teams that shard before exhausting vertical headroom buy complexity they didn't need.
+- **Databases: up first, then out.** Because scaling a database out is so expensive in engineering terms, the standard ladder is: tune queries and indexes → [[Caching Strategies|caching]] → read [[Replication|replicas]] → bigger instance → functional split → [[Sharding]] last ([[Database Scaling Patterns]]). Teams that shard before exhausting vertical headroom buy complexity they didn't need.
 - **Both at once.** A fleet of large-ish nodes usually beats either extreme: too-small nodes waste overhead per node and multiply coordination; one giant node concentrates risk.
 
 ### A decision checklist

@@ -4,7 +4,7 @@ tags: [system-design, networking]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-14
 summary: What TCP's reliability actually costs — handshakes, ordering, head-of-line blocking — and the cases where UDP's "unreliability" is the right trade.
 related: ["[[HTTP 1.1 vs HTTP 2 vs HTTP 3]]", "[[How DNS Works]]", "[[Latency vs Throughput vs Bandwidth]]"]
 ---
@@ -65,7 +65,7 @@ Two small latency gotchas worth recognizing by name: **Nagle's algorithm** (batc
 
 **When UDP wins:**
 
-- **DNS** — a query fits in one datagram; a handshake would triple the cost of every lookup. Retry logic is trivial (ask again, or ask another server).
+- **DNS** — a query fits in one datagram; a handshake would double the round trips of every lookup. Retry logic is trivial (ask again, or ask another server).
 - **QUIC / HTTP3** — the heavyweight case: QUIC rebuilds reliability, ordering *per stream*, and congestion control in userspace **on top of UDP**, precisely so one lost packet blocks only its own stream and so the transport can evolve without waiting for kernels and middleboxes. UDP here is an escape hatch from TCP's ossification, not a rejection of reliability.
 - **Live video/voice calls** — a frame that arrives late is worthless; retransmitting it wastes bandwidth to deliver garbage. Better to drop it and conceal the loss (interpolation, forward error correction). Note: *buffered streaming* like Netflix is the opposite case — it runs fine over TCP because a client buffer absorbs retransmission delays.
 - **Multiplayer games** — only the *latest* position matters; a retransmitted stale position is actively harmful. Send state snapshots, let old ones die.
@@ -109,14 +109,14 @@ Where each shows up in a typical backend day:
 ## Common misconceptions
 
 - **"UDP is faster than TCP."** UDP has lower *overhead and latency variance*; raw throughput on a clean network is comparable. On lossy networks TCP's retransmissions and backoff hurt latency, which is what people actually mean.
-- **"UDP is unreliable, so serious systems avoid it."** HTTP/3 — a growing share of all web traffic, as of ~2024 — runs on UDP. Reliability was *moved*, not removed.
+- **"UDP is unreliable, so serious systems avoid it."** HTTP/3 — about a fifth of requests to Cloudflare in 2025 (21%) — runs on UDP. Reliability was *moved*, not removed.
 - **"The handshake is 3 messages, so it's 1.5 RTT."** Data can ride immediately after the client's final ACK — the client-perceived cost is one RTT.
 - **"Flow control and congestion control are the same thing."** Receiver protection vs network protection; an interviewer distinguishing question.
 
 ## In your stack
 
 - Everything you run — HTTP APIs through Kong, MongoDB wire protocol, Redis (RESP), Kafka, JDBC — speaks **TCP**. Your daily UDP exposure is DNS lookups and any statsd-style metrics emission.
-- Connection pools (Mongo driver, Redis/Lettuce, HTTP clients) exist to amortize the TCP+TLS handshake cost. A pool misconfigured to churn connections pays ~1–2 RTTs plus slow-start on every request — visible as a p99 cliff, invisible at p50.
+- Connection pools (Mongo driver, Redis/Lettuce, HTTP clients) exist to amortize the TCP+TLS handshake cost. A pool misconfigured to churn connections pays ~2–3 RTTs (TCP plus TLS 1.3 or 1.2; 1 RTT for plaintext) plus slow-start on every request — visible as a p99 cliff, invisible at p50.
 - TCP retransmission timeouts are one of the gremlins behind "the service was *slow*, not down" incidents — a few lost SYNs between a pod and MongoDB produce multi-second stalls with zero errors logged. See [[Network Partitions and Timeouts]].
 - Kubernetes Services and ALBs track TCP connection state; long-lived idle connections can be silently dropped by intermediaries (NAT, ALB idle timeout), and the next write discovers it the hard way — keepalives exist for this.
 
@@ -133,7 +133,7 @@ Classic follow-ups: *Why does HTTP/3 use UDP — isn't that unreliable?* (QUIC a
 > [!question]- Q1 answer
 > TCP promises in-order delivery. If segment N is lost, later segments wait in the kernel buffer — the app cannot read byte N+1 before byte N exists. Since the kernel enforces this per connection, any protocol multiplexing logical streams onto one TCP connection (like HTTP/2) stalls *all* streams when one packet is lost: the kernel doesn't know the bytes belong to independent streams. Fixing it requires either separate connections or a transport that understands streams — QUIC.
 
-**Q2 (scenario): A pod calls MongoDB over a link that silently drops 1% of packets. No errors appear in logs, but p99 latency jumps from 5ms to 2s while p50 stays flat. What's happening?**
+**Q2 (scenario): A pod calls MongoDB over a link that silently drops 1% of packets. No errors appear in logs, but p99 latency jumps from 5ms to several hundred ms while p50 stays flat. What's happening?**
 
 > [!question]- Q2 answer
 > TCP retransmission. Most requests see no loss (flat p50). The unlucky ~1–2% hit a dropped segment; the sender waits a retransmission timeout (commonly ~200ms minimum, with exponential backoff on repeated loss) before resending, and HOL blocking stalls the whole response behind the hole. No errors, because TCP *recovers* — slowly. This "slow, not down" pattern is the core lesson of [[Network Partitions and Timeouts]].

@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing a Dropbox or Google Drive class file-sync service — chunking, content-addressed dedup, delta sync, and the metadata service as the consistency-critical core.
 related: ["[[The System Design Interview Framework]]", "[[How S3 Works]]", "[[Consistency Models]]", "[[Idempotency]]"]
 ---
@@ -74,7 +74,7 @@ Files are split into **~4 MB chunks** (Dropbox's historical choice). Each chunk 
 - **Dedup falls out for free**: before uploading, the client sends the chunk hash list; the server replies with which hashes it already has (from *any* user); the client uploads only missing chunks. The installer already uploaded by a million users costs the million-and-first user one metadata write.
 - **Integrity falls out for free**: the hash *is* the name; corruption is detectable on every read.
 - **Immutability simplifies everything**: no chunk is ever overwritten, so replication, caching, and versioning never deal with mutation — a version is just a different list of hashes.
-- Fixed-size chunking has one weakness: an *insertion* at the start of a file shifts every boundary and changes every chunk hash. Content-defined chunking (rolling hash, e.g. Rabin fingerprinting) cuts chunks at content-determined boundaries so an insertion only disturbs nearby chunks — mention it as the refinement; rsync and modern backup tools use it.
+- Fixed-size chunking has one weakness: an *insertion* at the start of a file shifts every boundary and changes every chunk hash. Content-defined chunking (rolling hash, e.g. Rabin fingerprinting) cuts chunks at content-determined boundaries so an insertion only disturbs nearby chunks — mention it as the refinement; LBFS introduced it and backup tools such as restic and Borg use it (rsync attacks the same shift problem differently, matching the old file's fixed blocks at any offset with a rolling checksum).
 - Security note worth volunteering: cross-user dedup can leak information (upload speed reveals whether a chunk exists globally — the "dedup oracle"); per-user dedup or encrypted chunks trade storage efficiency for confidentiality.
 
 ### 2. Delta sync
@@ -122,7 +122,7 @@ Idempotency matters throughout: chunk uploads are naturally idempotent (same has
 - **Metadata DB**: shard by namespace; replicate with synchronous commit to a majority ([[Replication]], [[Quorum Reads and Writes]]) — metadata loss = data loss even with all chunks intact, since 2.5 EB of unaddressable chunks is noise.
 - **Notification tier**: millions of concurrent long-poll/push connections — stateless connection servers in front of a pub/sub; lost notifications are safe (clients also poll periodically as a backstop).
 - **Client resilience**: all sync steps are resumable — chunked upload means a dropped connection re-uploads at most one chunk, not the file; the cursor means a crashed client re-pulls the journal from its last durable position. At-least-once everywhere, with idempotent operations absorbing duplicates ([[Exactly-Once Delivery Is a Lie]]).
-- **Garbage collection**: orphan chunks (uploaded, never committed; or last reference deleted past version retention) are collected by an async reference-counting sweep — reference counting across 10¹¹ files is itself a batch pipeline, worth mentioning as an operational reality.
+- **Garbage collection**: orphan chunks (uploaded, never committed; or last reference deleted past version retention) are collected by an async reference-counting sweep — reference counting across ~5 × 10¹¹ files is itself a batch pipeline, worth mentioning as an operational reality.
 - **Degradation**: if the metadata service is down, clients keep working locally and queue changes — the design is offline-first by nature, which is a resilience feature worth stating explicitly.
 
 ## Common mistakes
@@ -153,5 +153,5 @@ Idempotency matters throughout: chunk uploads are naturally idempotent (same has
 
 - Alex Xu, *System Design Interview Vol. 1*, chapter "Design Google Drive" — the chunk/metadata/notification split.
 - Dropbox Tech Blog: "Streaming File Synchronization" and the "Magic Pocket" series (Dropbox's exabyte-scale block store) — chunking at 4 MB, content addressing in production.
-- rsync algorithm (Tridgell & Mackerras, 1996) — rolling-hash delta transfer, the ancestor of content-defined chunking.
+- rsync algorithm (Tridgell & Mackerras, 1996) — rolling-hash delta transfer; content-defined chunking proper comes from LBFS (Muthitacharoen, Chen & Mazières, SOSP 2001).
 - *Designing Data-Intensive Applications* (Kleppmann), ch. 5 and 9 — replication and consistency trade-offs behind the metadata/block split.

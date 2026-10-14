@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing a payment system — payment intents, PSP abstraction, end-to-end idempotency, double-entry ledgers, webhook discipline, and reconciliation as the daily fintech reality.
 related: ["[[The System Design Interview Framework]]", "[[Stripe and Payment System Design]]", "[[Idempotency]]", "[[Exactly-Once Delivery Is a Lie]]"]
 ---
@@ -23,7 +23,7 @@ This is your home turf, so the bar is higher: the interviewer expects not just t
 - Multi-PSP from day one (resilience and cost routing) — clarify, because it drives the abstraction layer.
 
 **Non-functional**
-- Scale: payments are *small* by throughput standards — even 1M payments/day ≈ 12/s average, ~100/s peak. **Correctness, not throughput, is the entire game.**
+- Scale: payments are *small* by throughput standards — even 1M payments/day ≈ 12/s average, ~120/s peak. **Correctness, not throughput, is the entire game.**
 - Zero tolerance for double-charges or lost money; ambiguity must surface, never be guessed away.
 - Durability and auditability: regulators and auditors read this system's output ([[ACID Transactions]] territory, not eventual consistency).
 - PCI-DSS scope must be minimized — see deep dive; this shapes the architecture, not just compliance paperwork.
@@ -98,6 +98,7 @@ Every hop can retry, so every hop needs [[Idempotency]] — a chain, not a featu
 - **Client → API**: the client generates an idempotency key per payment attempt (UUID minted when the pay button renders, not when clicked). A double-click or network retry sends the same key; the API returns the original result instead of creating a second intent. Keys + responses stored with a TTL (~24 h) — Stripe's exact model.
 - **API → PSP**: the abstraction layer sends a per-PSP idempotency key *derived from the intent ID* (e.g., `{intent_id}:attempt:{n}`). If our call times out and we retry, the PSP sees the same key and does not charge twice. Every serious PSP supports this; a design that omits it is wrong, not simplified.
 - **Webhook → internal**: PSP event IDs dedup inbound events (below).
+- **Intent state → ledger and downstream events**: committing a state transition and announcing it is a dual write — write the event in the same local transaction via [[The Outbox Pattern]], never publish-after-commit.
 - Key discipline details worth saying aloud: the key must be stored **atomically with** the operation's result (same transaction), not checked-then-written (a race window); and a *different* amount under the same key is an error, not a replay.
 
 This chain is how you get **exactly-once *effect* from at-least-once delivery** — the honest formulation of [[Exactly-Once Delivery Is a Lie]]: messages and requests may arrive multiple times; the *charge* happens once because every layer collapses duplicates.
@@ -123,7 +124,7 @@ The ledger is the system's memory of money, and it follows accounting's 700-year
 PSP webhooks are at-least-once, unordered, and arrive from the public internet — treat them accordingly:
 
 - **Verify signatures** (HMAC with per-endpoint secret, timestamp-bound against replay) before parsing anything. An unverified webhook endpoint is an open "mark this paid" API.
-- **Dedup** on the PSP's event ID: store processed IDs (unique constraint); duplicates ack and drop. Ack fast (2xx), process async off a queue — a slow handler causes PSP retry storms that your own dedup then has to absorb.
+- **Dedup** on the PSP's event ID: store processed IDs (unique constraint); duplicates ack and drop. Ack fast (2xx) once the raw event is durably stored or enqueued — ack-then-crash loses it — and process async off a queue — a slow handler causes PSP retry storms that your own dedup then has to absorb.
 - **Out-of-order safety**: `capture.succeeded` can arrive before `authorization.created`. Never apply events blindly — feed them to the state machine, which accepts only legal transitions; an early event parks until its predecessor lands, or better, each event triggers "query current authoritative status and advance accordingly" (making event payloads hints rather than truth — strictly more robust).
 - Webhooks are a *push accelerant*, not the only path: a poller queries the PSP for intents stuck in `processing` beyond a threshold, so a dropped webhook delays truth, never loses it.
 
@@ -140,13 +141,13 @@ Everything above is real-time truth-tracking; reconciliation is the **batch proo
 
 - **PCI-DSS** applies to every system that stores, processes, or transmits cardholder data. Full compliance is brutally expensive — so the design goal is for card numbers (**PANs**) to *never touch your servers*.
 - Mechanism: the checkout page loads a PSP-hosted field/SDK; card data goes **browser → PSP directly**; the PSP returns a **token**; your backend only ever sees and stores the token. Tokens are useless outside your PSP account — stealing your database yields no cards.
-- Your PCI scope collapses to the lowest self-assessment tier; the architecture is the compliance strategy. Never log full PANs, never accept them into your API "temporarily" — scope is contagious: one service that touches PANs drags its whole connected surface into audit.
-- Multi-PSP wrinkle: PSP-native tokens lock you in; network tokens or a token vault (itself PCI-scoped, often outsourced) restore portability — name the trade-off rather than hand-waving it.
+- Your PCI scope collapses to the shortest self-assessment questionnaire (SAQ A, for fully PSP-hosted card entry; your merchant level by volume still decides whether a QSA audit is required); the architecture is the compliance strategy. Never log full PANs, never accept them into your API "temporarily" — scope is contagious: one service that touches PANs drags its whole connected surface into audit.
+- Multi-PSP wrinkle: PSP-native tokens lock you in; network tokens or a token vault (itself PCI-scoped, often outsourced) restore portability — name the trade-off rather than hand-waving it. For Indian cards the choice is narrower: RBI's card-on-file tokenisation rules (effective 1 October 2022) bar every entity except card issuers and networks from storing card data, so network/issuer tokens are the path and a merchant-run PAN vault is not an option.
 
 ## Scaling and failure handling
 
 - Throughput needs are modest (hundreds/s) — scale is not the risk. Partition by merchant/intent ID if ever needed ([[Sharding]]); payments are shard-friendly (no cross-payment transactions; the ledger's zero-sum invariant is per-transaction, not per-shard).
-- **Payment DB and ledger**: synchronous replication, point-in-time recovery, tested restores ([[Replication]], [[Disaster Recovery]]). RPO for a ledger is zero — state it.
+- **Payment DB and ledger**: synchronous replication to a majority or semi-sync replica (not to every follower — that couples uptime to the slowest node), point-in-time recovery, tested restores ([[Replication]], [[Disaster Recovery]]). RPO for a ledger is zero — state it.
 - **PSP outage**: circuit breaker per PSP → route new intents elsewhere; in-flight ambiguous attempts freeze until resolvable. Whole-PSP-fleet outage → fail closed: reject new payments with honest errors ([[Load Shedding and Graceful Degradation]] — a queued "we'll charge you later" surprise is worse than a clean failure at checkout).
 - **Webhook flood or drought**: queue absorbs floods ([[Backpressure and Flow Control]]); the stuck-intent poller covers droughts.
 - **Audit trail**: append-only ledger + immutable event log of every state transition with actor and timestamp; auditors replay, never trust a summary. Access to review-queue actions is itself logged — who resolved what, with what evidence.
@@ -174,8 +175,8 @@ Everything above is real-time truth-tracking; reconciliation is the **batch proo
 > [!question]- Q: A PSP webhook arrives twice, and a `refund.succeeded` for a payment arrives before the `payment.succeeded`. What does each layer do?
 > Duplicate: the webhook receiver verifies the signature, then hits the unique constraint on the PSP event ID — second copy acks 2xx and drops; no state transition fires twice (and even if dedup missed, the state machine would reject the repeated transition — defense in depth). Out-of-order: the refund event proposes a transition the intent's current state (`processing`) doesn't allow; the state machine refuses it. The event parks for redelivery/retry, or better, triggers a status query to the PSP, which returns the full truth (payment succeeded AND refunded) and the state machine advances through both legal transitions in order. Nothing is applied on arrival-order faith.
 
-> [!question]- Q: Design the variant — UPI-style instant account-to-account payments (no cards, bank rails, regulator-operated switch).
-> PCI/tokenization drops out; in its place come bank/switch integrations with their own idempotency vocabulary (retrieval reference numbers), *hard latency expectations* (user waits in-app for seconds, not for T+1), and a regulator-defined state machine including `deemed` outcomes — UPI transactions can be ambiguous at the switch itself, so the pending/needs-review discipline gets *more* central, not less. Reconciliation becomes settlement-file-driven against NPCI-style reports with mandated timelines for reversals and dispute (chargeback-equivalent) flows. The ledger, idempotency chain, fail-closed ambiguity handling, and append-only audit trail carry over unchanged — which is the point: rails change, discipline doesn't. New regulatory scope (RBI oversight, data-localisation of payment data) must be named as part of the design, not discovered later.
+> [!question]- Q: Design the variant — UPI-style instant account-to-account payments (no cards, bank rails, an NPCI-operated switch).
+> PCI/tokenization drops out; in its place come bank/switch integrations with their own idempotency vocabulary (retrieval reference numbers), *hard latency expectations* (user waits in-app for seconds, not for T+1), and an NPCI-defined state machine including `deemed` outcomes — UPI transactions can be ambiguous at the switch itself, so the pending/needs-review discipline gets *more* central, not less. Reconciliation becomes settlement-file-driven against NPCI-style reports with mandated timelines for reversals and dispute (chargeback-equivalent) flows. The ledger, idempotency chain, fail-closed ambiguity handling, and append-only audit trail carry over unchanged — which is the point: rails change, discipline doesn't. New regulatory scope (RBI oversight, data-localisation of payment data) must be named as part of the design, not discovered later.
 
 ## Sources
 

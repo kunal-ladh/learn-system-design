@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: How a pod should die — SIGTERM, readiness removal, the preStop race, connection draining, consumer rebalance — and why a rolling update at 1 replica is a planned outage unless you engineer around it.
 related: ["[[Deployment Strategies]]", "[[Health Checks and Service Discovery]]", "[[Consumer Groups and Rebalancing]]"]
 ---
@@ -35,7 +35,7 @@ On SIGTERM, within `terminationGracePeriodSeconds`:
 3. **Close shared resources deliberately**: commit consumer offsets and leave the group; close connection pools; flush buffers, metrics, and logs.
 4. **Exit 0.** If the grace period expires first, SIGKILL ends the process mid-whatever — the budget must exceed your honest worst-case drain (longest request timeout + batch processing time + pool close), or long-tail work dies at the deadline.
 
-Spring Boot ≥2.3 implements the web-server half with `server.shutdown=graceful` plus `spring.lifecycle.timeout-per-shutdown-phase` — the listener stops taking new requests and active ones get the phase timeout to finish. Queue consumers and schedulers are on you (`SmartLifecycle`/`@PreDestroy` ordering).
+Spring Boot ≥2.3 implements the web-server half with `server.shutdown=graceful` plus `spring.lifecycle.timeout-per-shutdown-phase` (opt-in from 2.3 in 2020; the default since 3.4, November 2024, where `server.shutdown=immediate` is the opt-out) — the listener stops taking new requests and active ones get the phase timeout to finish. Queue consumers and schedulers are on you (`SmartLifecycle`/`@PreDestroy` ordering).
 
 ### The Kubernetes race, and the preStop sleep
 
@@ -44,7 +44,7 @@ Here is the trap. When a pod enters Terminating, two things start **in parallel*
 - Path A: kubelet sends SIGTERM to the container.
 - Path B: the endpoint controller removes the pod's IP from the Service's endpoints, and *then* every consumer of that list — kube-proxy on every node, Kong/ALB/ingress target lists — converges on its own schedule, typically hundreds of milliseconds to several seconds.
 
-Nothing orders A after B. So a pod that exits quickly on SIGTERM dies *while traffic is still being routed to it* — connection refused, 502s at the LB. **Readiness-gate removal must effectively happen before the kill, and Kubernetes does not guarantee it; you buy the ordering with a delay.** The standard fix is a **preStop sleep**:
+Nothing orders A after B. So a pod that exits quickly on SIGTERM dies *while traffic is still being routed to it* — connection refused, 502s at the LB. **Endpoint removal must effectively happen before the kill, and Kubernetes does not guarantee it; you buy the ordering with a delay.** The standard fix is a **preStop sleep**:
 
 ```yaml
 lifecycle:
@@ -57,11 +57,12 @@ preStop runs *before* SIGTERM is sent (and counts against the grace period), so 
 
 ```mermaid
 sequenceDiagram
+    participant C as Control plane
     participant K as Kubelet
     participant P as Pod
     participant E as Endpoints and LB
     K->>P: preStop hook sleep 10
-    K->>E: pod marked terminating removal begins
+    C->>E: pod marked terminating removal begins in parallel
     E-->>E: kube proxy and LB converge over seconds
     Note over P: still serving normally during sleep
     K->>P: SIGTERM after preStop returns
@@ -86,7 +87,8 @@ For Kafka/SQS/Redis Streams consumers, shutdown choreography is about the *group
 
 Everything above assumes *someone else serves while you die*. At `replicas: 1` that assumption fails, and the honest accounting is:
 
-- A rolling update with `maxUnavailable: 1, maxSurge: 0` is a **planned outage**: old pod dies, gap, new pod schedules, pulls, starts, JVM warms, passes readiness — easily 30–120 s of zero endpoints per deploy. The fix that exists: **`maxSurge: 1, maxUnavailable: 0`** — start the new pod first, kill the old only after the new is Ready. This closes the *deploy* gap (cost: brief 2× resources and tolerating two instances running concurrently — watch singleton assumptions like schedulers and non-grouped consumers).
+- First, the defaults: a Deployment's rolling update defaults to `maxSurge: 25%` and `maxUnavailable: 25%`, and at one replica surge rounds **up** to 1 while unavailable rounds **down** to 0 — so an untouched Deployment already starts the new pod before killing the old one. The planned outage below comes from an explicit override, a `Recreate` strategy, or a chart default that sets it; check the rendered spec.
+- A rolling update with `maxUnavailable: 1, maxSurge: 0` is a **planned outage**: old pod dies, gap, new pod schedules, pulls, starts, JVM warms, passes readiness — easily 30–120 s of zero endpoints per deploy. The fix that exists — and the effective default at 1 replica: **`maxSurge: 1, maxUnavailable: 0`** — start the new pod first, kill the old only after the new is Ready. This closes the *deploy* gap (cost: brief 2× resources and tolerating two instances running concurrently — watch singleton assumptions like schedulers and non-grouped consumers).
 - **PDBs protect nothing at 1 replica.** A PodDisruptionBudget bounds *voluntary* disruptions (node drains, consolidation) — but with one replica, `minAvailable: 1` computes `disruptionsAllowed = 0` and blocks node drains outright (the cluster can't be maintained), while `maxUnavailable: 1` permits the drain and the outage it implies. There is no PDB setting that makes one replica drain-safe; the PDB is paperwork either way. Only a second replica closes the node-drain gap.
 - Graceful shutdown still earns its keep at 1 replica: the outage window is *bounded and clean* (no dropped mid-flight transactions, offsets committed) instead of ragged. But it cannot make the window zero.
 
@@ -134,10 +136,10 @@ Everything above assumes *someone else serves while you die*. At `replicas: 1` t
 > On termination, SIGTERM delivery (kubelet → container) and endpoint removal (endpoint controller → kube-proxy on every node → external LBs) begin in parallel with no ordering guarantee; removal convergence takes hundreds of ms to seconds. A pod that reacts quickly to SIGTERM stops accepting while traffic is still routed to it → connection refused/502. preStop runs before SIGTERM and delays it; during the sleep the pod serves normally while removal propagates everywhere. It's not synchronization — it's a timing bet sized above observed propagation, which is why it must count inside the grace-period budget.
 
 > [!question]- Q: What happens if a Kafka consumer pod is SIGKILLed mid-batch without committing? Walk the timeline.
-> The broker doesn't learn of the death until heartbeats stop; the consumer's partitions sit unprocessed until `session.timeout.ms` expires. Then the group rebalances and another consumer (or the restarted pod) takes the partitions, resuming from the **last committed offset** — the dead consumer's in-flight batch is reprocessed: duplicates, which handlers must absorb idempotently ([[Idempotency]], [[Delivery Semantics]]). With one consumer total, the topic simply stalls for the session timeout plus restart. Graceful close() avoids most of this by committing and sending LeaveGroup, triggering an immediate rebalance.
+> The broker doesn't learn of the death until heartbeats stop; the consumer's partitions sit unprocessed until `session.timeout.ms` expires. Then the group rebalances and another consumer (or the restarted pod) takes the partitions, resuming from the **last committed offset** — the dead consumer's in-flight batch is reprocessed: duplicates, which handlers must absorb idempotently ([[Idempotency]], [[Delivery Semantics]]). With one consumer total, the topic stalls until *both* the session timeout has expired and the replacement pod has started and joined — whichever is later, since the two run in parallel. Graceful close() avoids most of this by committing and sending LeaveGroup, triggering an immediate rebalance.
 
 > [!question]- Q: A service runs 1 replica with maxUnavailable 1, maxSurge 0, and a PDB of minAvailable 1. Describe deploy behavior and node-drain behavior.
-> Deploy: the rollout kills the only pod first, then creates the new one — schedule + pull + start + warm-up + readiness ≈ 30–120 s of zero endpoints; every deploy is a planned outage. Node drain: the PDB computes disruptionsAllowed = 0, so the drain *blocks* — the outage is prevented by making the node unmaintainable, which just moves the pain to the platform team (and gets overridden eventually). Fixes: `maxSurge: 1, maxUnavailable: 0` closes the deploy gap (if two concurrent instances are safe); the PDB should be `maxUnavailable: 1` (permitting drains, outage and all); only a second replica makes drains actually safe.
+> Deploy: these are non-default values (the 25% defaults would surge first at 1 replica), and with them the rollout kills the only pod first, then creates the new one — schedule + pull + start + warm-up + readiness ≈ 30–120 s of zero endpoints; every deploy is a planned outage. Node drain: the PDB computes disruptionsAllowed = 0, so the drain *blocks* — the outage is prevented by making the node unmaintainable, which just moves the pain to the platform team (and gets overridden eventually). Fixes: `maxSurge: 1, maxUnavailable: 0` closes the deploy gap (if two concurrent instances are safe); the PDB should be `maxUnavailable: 1` (permitting drains, outage and all); only a second replica makes drains actually safe.
 
 > [!question]- Q: Mini design: specify the full shutdown config for a Spring Boot payment service — 10 s p99 request timeout, SQS consumer, behind Kong/ALB, 1 replica.
 > preStop sleep 10 s (endpoint + ALB deregistration propagation); `server.shutdown=graceful` with timeout-per-shutdown-phase 15 s (> the 10 s longest request); SQS listener stop + finish/delete in-hand messages ≈ 10 s; pool/offset/flush close ≈ 5 s → `terminationGracePeriodSeconds` ≥ 45 (sleep 10 + drain 15 + consumer 10 + close 5 + margin), spelled `termination_grace_period_seconds` if Facets-managed, verified in the rendered pod spec. ALB deregistration delay ~15 s ≤ drain window. Deploy with maxSurge 1/maxUnavailable 0 after confirming two concurrent consumers are safe (SQS: yes, with idempotent handlers). Readiness flips at SIGTERM; liveness untouched. Validate by killing the pod under synthetic load and counting errors — target zero.

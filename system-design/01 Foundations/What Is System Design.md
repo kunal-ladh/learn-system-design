@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: What the discipline of system design actually is, how functional and non-functional requirements shape it, and why every answer is a trade-off rather than a correct solution.
 related: ["[[Scalability]]", "[[The System Design Interview Framework]]", "[[Back of the Envelope Estimation]]"]
 ---
@@ -115,7 +115,7 @@ Nearly every design in this vault is assembled from a dozen moves. Meeting them 
 ## In your stack
 
 - Niyo's domain makes the trade-off weighting unusual: for money movement and KYC, **correctness and auditability outrank latency**. Where a social app picks availability in a partition, a ledger-touching service should usually fail closed — refuse the write rather than risk a double-spend.
-- The "many services pinned at 1 replica" cost decision is trade-off thinking in action: it knowingly accepts that a pod restart means seconds of downtime for that service. The honest design question is which services that is acceptable for — and it is *not* acceptable where an outage blocks money movement at peak.
+- The "many services pinned at 1 replica" cost decision is trade-off thinking in action: it knowingly accepts that an unplanned pod restart means tens of seconds of downtime for that service while a replacement JVM starts and passes readiness. The honest design question is which services that is acceptable for — and it is *not* acceptable where an outage blocks money movement at peak.
 - Your messaging journey (RabbitMQ → Kafka → SQS → planned Redis Streams) is a live case study in re-making the same trade-off as requirements and operating costs shifted — see [[Choosing a Message Broker]].
 - Your stack already encodes NFR decisions you can read: Kong at the edge centralizes authn and [[Rate Limiting]] (operability), JWT from a central IAM service trades revocation ease for statelessness ([[How JWT Works]]), and `x-correlation-id` on every call buys debuggability ([[Distributed Tracing]]).
 
@@ -148,4 +148,4 @@ Nearly every design in this vault is assembled from a dozen moves. Meeting them 
 - *Designing Data-Intensive Applications*, Martin Kleppmann — ch. 1 ("Reliable, Scalable, and Maintainable Applications") frames the discipline exactly this way.
 - *System Design Interview — An Insider's Guide, Vol. 1*, Alex Xu — ch. 1 on scaling from zero and the role of requirements.
 - Google SRE Book (*Site Reliability Engineering*, O'Reilly, 2016) — chapters on embracing risk: reliability is a feature with a cost, not an absolute.
-- AWS Well-Architected Framework (official AWS docs) — a production checklist of non-functional pillars: reliability, performance efficiency, cost, security, operational excellence.
+- AWS Well-Architected Framework (official AWS docs) — a production checklist of non-functional pillars: reliability, performance efficiency, cost optimization, security, operational excellence, and (added 2021) sustainability.

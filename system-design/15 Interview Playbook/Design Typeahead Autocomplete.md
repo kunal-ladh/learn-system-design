@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Search-box suggestions in milliseconds — trie with precomputed top-k per node vs a Redis prefix hash table, the offline ranking pipeline, prefix sharding and the hot-prefix problem, and client-side debounce.
 related: ["[[The System Design Interview Framework]]", "[[Hot Key Problem]]", "[[Change Data Capture]]"]
 ---
@@ -30,7 +30,7 @@ Typeahead (Google's search suggestions, your app's search box) fires a query on 
 
 ## Back-of-envelope estimation
 
-Assume Google-ish-but-smaller: **500M searches/day**, average query 20 characters. Undebounced, that is ~20 requests per search — one per keystroke. Debounce and in-flight cancellation collapse the runs of fast typing, so *assume* **10 effective requests per search**; carry both numbers, because the gap between them is a capacity decision the client makes for you (deep dive 4).
+Assume Google-ish-but-smaller: **500M searches/day**, average query 20 characters. Undebounced, that is ~20 requests per search — one per keystroke. Debounce collapses the runs of fast typing (in-flight cancellation stops stale responses rendering but removes no requests), so *assume* **10 effective requests per search**; carry both numbers, because the gap between them is a capacity decision the client makes for you (deep dive 4).
 
 - **Read QPS**: 500M × 10 = 5 × 10⁹ typeahead requests/day ÷ 86,400 ≈ **58,000 QPS** average; × 2.5 peak ≈ **145,000 QPS**. This is why per-request computation is unaffordable and the serving store must be memory-resident.
 - **Write volume (raw signal)**: 500M submitted queries/day ÷ 86,400 ≈ **5,800/sec** — but these are *not* served as writes; they are logged and batch-aggregated. The asymmetry is what licenses the precompute: 58,000 reads/sec against 5,800 logged queries/sec is 10:1 on the *logging* path, while against the **serving store** the ratio is effectively infinite, because that store absorbs zero online writes at all between rebuilds.
@@ -115,7 +115,7 @@ What hashing cannot flatten: **individual hot keys**. During a live event, milli
 
 ### 4. Client-side debounce and the freshness trade
 
-**Debounce**: don't fire on every raw keystroke — wait ~100–150 ms of typing pause (or request-cancel on next keystroke). A fast typist producing 10 chars/sec would otherwise fire 10 QPS alone; across the fleet that is the difference between the 10 effective requests per search we sized for and the ~20 an undebounced client sends — 500M × 20 ÷ 86,400 × 2.5 ≈ **290K peak QPS instead of 145K**, so debounce is worth **~2x** of your serving tier. Client behavior is a capacity decision; say so. The client also **caches its own session's prefix→results** (typing "desi", deleting to "des", retyping hits the local cache) and the CDN/edge can cache `GET /suggest?q=...` responses for the hottest prefixes with a short TTL since responses are user-independent (personalization was scoped out — this is the payoff).
+**Debounce**: don't fire on every raw keystroke — wait ~100–150 ms of typing pause, and cancel the in-flight request on the next keystroke (cancellation prevents out-of-order rendering; it does not reduce request count). A fast typist producing 10 chars/sec would otherwise fire 10 QPS alone; across the fleet that is the difference between the 10 effective requests per search we sized for and the ~20 an undebounced client sends — 500M × 20 ÷ 86,400 × 2.5 ≈ **290K peak QPS instead of 145K**, so debounce is worth **~2x** of your serving tier. Client behavior is a capacity decision; say so. The client also **caches its own session's prefix→results** (typing "desi", deleting to "des", retyping hits the local cache) and the CDN/edge can cache `GET /suggest?q=...` responses for the hottest prefixes with a short TTL since responses are user-independent (personalization was scoped out — this is the payoff).
 
 **Freshness vs precompute** — the closing trade-off: the batch pipeline gives cheap, simple, rollbackable serving with suggestions stale by one build interval. If product wants **trending** queries live within minutes, bolt on a *small* streaming side-path: a sliding-window counter over the live query stream detects spiking queries and patches them into the serving top-k for affected prefixes (a targeted overlay, merged at read or written as key patches) — never a full streaming rebuild of everything. Architecture lesson to state: serve a **lambda-style split** — batch for the 99.9% body, a thin stream for the trending head — and keep the batch path as the source of truth.
 

@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Why keeping a small copy of hot data close to the reader gives outsized speedups — locality, access skew, and the hit-ratio arithmetic that decides whether a cache pays for itself.
 related: ["[[Caching Strategies]]", "[[Latency Numbers Every Engineer Should Know]]", "[[CDN]]", "[[Hot Key Problem]]"]
 ---
@@ -15,11 +15,43 @@ A cache is a small, fast store that holds copies of data whose authoritative hom
 
 ## Why this matters
 
-Caching is the single highest-leverage performance tool in system design: no other change turns a ~1 ms operation into a ~100 µs one by adding one component. It is also the fastest way to serve **stale** data, double your operational surface, and hide a database that can no longer survive on its own. Every later note in this module — [[Caching Strategies]], [[Cache Invalidation]], [[Cache Stampede and Thundering Herd]] — is about managing the costs of the trade you make here. You cannot reason about any of them until you can answer two questions: *why do caches hit at all*, and *how much does a given hit ratio actually buy me*?
+Caching is the single highest-leverage performance tool in system design: no other change turns a ~1–5 ms database read into a ~0.2–1 ms one by adding one component. It is also the fastest way to serve **stale** data, double your operational surface, and hide a database that can no longer survive on its own. Every later note in this module — [[Caching Strategies]], [[Cache Invalidation]], [[Cache Stampede and Thundering Herd]] — is about managing the costs of the trade you make here. You cannot reason about any of them until you can answer two questions: *why do caches hit at all*, and *how much does a given hit ratio actually buy me*?
 
 Interviewers also use caching as a litmus test. Saying "add a cache" is free; knowing that going from a 90% to a 99% hit ratio reduces database read load by **10×** (10% of traffic reaching the DB versus 1%) is the difference between a buzzword and a design.
 
 ## How it works
+
+### If indexes made reads cheap, why cache at all?
+
+This is the right question to ask arriving here from [[Database Indexes]], and the answer is the
+cleanest way to understand what a cache is actually for.
+
+An index makes **one query cheap**. A cache **removes the query**. Those are different wins, and the
+second one matters more as traffic grows:
+
+- **An indexed read is cheap, not free.** It still costs a connection from a finite pool
+  ([[Connection Pooling]]), a network round trip, parsing and planning, a few buffer-pool page
+  lookups, and result serialisation. A same-datacentre Redis GET lands in roughly 0.2-1 ms against
+  roughly 1-5 ms for a warm indexed point read — call it roughly 5-10x, not orders of
+  magnitude. The latency win alone would rarely justify the staleness.
+- **The real win is load removed from the scarce tier.** At 100,000 reads per second, perfect
+  indexing still means 100,000 queries hitting the database. A 95% hit ratio turns that into 5,000.
+  The database is the hardest thing in your architecture to scale — writes funnel through a single
+  leader ([[Replication]]) — while cache nodes are cheap and horizontally scalable. Caching spends
+  an abundant resource to protect a scarce one.
+- **Caches store answers, not rows.** An index speeds up retrieving data; it does nothing for the
+  work done *after* retrieval. A ranked feed, an aggregation over a million rows, a joined and
+  serialised API response — the cache holds the finished result, so you skip the computation as well
+  as the lookup. No index makes an expensive aggregation cheap.
+- **Indexes cannot help some reads at all.** Queries touching a large fraction of the table, or
+  computing something no index can answer, remain expensive however you index them.
+
+So the order in [[Database Scaling Path]] is not arbitrary: index first, because it is cheap,
+reversible and costs you no correctness. Cache second, because it is the first step that makes you
+serve possibly-stale data — a real price, paid only once indexing has already taken the easy wins.
+
+Caching a query you never indexed is the classic mistake: you are now maintaining a stale copy of a
+slow answer, and every cache miss still pays the full unindexed cost.
 
 ### Locality: the reason caches hit
 
@@ -116,7 +148,7 @@ graph LR
 | [[CDN]] edge | one region, all users | ~10–50 ms | purge APIs, versioned URLs |
 | Gateway cache (e.g. Kong proxy-cache) | one cluster | ~1 ms | plugin-level TTL/purge |
 | App-local (Caffeine/Guava in-JVM) | one process | ~100 ns–1 µs | per-instance only — N replicas hold N copies |
-| Redis / Memcached | all services sharing it | ~0.3–1 ms | full programmatic control |
+| Redis / Memcached | all services sharing it | ~0.2–1 ms | full programmatic control |
 | DB buffer pool | the database itself | saves disk I/O, not query cost | automatic, transparent |
 
 The deeper the layer, the more control you have and the less latency you save. A request answered by the browser never touches your infrastructure at all; a request answered by the buffer pool still paid for parsing, planning, and a network round trip. Good designs push cacheable data as far up the ladder as its freshness requirements allow.
@@ -146,7 +178,7 @@ The capacity-masking point deserves emphasis because it is invisible until the d
 
 ## In your stack
 
-- Your read path already traverses most of the ladder: CloudFront (CDN) → Kong (gateway) → Spring Boot service → Redis → MongoDB (whose WiredTiger storage engine has its own internal cache, default roughly 50% of RAM minus 1 GB). When you measure "is caching helping", identify *which* layer hit.
+- Your read path already traverses most of the ladder: CloudFront (CDN) → Kong (gateway) → Spring Boot service → Redis → MongoDB (whose WiredTiger storage engine has its own internal cache, default the larger of 50% of (RAM − 1 GB) or 256 MB). When you measure "is caching helping", identify *which* layer hit.
 - Fintech skews the trade: for balances, KYC status, or transaction state, a stale read can be a correctness bug and a regulatory problem, not a UX blemish. Cache aggressively for reference data (IFSC codes, product configs, feature flags); be deliberately conservative for money state. Correctness beats latency.
 - JWT validation is a textbook win: the IAM service's public keys (JWKS) change rarely and are read on every authenticated request — ideal for an app-local cache with a short refresh, saving a network hop per request.
 - With many services pinned at 1 replica, an app-local (Caffeine) L1 in front of Redis is unusually attractive for you: no cross-replica incoherence to worry about, and it shields Redis from your hottest keys ([[Hot Key Problem]]).
@@ -180,7 +212,7 @@ Classic follow-ups:
 > (1) **The cached read was a small share of the request.** If the 5 ms Mongo call sits inside a 50 ms budget dominated by a downstream HTTP call, a perfect cache removes 9% of the time and p99 moves by less than the noise. (2) **p99 *is* the miss path.** At h = 0.97 the slowest 3% of requests are exactly the misses, so the 99th percentile lies inside the miss distribution — and a miss now costs the Redis lookup *plus* the full Mongo read, so the tail is marginally worse than before even as the mean improves. (3) **The database was already serving this from memory.** If the working set fits in WiredTiger's cache, you replaced a local memory read with a network hop plus a memory read, and the hit ratio is high while the latency is unchanged or slightly worse. Telling them apart: look at the mean and p99 as separate numbers — explanation 2 shows a clearly improved mean with a flat or worse tail, while explanation 1 shows both flat. Then read a trace's span breakdown for the endpoint ([[Distributed Tracing]]): explanation 1 is visible immediately as a small Mongo span inside a large total. For explanation 3, compare the Mongo call's own latency before caching against the Redis call's latency now — if they were already comparable, the cache was never going to help this path, though it may still be worth keeping for the origin-load reduction rather than the latency.
 
 > [!question]- Q: Mini design — you have 10 TB of product data and budget for 100 GB of Redis. Is that useless at 1% of the data? How would you decide?
-> Not useless — the question is what fraction of *traffic* the hottest 100 GB of *data* covers, not what fraction of bytes. Measure the access distribution (sample reads, rank keys, plot cumulative traffic vs. distinct keys). If it is near-Zipfian, 1% of keys may cover 80–95% of reads. Then run the effective-latency and DB-load math at the predicted hit ratio to size the win; also check the DB buffer pool isn't already absorbing the same hot set.
+> Not useless — the question is what fraction of *traffic* the hottest 100 GB of *data* covers, not what fraction of bytes. Measure the access distribution (sample reads, rank keys, plot cumulative traffic vs. distinct keys). Pure Zipf(1) over the whole keyspace would give only ~72% at 1% of keys (the table above); the real figure depends on the measured exponent and on how many distinct keys are touched within the TTL window, which is why you measure rather than assume. Then run the effective-latency and DB-load math at the predicted hit ratio to size the win; also check the DB buffer pool isn't already absorbing the same hot set.
 
 ## Sources
 

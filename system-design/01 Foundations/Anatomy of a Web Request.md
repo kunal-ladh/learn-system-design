@@ -4,7 +4,7 @@ tags: [system-design, foundations]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: The full journey of one HTTPS request — DNS, CDN, load balancer, API gateway, app server, cache, database — and where latency accumulates at each hop.
 related: ["[[How DNS Works]]", "[[Load Balancers]]", "[[Latency Numbers Every Engineer Should Know]]"]
 ---
@@ -120,7 +120,7 @@ Two structural lessons fall out of the table. First, **on the warm path, the dat
 - Your concrete path is: client → CloudFront → ALB → Kong on EKS → Spring Boot service pod → Redis → MongoDB. Mapping any production latency complaint onto those hops, in that order, is a reliable triage method.
 - The `x-correlation-id` header your services attach at the first hop is what lets you reconstruct this entire journey from logs — one ID stitching together gateway, service, and downstream entries ([[Distributed Tracing]]).
 - Kubernetes adds a hidden extra hop: the Service/kube-proxy layer load-balances pod-to-pod traffic *inside* the cluster, and readiness probes decide which pods receive traffic at all ([[Health Checks and Service Discovery]]).
-- Services pinned at 1 replica make step 4 degenerate: the balancer has no healthy alternative during a pod restart or node drain, so deploys and evictions appear in this path as connection errors rather than as rerouted traffic.
+- Services pinned at 1 replica make step 4 degenerate: the balancer has no healthy alternative during a pod restart or node drain, so crashes, OOM kills and evictions appear in this path as connection errors rather than as rerouted traffic (a surge-first rolling deploy can still be gapless — [[Graceful Shutdown and Deployment Safety]]).
 - CORS, TLS termination, and coarse rate limiting live at CloudFront/ALB/Kong in your fleet — keeping them at the edge keeps every Spring Boot service simpler, at the price of trusting edge configuration.
 
 ## Interview angle
@@ -132,13 +132,13 @@ Two structural lessons fall out of the table. First, **on the warm path, the dat
 ## Check yourself
 
 > [!question]- Q: Explain why the first request to a cross-region API can take over half a second even when the server processes it in 5 ms.
-> The cold path is round-trip-bound: a cold DNS lookup, then a TCP handshake (1 RTT) and TLS negotiation (1 RTT on 1.3, 2 on 1.2), each costing a full cross-region round trip of roughly 150–250 ms. Three round trips at ~200 ms is ~600 ms before the request is even sent. Server time is a rounding error; the fix is edge termination, connection reuse, and session resumption rather than faster server code.
+> The cold path is round-trip-bound: a cold DNS lookup (at a nearby resolver), then a TCP handshake (1 RTT) and TLS negotiation (1 RTT on 1.3, 2 on 1.2), each costing a full cross-region round trip of roughly 150–250 ms, and then the request itself takes one more. TCP + TLS 1.3 + request is three round trips at ~200 ms, ~600 ms before the first response byte arrives; TLS 1.2 makes it four. Server time is a rounding error; the fix is edge termination, connection reuse, and session resumption rather than faster server code.
 
 > [!question]- Q: What happens if Redis becomes unreachable in the path above? Trace the symptom from the user's point of view.
 > Every request that would have hit cache now either fails fast (if the app treats Redis errors as a miss) or hangs on connection timeouts (if it doesn't — much worse). Misses all land on MongoDB at once, multiplying its load exactly when there's no cache to absorb it; DB latency climbs, app threads block, the pool saturates, and users see timeouts — a mini [[Cache Stampede and Thundering Herd|stampede]]. Correct behavior is treating cache failure as a miss with a short timeout, plus load shedding if the DB can't take full traffic ([[Load Shedding and Graceful Degradation]]).
 
 > [!question]- Q: Your p99 for one endpoint is 800 ms but p50 is 30 ms. Using the hop table, where do you look first and why?
-> A healthy median with a bad tail points at conditional costs, not fixed ones: cache misses falling through to slow DB queries, queries that occasionally miss an index or hit lock contention, GC pauses, connection-pool exhaustion under bursts, or a slow downstream dependency hit by a fraction of requests. Check cache hit ratio, DB slow-query logs, and per-hop timings from tracing. Fixed-cost hops (LB, gateway) can't produce a 25x p50-to-p99 gap — see [[Latency vs Throughput vs Bandwidth]] on tail latency.
+> A healthy median with a bad tail points at conditional costs, not fixed ones: cache misses falling through to slow DB queries, queries that occasionally miss an index or hit lock contention, GC pauses, connection-pool exhaustion under bursts, or a slow downstream dependency hit by a fraction of requests. Check cache hit ratio, DB slow-query logs, and per-hop timings from tracing. Fixed-cost hops (LB, gateway) can't produce a ~27x p50-to-p99 gap — see [[Latency vs Throughput vs Bandwidth]] on tail latency.
 
 > [!question]- Q: Mini design prompt — you must cut p99 from 400 ms to 150 ms for a read-heavy endpoint serving users in India from a US-hosted backend. Which hops do you attack, in what order?
 > First the physics: ~200 ms+ India↔US RTT makes the target impossible while every request crosses the ocean, so either serve reads from an India region (read replica or regional deployment — [[Replication]]) or cache aggressively at a CloudFront edge in India. Second, eliminate handshakes with edge TLS termination and keep-alive. Third, warm-path work: Redis cache-aside for the hot reads, verify DB indexes. Order matters — no backend tuning can beat a 200 ms geographic floor ([[Latency Numbers Every Engineer Should Know]]).

@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Storing state as an append-only log of events and deriving current state by folding over it — replay, temporal queries, and audit for free, versus the long-haul costs of schema evolution, snapshots, GDPR erasure, and query models.
 related: ["[[CQRS]]", "[[Event Schema Evolution]]", "[[Message Queues vs Event Logs]]", "[[ACID Transactions]]"]
 ---
@@ -132,7 +132,7 @@ Where it *earns* its cost: ledgers and money movement (balances are literally fo
 
 - Your true ledger (or your banking partners') is already event-sourced in spirit: double-entry postings are immutable events; balances are projections. If you build an internal ledger, event-source *that* — it is the one entity where the pattern's costs are all repaid.
 - KYC lifecycle (submitted → verified → re-verified → expired, each with documents and reasons) is a strong candidate: RBI audit queries are temporal by nature ("state of this KYC on the date of the transaction").
-- MongoDB as event store is workable (events collection, `{aggregateId, version}` unique index for optimistic concurrency, change streams to feed projections) — but it is DIY; dedicated stores (EventStoreDB, or Kafka-as-source-of-truth with compaction caveats) exist for a reason. Count the tooling you'd build.
+- MongoDB as event store is workable (events collection, `{aggregateId, version}` unique index for optimistic concurrency, change streams to feed projections) — but it is DIY; dedicated stores (EventStoreDB — renamed KurrentDB in 2025 — or Kafka-as-source-of-truth with compaction caveats) exist for a reason. Count the tooling you'd build.
 - Don't event-source your user-preferences service because the ledger team did. Per-aggregate decision, not per-company.
 - Erasure planning: DPDP-era India + event-sourced KYC → crypto-shredding designed in from day one, with per-customer keys in your KMS.
 - The fold-purity rule has a concrete shape in a Spring service: a fold function must not be able to reach a `@Value` config property, a `Clock`, or an injected client. Make the event applier a static or stateless method taking only `(state, event)`, and the compiler stops the 3am story above from being written. If the current code does have ambient reads in its applier, that is a finding worth writing down regardless of whether anything has diverged yet.
@@ -154,7 +154,7 @@ Classic follow-ups:
 ## Check yourself
 
 > [!question]- Q: Explain "state as a fold over events" to a teammate using a bank account, and say what a snapshot is in those terms.
-> The account's stream holds facts: `Opened`, `Deposited 1000`, `Withdrawn 200`, `Deposited 100`. Current balance = fold: start at 0, apply each event → 900. Nothing stores "900" authoritatively; any state is recomputable at any point in history by stopping the fold early. A snapshot is a memoized prefix of the fold — "after event 3, balance was 900" — stored so loading doesn't replay from event 1; it is disposable cache, never truth, and must be invalidated when the fold function changes.
+> The account's stream holds facts: `Opened`, `Deposited 1000`, `Withdrawn 200`, `Deposited 100`. Current balance = fold: start at 0, apply each event → 900. Nothing stores "900" authoritatively; any state is recomputable at any point in history by stopping the fold early. A snapshot is a memoized prefix of the fold — "after event 4, balance was 900" — stored so loading doesn't replay from event 1; it is disposable cache, never truth, and must be invalidated when the fold function changes.
 
 > [!question]- Q: Your projection shows wrong balances for ~2% of accounts due to a projection bug deployed last month. Walk through recovery, and contrast with the same bug in a CRUD system.
 > Fix the projection code; rebuild the read model by replaying events from the start (or from a pre-bug snapshot position) into a fresh model; verify on known cases; cut reads over; discard the bad model. The events were never wrong, so no data is lost and no guesswork is needed. In a CRUD system the wrong computation *overwrote* the truth: recovery means forensic reconstruction from backups plus re-derivation of a month of mutations — often ending in "best-effort adjustment entries" and apology emails.
@@ -174,4 +174,4 @@ Classic follow-ups:
 - Greg Young — "Versioning in an Event Sourced System" (free ebook) — upcasters, immutability, and the decade-scale schema problem; his CQRS/ES talks originated much of the practice.
 - *Designing Data-Intensive Applications*, Kleppmann — Ch. 11, "Event Sourcing" and "State, Streams, and Immutability".
 - microservices.io — "Pattern: Event sourcing" (Chris Richardson).
-- EventStoreDB documentation — streams, expected-version concurrency, projections (a reference implementation's vocabulary).
+- EventStoreDB (KurrentDB since v25.0, 2025) documentation — streams, expected-version concurrency, projections (a reference implementation's vocabulary).

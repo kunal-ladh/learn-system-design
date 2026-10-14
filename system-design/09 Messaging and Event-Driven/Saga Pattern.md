@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: How to keep a multi-service business operation consistent without a distributed transaction — a sequence of local transactions, each with a compensating action — plus the honest costs: no isolation, semantic undo instead of rollback, and an irreversible pivot step you can never take back.
 related: ["[[Two-Phase Commit and Distributed Transactions]]", "[[Idempotency]]", "[[The Outbox Pattern]]", "[[Communication Patterns Between Services]]"]
 ---
@@ -23,7 +23,7 @@ Then the system grows. Wallet becomes its own service with its own MongoDB. Paym
 2. **Retries create duplicates.** A timeout on the payment call tells you nothing about whether the payment happened. Retry blindly and you may send the money twice; give up and you may have sent it once and told the customer it failed.
 3. **The crash window moves but never closes.** Wherever you put the commit, a pod restart can land between two steps. The knowledge that a transfer was mid-flight dies with the process unless something durable recorded it.
 
-The textbook fix, 2PC, does restore atomicity — and in exchange a coordinator crash leaves every participant holding locks indefinitely, every participating resource must implement XA or an equivalent prepare-and-commit interface, and availability becomes the product of all participants' availability. Brokers, HTTP APIs, and most NoSQL stores simply do not offer it.
+The textbook fix, 2PC, does restore atomicity — and in exchange a coordinator crash after the votes leaves every prepared participant holding locks until the coordinator recovers, every participating resource must implement XA or an equivalent prepare-and-commit interface, and availability becomes the product of all participants' availability. Brokers, HTTP APIs, and most NoSQL stores simply do not offer it.
 
 The escape hatch came from an older problem. Garcia-Molina and Salem's **"Sagas"** (SIGMOD, 1987) was written about *long-lived transactions* inside one database: a batch job holding locks for an hour destroys concurrency, so instead split it into short committed chunks and attach a compensating chunk to each. If the long operation fails midway, run the compensations backwards. The microservices world borrowed the structure wholesale, with the service boundary playing the role the time boundary played in 1987.
 
@@ -123,6 +123,8 @@ The rail call times out. You do not know whether the payment was submitted. **Co
 The rule: a timeout is not a failure, it is an **unknown**. The saga must move to an `AWAITING_CONFIRMATION` state and resolve the unknown by evidence — query the rail's transaction-status API by your own idempotency reference, or wait for the rail's webhook, or fall back to the end-of-day reconciliation file. Only a definitive "not found / not submitted" authorises compensation. This is why the pivot step's request must carry a client-generated reference that the rail echoes back: without it you cannot ask "did my transfer go through" and get a trustworthy answer. See [[Network Partitions and Timeouts]] for why the ambiguity is irreducible rather than a protocol flaw.
 
 ### Choreography vs orchestration
+
+> The choice itself — and how to design a durable orchestrator properly, plus engines like Temporal and Step Functions — has its own note: [[Orchestration vs Choreography]]. This section covers only what matters for the saga.
 
 **Choreography**: no coordinator. Each service publishes an event when its local transaction commits, and the next service reacts. Wallet publishes `WalletDebited`; Risk consumes it, decides, publishes `RiskApproved`; Payments consumes that. Compensation is the same mechanism with failure events flowing backwards.
 

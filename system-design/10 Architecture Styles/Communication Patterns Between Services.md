@@ -4,7 +4,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: How services should talk — synchronous vs asynchronous, orchestration vs choreography, and how to do cross-service reads — with the latency and availability math of call chains.
 related: ["[[Why Async Messaging Exists]]", "[[Saga Pattern]]", "[[The Distributed Monolith Anti-Pattern]]"]
 ---
@@ -43,6 +43,8 @@ Asynchronous messaging changes the equation: the producer's availability depends
 
 ### Orchestration vs choreography
 
+> Full treatment — designing the orchestrator as a durable state machine, the hybrid forms, and when to use an engine — is in [[Orchestration vs Choreography]].
+
 For multi-step flows (a transfer: debit, credit, notify, record), two coordination styles:
 
 - **Orchestration**: one coordinator (an orchestrator service or workflow engine) explicitly commands each step and handles each outcome. The flow is readable in one place, state is queryable ("where is transfer 123 stuck?"), and compensation on failure is centrally managed. Cost: the orchestrator couples to every participant and can become a god service.
@@ -54,7 +56,7 @@ Rule of thumb: **choreograph simple, local reactions (2–3 steps, side effects)
 |---|---|---|
 | Where the flow is written down | One coordinator's code or workflow definition | Nowhere — it emerges from each service's subscriptions |
 | Answering "where is transfer 123?" | Query the orchestrator's state row | Correlate events across several services and logs |
-| Adding a step | Edit the orchestrator; participants unaware | New consumer subscribes; no existing service changes |
+| Adding a step | Edit the orchestrator; participants unaware | Parallel reaction: new consumer subscribes, no existing service changes. Mid-sequence step: several services re-wire their subscriptions |
 | Removing a participant | Edit the orchestrator | Stop consuming; the producer never knew |
 | Compensation on failure | Centralised, expressible as a sequence | Each consumer handles its own; cross-step rollback is hard to express |
 | Coupling direction | Coordinator knows every participant | Producer knows nobody |

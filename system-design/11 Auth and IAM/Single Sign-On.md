@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: How SSO actually works — IdP vs SP, SAML vs OIDC, the two-session model that explains both the magic and the logout mess — plus workforce vs customer identity and where Okta, Entra, Auth0, and Cognito fit.
 related: ["[[OAuth 2 and OpenID Connect]]", "[[Designing an IAM Service]]", "[[Sessions vs Tokens]]"]
 ---
@@ -32,7 +32,7 @@ The fix inverts the trust: apps *outsource* authentication to one **Identity Pro
 
 1. Browser hits `app.example.com` with no session. The SP redirects to the IdP, carrying an authentication request.
 2. The IdP checks for its **own session cookie**. None → login page (password + MFA). Present → skip straight to step 3; *this skip is the entire "single" in SSO*.
-3. The IdP posts/redirects the browser back to the SP with a **signed assertion** — "I authenticated user X at time T by methods M."
+3. The IdP posts/redirects the browser back to the SP with a **signed assertion** — "I authenticated user X at time T by methods M." (SAML: the assertion itself rides the browser POST. OIDC code flow: the browser carries only a one-time code, and the app swaps it for the id_token on a back-channel call — [[OAuth 2 and OpenID Connect]].)
 4. The SP validates the signature against the IdP's published keys, then establishes **its own session** (cookie or token — [[Sessions vs Tokens]]) and serves the user. Subsequent requests to this app never involve the IdP.
 
 So SSO is *federated login*, not shared sessions: after the dance, each app runs an **independent app session** alongside the **IdP session**. App session lifetimes are the app's choice — which is why you stay logged into one tool for weeks while another re-dances daily — and why logout is about to get messy.
@@ -97,7 +97,7 @@ The market splits on who the users are, and the products barely overlap:
 | You gain | You pay |
 |---|---|
 | One strong login; MFA investment amortized over all apps | IdP = single point of failure for *new* logins across every app |
-| One-switch offboarding and central audit | IdP compromise = every app compromised (the 2022-era Okta incidents made this concrete) |
+| One-switch offboarding and central audit | IdP compromise = every app compromised (the 2022 and 2023 Okta breaches made this concrete) |
 | Apps hold no passwords | Apps must implement federation correctly — assertion validation bugs are auth bypasses |
 | Invisible second-app login | Logout and session-lifetime semantics get genuinely confusing |
 | Per-app access policy in one console | Protocol/metadata/cert-rotation ops per SP integration |
@@ -147,6 +147,6 @@ The market splits on who the users are, and the products barely overlap:
 
 - SAML 2.0 specifications (OASIS) — assertions, bindings, and the Web Browser SSO profile.
 - OpenID Connect Core 1.0, plus the Front-Channel and Back-Channel Logout specs (openid.net) — the OIDC SSO and SLO mechanics.
-- RFC 7522 — SAML 2.0 profile for OAuth 2.0 client authentication (where the two worlds meet).
+- RFC 7522 — SAML 2.0 profile for OAuth 2.0 client authentication and authorization grants (where the two worlds meet).
 - Okta and Auth0 developer documentation — the clearest practitioner explanations of IdP/SP flows and logout limitations.
 - NIST SP 800-63C — *Digital Identity Guidelines: Federation and Assertions*.

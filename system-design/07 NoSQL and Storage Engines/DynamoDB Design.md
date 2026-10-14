@@ -1,10 +1,10 @@
 ---
 title: DynamoDB Design
-tags: [system-design, nosql]
+tags: [system-design, nosql, aws]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How AWS DynamoDB actually works — partitions and keys, capacity modes, adaptive capacity's limits, GSIs/LSIs, single-table design, Streams, transactions, and hot-partition throttling in practice.
 related: ["[[The Dynamo Paper]]", "[[Hot Partition Problem]]", "[[Secondary Indexes on Sharded Data]]", "[[DynamoDB in Production]]"]
 ---
@@ -22,7 +22,7 @@ Amazon's own story explains the product. By the mid-2000s, Amazon's Oracle insta
 - **Operational burden**: no servers, no patching, no capacity-planning cluster math; replication across 3 AZs is automatic.
 - **Predictable latency at any scale**: the design goal is that a table with 10 TB behaves like a table with 10 MB, because every operation is routed to one partition.
 - **Elasticity**: throughput scales up and down (on-demand mode) without resharding projects.
-- **Availability**: 99.99% SLA for a single-region table (99.999% for global tables), no maintenance windows.
+- **Availability**: 99.99% SLA for a single-region table (99.999% for global tables, as of 2026), no maintenance windows.
 
 ## How it works
 
@@ -30,7 +30,7 @@ Amazon's own story explains the product. By the mid-2000s, Amazon's Oracle insta
 
 Every table has a **partition key** (hash key); optionally a **sort key** (range key). Items with the same partition key form an **item collection**, stored together and ordered by sort key — the same two-level model as wide-column stores ([[Cassandra and Wide-Column Stores]]).
 
-Under the hood the table is split into **partitions** — each a replicated storage unit (a leader and replicas across AZs, consensus-replicated; unlike Dynamo-the-paper there are no sloppy quorums, and strongly consistent reads are an option served by the leader). Each physical partition has hard per-partition limits — as documented: roughly **3,000 read capacity units, 1,000 write capacity units, and 10 GB** of storage. The table's total throughput is the sum over partitions, but *no single key can ever exceed one partition's share*. That sentence is the root of all hot-partition grief — see [[Hot Partition Problem]].
+Under the hood the table is split into **partitions** — each a replicated storage unit (a leader and replicas across AZs, consensus-replicated; unlike Dynamo-the-paper there are no sloppy quorums, and strongly consistent reads are an option served by the leader). Each physical partition has hard per-partition limits — as documented: roughly **3,000 read capacity units and 1,000 write capacity units**, plus roughly **10 GB** of storage (a long-cited figure that current AWS docs no longer state). The table's total throughput is the sum over partitions, but *no single key can ever exceed one partition's share*. That sentence is the root of all hot-partition grief — see [[Hot Partition Problem]].
 
 The partition key is hashed to choose the partition ([[Consistent Hashing]] in spirit); partitions split as data or traffic grows.
 
@@ -48,7 +48,7 @@ graph TD
 ### Capacity modes
 
 - **Provisioned**: you declare read/write capacity units (RCU/WCU) per table. 1 RCU = one strongly consistent read of up to 4 KB per second (two eventually consistent); 1 WCU = one 1 KB write per second. Cheaper at steady load; you can attach auto-scaling, but it reacts in minutes, not milliseconds — bursts beyond provisioned capacity are throttled (`ProvisionedThroughputExceededException`).
-- **On-demand**: pay per request, no capacity declaration. It absorbs most spikes (it maintains headroom of roughly double the previous peak; growing beyond that quickly can still throttle), and costs more per request. The right default for spiky or unknown workloads; switch to provisioned when traffic is predictable and high.
+- **On-demand**: pay per request, no capacity declaration. It absorbs most spikes (new tables start at 4,000 writes/s and 12,000 reads/s, and it maintains headroom of double the previous peak; exceeding that within 30 minutes can still throttle), and costs more per request. AWS halved on-demand prices in November 2024 and now calls it the default recommended mode; switch to provisioned when traffic is steady, predictable and high.
 
 ### Adaptive capacity — what it can and can't rescue
 
@@ -94,7 +94,7 @@ Scans price the anti-pattern honestly: a scan reads *every byte of the table* in
 
 Take a notification-delivery table: 500 writes/sec of 2.5 KB items, 2,000 reads/sec of the same items, and two GSIs projecting all attributes.
 
-- **Writes.** WCU rounds *up* per 1 KB, so a 2.5 KB item costs 3 WCU. Base table: 500 × 3 = **1,500 WCU**. Each all-attribute GSI re-stores the item and re-pays the write, so the two indexes add 2 × 1,500 = 3,000 WCU. Total **4,500 WCU** — three times what "500 writes per second" suggests, and the indexes are the entire difference.
+- **Writes.** WCU rounds *up* per 1 KB, so a 2.5 KB item costs 3 WCU. Base table: 500 × 3 = **1,500 WCU**. Each all-attribute GSI re-stores the item and re-pays the write, so the two indexes add 2 × 1,500 = 3,000 WCU. Total **4,500 WCU** — three times the base table's own 1,500 WCU (nine times the 500 that "500 writes per second" naively suggests), and the indexes are the entire difference between 1,500 and 4,500.
 - **Reads.** RCU rounds up per 4 KB, so a 2.5 KB item is 1 RCU strongly consistent, 0.5 eventually consistent. At 2,000 reads/sec that is **2,000 RCU** strong or **1,000 RCU** eventual — choosing eventual consistency where the product tolerates it halves the line item outright.
 - **The per-key ceiling.** One partition sustains roughly 1,000 WCU. At 3 WCU per write that is about 333 writes/sec (1,000 ÷ 3 ≈ 333) for *any single partition-key value*, permanently, no matter what the table is provisioned at. If one key is expected to exceed that, the design is already wrong and capacity cannot fix it.
 - **The scan somebody will propose.** A full scan of a 100 GB table reads roughly 100 × 1,048,576 ÷ 4 ÷ 2 ≈ **13.1 million RCU** at eventual consistency. At any price per unit, that is a number somebody notices.
@@ -127,7 +127,7 @@ Each entry names the signal and the confirming check, because every one of these
 - **GSI back-pressure.** *Signal:* writes to the base table throttle while the base table's own capacity looks fine. *Confirm:* compare `WriteThrottleEvents` on the index against the table; an index at 100% consumed while the table is at 40% is conclusive. *Fix:* size GSI capacity like table capacity, and prune projections so the index absorbs less per write.
 - **Item-size and collection limits.** 400 KB per item; unbounded "append to a list in one item" designs die here. *Signal:* `ValidationException` on update for the item cap, or an LSI item collection refusing writes as it approaches 10 GB. *Confirm:* the returned `ItemCollectionMetrics` size estimate on writes into an LSI-bearing collection.
 - **Stream consumer lag.** Downstream Lambdas that error retry with the shard blocked — ordered-per-key semantics mean one poison record stalls its shard ([[Dead Letter Queues and Poison Messages]]). *Signal:* `IteratorAge` on the stream climbing monotonically while invocation errors stay low in absolute count. *Confirm:* one shard's iterator age rising while its siblings stay flat — a stuck shard, not a slow consumer. *Fix:* a failure destination or on-failure DLQ plus bisect-on-error so one bad record cannot hold a batch hostage.
-- **On-demand cold spikes.** Doubling traffic faster than the headroom rule allows still throttles. *Signal:* throttling at the start of a campaign or batch run that disappears minutes later without anybody changing anything — "on-demand" is not "infinite instantly". *Fix:* pre-warm by ramping, or provision for known events.
+- **On-demand cold spikes.** Doubling traffic faster than the headroom rule allows still throttles. *Signal:* throttling at the start of a campaign or batch run that disappears minutes later without anybody changing anything — "on-demand" is not "infinite instantly". *Fix:* pre-warm explicitly with warm throughput (since November 2024) or by ramping, or provision for known events.
 
 ## When NOT to use it
 
@@ -167,7 +167,7 @@ Classic follow-ups: *How is DynamoDB different from the Dynamo paper?* (leader-p
 > A 3.2 KB item rounds up to 4 WCU, so the base table consumes 800 × 4 = 3,200 WCU. Each all-attribute GSI re-pays the same write, so three of them add 3 × 3,200 = 9,600 WCU — **12,800 WCU total**, four times the figure anyone wrote in the design doc. Cheapest lever: projection. A GSI projecting only its keys plus the two attributes a query actually returns both stores and writes far less than one projecting everything. Second lever: item size — moving a large payload field to S3 and keeping a pointer can take the item under 1 KB, which cuts all four lines by a factor of four simultaneously ([[How S3 Works]]). Adding capacity is not a lever; it is the bill.
 
 > [!question]- Q: Mini-design — model "user places orders; fetch a user with their 10 most recent orders in one call" in single-table style.
-> One table: user item `PK=USER#<id>, SK=PROFILE`; order items `PK=USER#<id>, SK=ORDER#<ISO-timestamp>#<orderId>`. Query `PK=USER#<id>` with `ScanIndexForward=false, Limit=11` returns profile plus newest orders in one request (profile sorts last or first depending on SK prefix design — a known trick is `SK=#PROFILE` to sort before `ORDER#`). "All orders over ₹10,000 last month across users" then needs a GSI or an export — demonstrating exactly what single-table design trades away.
+> One table: user item `PK=USER#<id>, SK=PROFILE`; order items `PK=USER#<id>, SK=ORDER#<ISO-timestamp>#<orderId>`. Query `PK=USER#<id>` with `ScanIndexForward=false, Limit=11` returns profile plus newest orders in one request (this works because `PROFILE` sorts after every `ORDER#…` key, so a descending query returns the profile first and then the ten newest orders; a prefix like `#PROFILE` would sort *before* `ORDER#` and fall outside the limit for any user with more than ten orders). "All orders over ₹10,000 last month across users" then needs a GSI or an export — demonstrating exactly what single-table design trades away.
 
 ## Sources
 

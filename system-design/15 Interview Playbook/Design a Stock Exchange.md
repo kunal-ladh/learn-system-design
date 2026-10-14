@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing an exchange — in-memory price-time priority matching engines, single-threaded determinism, event-sourced audit logs, market-data fan-out, and microsecond physics.
 related: ["[[The System Design Interview Framework]]", "[[Event Sourcing]]", "[[Latency Numbers Every Engineer Should Know]]", "[[Design a Payment System]]"]
 ---
@@ -35,13 +35,13 @@ An exchange matches buy and sell orders. What makes it unlike every other proble
 Latency budget — this is where the "different physics" claim becomes arithmetic ([[Latency Numbers Every Engineer Should Know]]):
 
 - Target: ~100 µs order-to-ack. Now price the usual suspects:
-- One network hop within a datacenter ≈ 50–500 µs (kernel TCP stack) — **one ordinary hop can blow the entire budget**, which is why exchanges use kernel-bypass networking and brokers colocate.
+- One round trip within a datacenter ≈ 100–500 µs through an ordinary kernel TCP stack (the latency table's figure) — **one ordinary hop can blow the entire budget**, which is why exchanges use kernel-bypass networking and brokers colocate.
 - A single SSD write ≈ 50–100 µs; a replicated DB commit (network + fsync + ack) ≈ **1–10 ms = 10–100× the whole budget**. Any design with "write order to database, then match" is dead on arrival.
 - Main-memory access ≈ 100 ns; an L2 hit ≈ 5 ns. Matching against an in-memory book costs **hundreds of nanoseconds to single-digit µs** — 100 µs is *generous* if and only if everything stays in memory and in one thread (no lock acquisition, no context switches — a contended lock or scheduler preemption costs 1–10+ µs each, i.e., several percent of budget per incident).
 
 Throughput sanity:
 
-- 1M orders/s ÷ ~10K active symbols is ~100/s per symbol on average, but volume is wildly skewed — a hot symbol may see **100K+ messages/s**. One modern core executing ~10⁸–10⁹ simple ops/s can process a book operation in well under 1 µs → a single-threaded engine comfortably sustains ~1M ops/s *per core*. Conclusion: **one thread per symbol (or symbol group) is not a compromise — it is faster than any locked multi-threaded alternative**, and it buys determinism for free.
+- 1M orders/s ÷ ~10K active symbols is ~100/s per symbol on average, but volume is wildly skewed — a hot symbol may see **100K+ messages/s**. One modern core executing ~10⁹–10¹⁰ simple instructions/s (a few GHz × a few instructions per cycle) can process a book operation in well under 1 µs → a single-threaded engine comfortably sustains ~1M ops/s *per core*. Conclusion: **one thread per symbol (or symbol group) is not a compromise — it is faster than any locked multi-threaded alternative**, and it buys determinism for free.
 - Audit log: 1M msgs/s × ~100 B ≈ 100 MB/s of append — easily sustained by sequential writes; ~8.6 TB/day per full-rate day, so retention tiers matter but the write path doesn't strain.
 
 ## High-level design
@@ -59,7 +59,7 @@ graph LR
     EX --> CL["Clearing and settlement downstream"]
 ```
 
-- **Gateways** terminate member sessions (binary protocols — FIX for breadth, native binary for speed), normalize, and timestamp on arrival.
+- **Gateways** terminate member sessions (FIX — a tag-value text protocol — for breadth, native binary protocols such as Nasdaq's OUCH for speed), normalize, and timestamp on arrival.
 - **Pre-trade risk** — synchronous, in-path, microsecond-budget checks (limits precomputed; the check is comparisons against cached numbers, never a DB call).
 - **Sequencer** — assigns each symbol's messages a single, gapless sequence. *The sequence is the truth*: whatever order the sequencer assigns is, by definition, the order of the market.
 - **Matching engine** — one single-threaded engine per symbol (partition — [[Sharding]] by symbol, the cleanest partition key imaginable: no cross-symbol matching exists by definition). Consumes its input sequence, mutates the in-memory book, emits executions and book deltas.

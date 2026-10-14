@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Why auth systems issue two tokens — a short-lived access token and a long-lived refresh token — and how rotation with reuse detection turns a stolen refresh token into a tripwire instead of a skeleton key.
 related: ["[[How JWT Works]]", "[[JWT Pitfalls]]", "[[OAuth 2 and OpenID Connect]]"]
 ---
@@ -22,7 +22,7 @@ The session world never had this problem: the server-side session was both long-
 - **Access token** — JWT, 5–15 minutes, verified statelessly by every service on every request ([[How JWT Works]]).
 - **Refresh token** — opaque random string (no need for JWT structure; only the issuer ever reads it), days to months, stored server-side by the IAM, usable only at the token endpoint.
 
-Revocation now has a handle again: the IAM checks its database on every *refresh* — is this token known, unexpired, unrevoked, and bound to this client? Killing a session = deleting one row. The user feels nothing: the client silently exchanges the refresh token for new access tokens for months. Security gets a damage window of minutes; UX gets a session of months. The state lookup happens once per 15 minutes per user instead of once per request — thousands of times cheaper than sessions, almost as revocable.
+Revocation now has a handle again: the IAM checks its database on every *refresh* — is this token known, unexpired, unrevoked, and bound to this client? Killing a session = deleting one row. The user feels nothing: the client silently exchanges the refresh token for new access tokens for months. Security gets a damage window of minutes; UX gets a session of months. The state lookup happens once per 15 minutes per user instead of once per request — cheaper than sessions by a factor of requests per user per access-token lifetime (about nine in the worked example below), almost as revocable.
 
 ## What it solves
 

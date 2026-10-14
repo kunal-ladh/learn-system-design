@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How Redis actually executes — the single-threaded event loop and what IO threads really offload, the core data structures and their costs, and persistence via RDB, AOF, and fork-based copy-on-write snapshotting.
 related: ["[[Redis Cluster and Sentinel]]", "[[Redis Beyond Caching]]", "[[Cache Eviction Policies]]", "[[Redis Streams]]"]
 ---
@@ -21,11 +21,11 @@ Redis's performance model is unusual: it is fast *because* it is single-threaded
 
 ### The single-threaded event loop
 
-One thread runs an event loop (epoll/kqueue under the hood, via Redis's own `ae` library): accept connections, read request bytes, parse the RESP protocol, **execute the command**, write response bytes, repeat. Commands therefore execute strictly one at a time — which is why `INCR`, `SETNX`, and Lua scripts are atomic *without any locking*: atomicity falls out of the architecture for free. It's also why Redis pipelining works so well (batch many commands per network round trip) and why a single Redis instance saturates at roughly one CPU core for command execution — typically on the order of 100K+ simple ops/s per instance, network and payload permitting (benchmark your own; never quote a number you haven't measured).
+One thread runs an event loop (epoll/kqueue under the hood, via Redis's own `ae` library): accept connections, read request bytes, parse the RESP protocol, **execute the command**, write response bytes, repeat. Commands therefore execute strictly one at a time — which is why `INCR`, `SETNX`, and Lua scripts are atomic *without any locking*: atomicity falls out of the architecture for free. It's also why Redis pipelining works so well (batch many commands per network round trip) and why a single Redis instance saturates at roughly one CPU core for command execution — typically on the order of 100K+ simple ops/s per instance with I/O threading off, network and payload permitting (as of 2026); Redis's own 2025 benchmarks exceed 1M ops/s on one Redis 8.2 instance with 8 I/O threads, while execution still runs on one core (benchmark your own; never quote a number you haven't measured).
 
 The flip side: **latency is a shared fate.** A single O(N) command over a large N — `KEYS *`, `SMEMBERS` on a huge set, `LRANGE 0 -1`, `DEL` of a multi-GB hash — blocks every other client for its duration. Production hygiene: `SCAN` instead of `KEYS`, `UNLINK` instead of `DEL` for big keys (lazy-freeing in a background thread, Redis 4.0+), `SLOWLOG` monitored, and the `latency-monitor` enabled.
 
-**What Redis 6's IO threads actually do:** with `io-threads N`, Redis uses extra threads for the network-I/O halves of the loop, which at high throughput dominate CPU. Read the default before assuming it covers both halves: in Redis 6 and 7, `io-threads-do-reads` defaults to **no**, so out of the box only **writing responses back to sockets** is threaded, and socket reads plus RESP parsing stay on the main thread until you turn that on. **Command execution remains on the single main thread either way.** So IO threads raise throughput on workloads whose cost is dominated by moving bytes, but do nothing for a slow command blocking the instance, and atomicity guarantees are unchanged. "Redis is multithreaded now" is wrong in the way that matters. (Background threads have long existed for fsync, lazy-free, and close — also not command execution.)
+**What Redis 6's IO threads actually do:** with `io-threads N`, Redis uses extra threads for the network-I/O halves of the loop, which at high throughput dominate CPU. Read the default before assuming it covers both halves: in Redis 6 and 7, `io-threads-do-reads` defaults to **no**, so out of the box only **writing responses back to sockets** is threaded, and socket reads plus RESP parsing stay on the main thread until you turn that on. Redis 8.0 (May 2025) replaced the implementation: the `io-threads-do-reads` directive is gone, and with `io-threads` above 1 the threads handle reads, parsing and writes (still off by default, as of 2026). **Command execution remains on the single main thread either way.** So IO threads raise throughput on workloads whose cost is dominated by moving bytes, but do nothing for a slow command blocking the instance, and atomicity guarantees are unchanged. "Redis is multithreaded now" is wrong in the way that matters. (Background threads have long existed for fsync, lazy-free, and close — also not command execution.)
 
 ### Core data structures and their costs
 
@@ -52,7 +52,7 @@ Since one thread does everything, the only capacity question that matters operat
 |---|---|---|---|
 | `KEYS pattern` | O(N) over the whole keyspace | stall proportional to total key count | `SCAN` with a `COUNT` hint, cursor-paged |
 | `HGETALL` / `SMEMBERS` / `LRANGE key 0 -1` | O(N) in collection size | stall **plus** serializing a huge RESP reply | `HSCAN`/`SSCAN`, bounded `LRANGE` ranges |
-| `ZRANGE key 0 -1` | O(log N + M), here M = N | same | bounded ranges, `ZRANGEBYSCORE … LIMIT` |
+| `ZRANGE key 0 -1` | O(log N + M), here M = N | same | bounded ranges, `ZRANGE … BYSCORE LIMIT` |
 | `SINTER` / `SUNION` / `SDIFF` | `SINTER` is O(N×M) worst case — N the smallest set's cardinality, M the number of sets | can reach seconds on large sets | precompute, `SINTERCARD` (Redis 7.0+) when only the count is wanted, or intersect in the app |
 | `SORT` | O(N + M log M) | sorts inside the shared thread | sort in the application |
 | `DEL bigkey` | O(N) for collections, O(1) for strings | frees N elements synchronously | `UNLINK` — Redis 4.0+ lazy-frees in a background thread |
@@ -67,7 +67,7 @@ Since one thread does everything, the only capacity question that matters operat
 - `SLOWLOG GET 128` — the slowest recent commands *with their arguments*, so you see the offending key name. `slowlog-log-slower-than` defaults to 10,000 µs.
 - `INFO commandstats` — calls, total µs and µs-per-call per command; this is where a command that looks cheap but averages badly shows itself.
 - `LATENCY LATEST` and `LATENCY DOCTOR`, once `latency-monitor-threshold` is set — these attribute spikes to a *cause* (`fork`, `expire-cycle`, `command`), which is the distinction that decides whether you are looking at a slow command or a background operation.
-- `redis-cli --bigkeys` — a `SCAN`-based pass reporting the largest key per type; `--hotkeys` does the same for access frequency but requires `maxmemory-policy` to be set to an LFU policy.
+- `redis-cli --bigkeys` — a `SCAN`-based pass reporting the largest key per type; `--hotkeys` does the same for access frequency but requires `maxmemory-policy` to be set to an LFU policy. Redis 8.6 added a server-side `HOTKEYS` command that ranks keys by share of CPU time and network bytes over a tracking window ([[Hot Key Problem]]).
 - `OBJECT ENCODING key` — confirms whether a hash is still a compact listpack or has flipped to a hashtable.
 
 ### Persistence: RDB, AOF, hybrid
@@ -84,7 +84,7 @@ Redis is memory-first; persistence is for restart recovery, not transactional du
 
 ```mermaid
 graph TD
-    A["Main process serving traffic"] -->|fork| B["Child process"]
+    A["Main process serving traffic"] -->|"fork"| B["Child process"]
     B -->|"serializes frozen view to RDB or AOF"| C["Disk"]
     A -->|"writes dirty pages"| D["Kernel copies pages - COW"]
     D -->|"memory grows with write rate"| A
@@ -99,7 +99,7 @@ graph TD
 - Meaningfully **above 1** — the allocator is holding pages Redis is no longer using. Common after a large mass deletion or eviction; `activedefrag yes` lets Redis compact in the background, at CPU cost on the shared thread.
 - **Below 1** — part of the process has been **swapped to disk**. For a single-threaded in-memory server this is the worst state available: one page fault on the command path stalls every client for a disk seek. Swap on a Redis host is not a tuning opportunity, it is an incident.
 
-Per-key cost is not the payload. A key carries its name string, a dictionary entry, the value object header, and — if it has a TTL — a second entry in the expires dictionary. This is precisely why a million tiny top-level keys cost dramatically more than one hash holding a million fields, and why the compact listpack encodings exist at all. Measure with `MEMORY USAGE key`; do not estimate from the value's size.
+Per-key cost is not the payload. A key carries its name string, a dictionary entry, the value object header, and — if it has a TTL — a second entry in the expires dictionary (Redis 8.2 packs the name, a short value and the TTL into one allocation, trimming this overhead but not removing it). This is precisely why a million tiny top-level keys cost dramatically more than one hash holding a million fields, and why the compact listpack encodings exist at all. Measure with `MEMORY USAGE key`; do not estimate from the value's size.
 
 Two configuration facts that decide behaviour at the ceiling:
 
@@ -141,7 +141,7 @@ At 02:40 the pager fires for four services at once — p99 latency over 1 s on a
 ## Common misconceptions
 
 - **"Single-threaded means slow."** Command execution being single-threaded is *why* it's fast: zero lock contention, pure memory ops. Network I/O — the actual bottleneck — is parallelized (IO threads) or amortized (pipelining).
-- **"IO threads made Redis multithreaded."** Only the socket work — reply writing by default, plus reads and parsing if you explicitly enable `io-threads-do-reads`. Execution, atomicity, and the one-slow-command-stalls-all hazard are unchanged.
+- **"IO threads made Redis multithreaded."** Only the socket work — in Redis 6/7 reply writing by default, plus reads and parsing if you explicitly enable `io-threads-do-reads`; in Redis 8 reads, parsing and writes once `io-threads` is set. Execution, atomicity, and the one-slow-command-stalls-all hazard are unchanged.
 - **"AOF means no data loss."** Only `appendfsync always` approaches that, at severe throughput cost; `everysec` loses up to a second, and async replication can lose more on failover.
 - **"Expired keys are gone at the expiry instant."** They're removed lazily on access plus by the sampling cycle above; memory reclaim lags, and `DBSIZE`-style counts can include corpses briefly.
 - **"Everything in Redis is O(1)."** Per-element operations mostly are; whole-collection operations (HGETALL, SMEMBERS, LRANGE 0 -1, SINTER, KEYS) are O(N) or worse, executed on the thread everyone shares.
@@ -181,7 +181,7 @@ Classic follow-ups: "Why is a Lua script atomic?" (the event loop runs it to com
 > Three mechanisms compound, and the first is the usual culprit. (1) **Expiry is lazy plus sampled, not scheduled.** Keys nobody reads again are only reclaimed when the active cycle happens to sample them; a large population of write-once, never-read keys drains slowly. (2) **Fragmentation.** After bursts of expiry and overwrite, the allocator holds pages Redis no longer uses, so RSS stays high even as the logical dataset shrinks. (3) **Something is genuinely unbounded** — a collection under one key keeps growing, and because the TTL sits on the whole key, none of its contents are reclaimed until that entire key expires. The numbers: `INFO keyspace` (compare `keys` against `expires` per database — a gap means TTL-less keys you did not intend), the `expired_keys` rate in `INFO stats` against your write rate, and `mem_fragmentation_ratio` in `INFO memory`. Then `redis-cli --bigkeys` to find anything unbounded. Note the ordering: confirm the dataset is actually shrinking logically *before* blaming fragmentation, or you will enable `activedefrag` and burn CPU on the shared thread for nothing.
 
 > [!question]- Q: Mini design — a leaderboard needs top-100 queries and rank lookups for 10M players with heavy score updates. Which structure, what are the costs, and what operation must you forbid?
-> A zset: ZADD O(log N) per update, ZREVRANGE 0 99 O(log N + 100) for top-100, ZREVRANK O(log N) for a player's rank. Costs: skiplist+hashtable memory overhead per member (tens of bytes beyond the payload — budget it at 10M members), and all ops on the shared thread. Forbid unbounded scans — ZRANGE 0 -1 or ZRANGEBYSCORE over the whole range — which are O(N) stalls; cap ranges and paginate. At larger scale, shard by league/region before sharding the zset itself, because a zset lives wholly on one node ([[Redis Cluster and Sentinel]], [[Hot Key Problem]]).
+> A zset: ZADD O(log N) per update, ZRANGE 0 99 REV O(log N + 100) for top-100 (`ZREVRANGE` before 6.2), ZREVRANK O(log N) for a player's rank. Costs: skiplist+hashtable memory overhead per member (tens of bytes beyond the payload — budget it at 10M members), and all ops on the shared thread. Forbid unbounded scans — ZRANGE 0 -1 or ZRANGEBYSCORE over the whole range — which are O(N) stalls; cap ranges and paginate. At larger scale, shard by league/region before sharding the zset itself, because a zset lives wholly on one node ([[Redis Cluster and Sentinel]], [[Hot Key Problem]]).
 
 ## Sources
 

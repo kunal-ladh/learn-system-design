@@ -4,14 +4,14 @@ tags: [system-design, nosql]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Cassandra as Dynamo's distribution married to Bigtable's data model — partition and clustering keys, query-first modeling, tunable consistency, the cheap LSM write path, and the tombstone problem.
 related: ["[[The Dynamo Paper]]", "[[B-Tree vs LSM-Tree]]", "[[Quorum Reads and Writes]]", "[[Discord Message Storage Evolution]]"]
 ---
 
 # Cassandra and Wide-Column Stores
 
-Apache Cassandra (built at Facebook for inbox search, open-sourced 2008) is the best-known **wide-column store**, and the cleanest way to understand it is as a marriage: **Dynamo's distribution layer** (ring, replication, quorums, gossip — see [[The Dynamo Paper]]) carrying **Bigtable's data model and storage engine** (partitions of sorted rows on an LSM engine — see [[Bigtable and Spanner]] and [[B-Tree vs LSM-Tree]]). It is masterless, write-optimized, and linearly scalable — and it demands that you model your data around your queries, not the other way round. ScyllaDB (a C++ reimplementation) and HBase (Bigtable's direct open-source clone, with a different, leader-based consistency design) are its siblings.
+Apache Cassandra (built at Facebook for inbox search, open-sourced 2008) is the best-known **wide-column store**, and the cleanest way to understand it is as a marriage: **Dynamo's distribution layer** (ring, replication, quorums, gossip — see [[The Dynamo Paper]]) carrying **Bigtable's data model and storage engine** (partitions of sorted rows on an LSM engine — see [[Bigtable and Spanner]] and [[B-Tree vs LSM-Tree]]). It is masterless, write-optimized, and linearly scalable — and it demands that you model your data around your queries, not the other way round. ScyllaDB (a C++ reimplementation, source-available rather than open source since its 2025.1 release) and HBase (Bigtable's direct open-source clone, with a different, leader-based consistency design) are its siblings.
 
 ## The problem that created it
 
@@ -69,7 +69,7 @@ Replication factor **N** (typically 3 per datacenter) with per-operation consist
 | Level | Meaning | Use |
 |---|---|---|
 | `ONE` | One replica acks | Fast, available, stale-tolerant reads/writes |
-| `QUORUM` | ⌈(N+1)/2⌉ ack | R+W>N overlap: QUORUM writes + QUORUM reads see latest acknowledged write |
+| `QUORUM` | ⌈(N+1)/2⌉ ack, where N is the total replica count summed across *all* DCs | R+W>N overlap: QUORUM writes + QUORUM reads see latest acknowledged write |
 | `LOCAL_QUORUM` | Quorum within the local DC | The multi-DC workhorse — avoids cross-DC latency on the hot path |
 | `ALL` | Every replica | Strictest and most fragile — one dead replica fails the op |
 
@@ -77,7 +77,7 @@ Cassandra inherits Dynamo's repair toolbox — hinted handoff, read repair, Merk
 
 ### The write path: why writes are cheap
 
-A write hits the coordinator → each replica appends to its **commit log** (sequential) and inserts into its **memtable** (memory) → ack. No read, no seek, no index update on the write path — an update doesn't even check whether the row exists. Memtables flush to immutable **SSTables**; compaction merges them in the background. This is the pure [[B-Tree vs LSM-Tree]] LSM story, and it's why Cassandra sustains write rates that would melt a B-tree engine. Reads pay the bill: merge memtable + several SSTables, mitigated by bloom filters and compaction strategy choice (size-tiered for write-heavy, leveled for read-heavy, time-window for time series).
+A write hits the coordinator → each replica appends to its **commit log** (sequential) and inserts into its **memtable** (memory) → ack. No read, no seek, no index update on the write path — an update doesn't even check whether the row exists. Memtables flush to immutable **SSTables**; compaction merges them in the background. This is the pure [[B-Tree vs LSM-Tree]] LSM story, and it's why Cassandra sustains write rates that would melt a B-tree engine. Reads pay the bill: merge memtable + several SSTables, mitigated by bloom filters and compaction strategy choice (size-tiered for write-heavy, leveled for read-heavy, time-window for time series — or, since Cassandra 5.0, the current GA series as of 2026, the Unified Compaction Strategy, which the docs recommend for most workloads and which can emulate all three).
 
 ```mermaid
 graph LR

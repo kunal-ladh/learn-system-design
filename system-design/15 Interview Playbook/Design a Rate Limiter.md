@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing a distributed rate limiter — algorithm choice, atomic Redis counters with Lua, the race conditions, local token caches, fail-open vs fail-closed, and the multi-datacenter wrinkle.
 related: ["[[Rate Limiting]]", "[[API Gateway]]", "[[Redis Internals]]"]
 ---
@@ -56,8 +56,8 @@ graph LR
 
 **What a rejection returns** — be specific, it's cheap and graded:
 
-- Status **`429 Too Many Requests`**, with **`Retry-After: <seconds>`**.
-- Rate-limit headers on *every* response so well-behaved clients can self-throttle: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (the IETF draft standardizes these as `RateLimit-*`).
+- Status **`429 Too Many Requests`**, with **`Retry-After`** (a delay in seconds or an HTTP-date; jitter it per client — [[Rate Limiting]]).
+- Rate-limit headers on *every* response so well-behaved clients can self-throttle: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` — the de-facto trio. The IETF effort is still an Internet-Draft as of 2026, and its revisions since 2023 define two structured fields, `RateLimit` and `RateLimit-Policy`, not a `RateLimit-*` trio.
 - Distinguish 429 (client over quota) from 503/load shedding (server over capacity) — different causes, different client behavior ([[Load Shedding and Graceful Degradation]]).
 
 ## Deep dives
@@ -70,9 +70,9 @@ The candidates, from [[Rate Limiting]], one line each on why they fall short her
 |---|---|
 | **Fixed window counter** | Cheapest, but allows ~2x bursts at window boundaries (100 at 11:59:59 + 100 at 12:00:01) |
 | **Sliding window log** | Exact (stores every request timestamp), but memory is O(requests) per key — 1,000/min keys get expensive |
-| **Token bucket** | Great semantics (steady rate + burst allowance); needs two values (tokens, last-refill) updated atomically |
+| **Token bucket** | Great semantics (steady rate + burst allowance); the same two-value O(1) state (tokens, last-refill), but it expresses rate-plus-burst rather than the "N per window" rule as written |
 | **Leaky bucket** | Smooths output to a constant rate; queues requests — adds latency, wrong fit for an API gateway check |
-| **Sliding window counter** | Two counters per key, O(1) memory, smooths the boundary burst — the pragmatic default |
+| **Sliding window counter** | Two counters per key, O(1) memory, removes the 2x boundary artifact — the pragmatic default for an "N per window" rule |
 
 **Sliding window counter** keeps a counter for the current and previous fixed windows and estimates the rolling count by weighting the previous window by its remaining overlap:
 
@@ -81,7 +81,7 @@ estimate = current_count + previous_count × (overlap fraction of previous windo
 e.g. 25s into a 60s window: estimate = curr + prev × (35/60)
 ```
 
-The estimate assumes requests were spread evenly across the previous window — an approximation, but Cloudflare measured this scheme on production traffic and found boundary error small in practice (they reported only ~0.003% of requests wrongly allowed/blocked across 400M sampled requests). State per key: two integers. That accuracy-for-O(1)-memory trade is the answer interviewers want *compared against alternatives*, not asserted.
+The estimate assumes requests were spread evenly across the previous window — an approximation, but Cloudflare (2017) measured this scheme on production traffic and found boundary error small in practice (they reported only ~0.003% of requests wrongly allowed/blocked across 400M sampled requests). State per key: two integers. That accuracy-for-O(1)-memory trade is the answer interviewers want *compared against alternatives*, not asserted.
 
 Token bucket is the equally respectable alternative (it is what many real gateways implement) — offer it when the requirement includes "allow short bursts."
 
@@ -103,7 +103,7 @@ The cost is accuracy at the margins: tokens stranded in a node that crashes or g
 
 ### 4. Multi-datacenter wrinkle
 
-With gateways in two regions, where does the counter live? Synchronously checking one global Redis from the far region adds **~50–150 ms WAN latency** to every request — instantly blowing the budget; a limiter must never cost more than it protects. Realistic options:
+With gateways in two regions, where does the counter live? Synchronously checking one global Redis from the far region adds **~50–250 ms WAN latency** (the cross-region rows in [[Latency Numbers Every Engineer Should Know]]) to every request — instantly blowing the budget; a limiter must never cost more than it protects. Realistic options:
 
 - **Per-region limits** (each region enforces `limit / regions` or a locally tuned share): simple, zero WAN cost; a client routed across regions can exceed the global number — usually acceptable for abuse protection.
 - **Local enforcement + async aggregation**: regions enforce locally and replicate counts in the background (e.g. CRDT-style merged counters); the global limit converges within seconds rather than holding instantaneously.
@@ -113,7 +113,7 @@ The honest summary: **exact global rate limiting across datacenters is not worth
 
 ## Scaling and failure handling
 
-- **Scale the counter store** by sharding keys across a Redis Cluster — keys hash well (millions of clients), so no inherent [[Hot Key Problem]]; one abusive client hammering a single key is bounded by the limiter itself rejecting them at the limit.
+- **Scale the counter store** by sharding keys across a Redis Cluster — keys hash well (millions of clients), so no inherent [[Hot Key Problem]]; but one abusive client hammering a single key still costs a Redis operation per request even when every request is rejected — rejection bounds the backend, not the limiter's own store, so that key is the limiter's own hot key ([[Rate Limiting]]); a node-local pre-filter in front of Redis (deep dive 3's local cache, or a short-lived deny entry for keys already over limit) absorbs it.
 - **Redis down** → the fail-open/fail-closed policy from requirements executes. Fail-open with a circuit breaker ([[Circuit Breakers]]) and an alert; optionally degrade to node-local in-memory limiting with a conservative share (`limit / node_count`) — crude, but keeps *some* protection while the store recovers.
 - **Gateway nodes are stateless** (batch caches are a soft optimization, safe to lose) — autoscale freely ([[Stateless vs Stateful Services]]).
 - **Rule changes** propagate via periodic refresh or pub/sub push; stale-by-30-seconds rules are fine — say so rather than building a config consensus system.
@@ -125,14 +125,14 @@ The honest summary: **exact global rate limiting across datacenters is not worth
 - **Designing the single-node algorithm only** — token bucket pseudocode on one server, no story for ten gateway nodes sharing a limit. The distribution *is* the problem.
 - **Read-then-write to Redis without atomicity** — presenting the race condition as the solution. If you draw `GET` then `INCR`, expect the interviewer to pounce.
 - **No fail-open/fail-closed position.** "Redis is down" must have a decided answer, and "depends on what's limited — here's the split" is the best one.
-- **Forgetting the response contract** — returning bare 429 with no `Retry-After`/`RateLimit-*` headers turns well-meaning clients into accidental retry storms ([[Timeouts Retries and Exponential Backoff]]).
+- **Forgetting the response contract** — returning bare 429 with no `Retry-After`/`X-RateLimit-*` headers turns well-meaning clients into accidental retry storms ([[Timeouts Retries and Exponential Backoff]]).
 - **Global synchronous counters across regions** — importing 100 ms of WAN into every API call to make a rate limit exact.
 - **Treating sliding-window-counter's estimate as exact** — it assumes uniform distribution in the previous window; know that it's an approximation and that the measured error is small.
 
 ## Check yourself
 
 > [!question]- Q: Explain in 60 seconds why the sliding window counter is the default algorithm for a distributed limiter.
-> Fixed windows allow ~2x bursts at boundaries; sliding window log is exact but costs memory per request; token bucket is good but carries two mutable values. Sliding window counter keeps just two integers per key — current and previous window counts — and estimates the rolling rate by weighting the previous window by its overlap fraction. O(1) memory, one-command-friendly, smooths the boundary burst, and Cloudflare measured its real-world error as tiny. It trades exactness for constant cost, which is the right trade for abuse protection.
+> Fixed windows allow ~2x bursts at boundaries; sliding window log is exact but costs memory per request; token bucket is equally O(1) but expresses rate-plus-burst rather than the "N per window" rule as written. Sliding window counter keeps just two integers per key — current and previous window counts — and estimates the rolling rate by weighting the previous window by its overlap fraction. O(1) memory, one-command-friendly, removes the 2x boundary burst, and Cloudflare measured its real-world error as tiny. It trades exactness for constant cost, which is the right trade for abuse protection.
 
 > [!question]- Q: What exactly goes wrong with GET-then-INCR, and how does Lua fix it — including why it also fixes the latency budget?
 > Two nodes at count 99/100 both GET 99, both decide "allowed", both INCR → 101 admitted: a check-then-act race on shared state, leaking worse as concurrency grows. A Lua script runs atomically inside Redis's single-threaded loop — read counters, compute the window estimate, conditionally increment, set TTLs — with no interleaving possible. And because all steps execute server-side in one EVALSHA call, the whole decision costs one network round trip (~0.5–1 ms), fitting the 1–2 ms budget that three separate commands would blow.
@@ -152,4 +152,4 @@ The honest summary: **exact global rate limiting across datacenters is not worth
 - Cloudflare blog — "How we built rate limiting capable of scaling to millions of domains" (the sliding window counter approximation and its measured accuracy).
 - Stripe engineering blog — "Scaling your API with rate limiters" (token bucket in Redis, limiter taxonomy in production).
 - Redis documentation — `EVAL`/`EVALSHA` atomicity guarantees and Lua scripting.
-- IETF draft — "RateLimit header fields for HTTP" (the standardized `RateLimit-*` headers).
+- IETF Internet-Draft `draft-ietf-httpapi-ratelimit-headers`, "RateLimit header fields for HTTP" — still a draft as of 2026; current revisions define the `RateLimit` and `RateLimit-Policy` fields.

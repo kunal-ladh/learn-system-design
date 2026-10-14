@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Kafka as a replicated commit log — topics, partitions, segments, offsets, consumer groups, ISR and the acks durability math, and why sequential IO makes it fast.
 related: ["[[Message Queues vs Event Logs]]", "[[Kafka Operations]]", "[[Sharding]]", "[[Replication]]", "[[Consumer Groups and Rebalancing]]"]
 ---
@@ -26,7 +26,7 @@ Jay Kreps' team asked: what if the pipeline *is* a log — the same structure as
 ## What it solves
 
 - **One pipeline, many readers** — each consumer group gets the full stream independently; adding a reader never slows producers or other readers.
-- **Throughput at commodity cost** — millions of messages/sec per cluster via sequential IO and batching.
+- **Throughput at commodity cost** — on the order of millions of messages/sec per cluster (rough, 2026; message size dominates) via sequential IO and batching.
 - **Replay** — bugs happen; re-consume from an old offset instead of restoring backups. Foundation of [[Event Sourcing]] and [[Change Data Capture]].
 - **Durable buffering** — a consumer down for six hours just resumes at its offset; the backlog is invisible to the broker ([[Backpressure and Flow Control]]).
 - **Per-key ordering at scale** — order within a partition, parallelism across partitions ([[Message Ordering]]).
@@ -35,7 +35,7 @@ Jay Kreps' team asked: what if the pipeline *is* a log — the same structure as
 
 ### Topics → partitions → segments
 
-A **topic** is a named stream. It is split into **partitions**, each a totally ordered, append-only log; records with the same key hash to the same partition, which is the entire ordering guarantee ([[Sharding]] applied to a log — and the same [[Hot Partition Problem]] applies to skewed keys). Each partition is stored as a sequence of **segment files** (default 1 GiB); only the last segment is written, old segments are deleted or compacted wholesale — which is why retention is cheap.
+A **topic** is a named stream. It is split into **partitions**, each a totally ordered, append-only log; records with the same key hash to the same partition, which is the entire ordering guarantee ([[Sharding]] applied to a log — and the same [[Hot Partition Problem]] applies to skewed keys). Each partition is stored as a sequence of **segment files** (default 1 GiB); only the last segment is written, old segments are deleted whole or rewritten by compaction — which is why retention is cheap.
 
 Each record in a partition gets a monotonically increasing **offset**. An offset is a dumb long — the consumer's entire state is "I have read partition 3 up to offset 182,440", stored in an internal topic (`__consumer_offsets`).
 
@@ -53,7 +53,7 @@ Producer `acks` setting:
 
 The trap: `acks=all` alone is weaker than it sounds, because the ISR can *shrink*. If followers fall behind and drop out, the ISR can become just the leader — and `acks=all` then means "the leader has it", i.e. `acks=1`. The guard is **`min.insync.replicas`**: with replication factor 3 and `min.insync.replicas=2`, a produce with `acks=all` fails (producer retries) rather than being accepted under-replicated.
 
-Durability math for the standard config (RF=3, min.insync=2, acks=all): every acked write exists on ≥2 brokers, so you tolerate **1 broker failure with zero acknowledged-write loss**, and the cluster keeps accepting writes with one broker down. Lose 2 of 3 simultaneously and acked-but-only-on-two-dead-brokers data is gone unless `unclean.leader.election.enable=false` holds the partition offline until a dead replica returns — the classic consistency-vs-availability choice ([[CAP Theorem]]). Note this is primary-backup replication gated on the ISR set, not a [[Quorum Reads and Writes|majority quorum]] — RF=3/min.insync=2 resembles a quorum but the ISR membership itself is managed by the controller.
+Durability math for the standard config (RF=3, min.insync=2, acks=all): every acked write exists on ≥2 brokers, so you tolerate **1 broker failure with zero acknowledged-write loss**, and the cluster keeps accepting writes with one broker down. Lose 2 of 3 simultaneously and acked-but-only-on-two-dead-brokers data is gone unless `unclean.leader.election.enable=false` holds the partition offline until a dead replica returns — the classic consistency-vs-availability choice ([[CAP Theorem]]). Note this is primary-backup replication gated on the ISR set, not a [[Quorum Reads and Writes|majority quorum]] — RF=3/min.insync=2 resembles a quorum but ISR membership itself is changed by the partition leader and recorded by the controller.
 
 ```mermaid
 graph TD
@@ -75,7 +75,7 @@ Leaders are spread so every broker leads some partitions — leadership is the u
 
 ### Consumer groups
 
-Consumers sharing a `group.id` form a **consumer group**: the group coordinator assigns each partition to exactly one consumer in the group, so the group collectively reads everything, each partition in order, with parallelism ≤ partition count. Two different groups each independently read the full topic. Members joining/leaving trigger a **rebalance** — disruptive enough to deserve its own note: [[Consumer Groups and Rebalancing]]. Consumers commit offsets; commit-after-process gives at-least-once, commit-before-process gives at-most-once ([[Delivery Semantics]], [[Exactly-Once Delivery Is a Lie]]).
+Consumers sharing a `group.id` form a **consumer group**: each partition is assigned to exactly one consumer in the group (computed by an elected group-leader consumer in the classic protocol, by the broker-side coordinator under KIP-848, GA in 4.0), so the group collectively reads everything, each partition in order, with parallelism ≤ partition count. Two different groups each independently read the full topic. Members joining/leaving trigger a **rebalance** — disruptive enough to deserve its own note: [[Consumer Groups and Rebalancing]]. Consumers commit offsets; commit-after-process gives at-least-once, commit-before-process gives at-most-once ([[Delivery Semantics]], [[Exactly-Once Delivery Is a Lie]]).
 
 ### Producer mechanics: batching, idempotence, transactions
 
@@ -101,7 +101,7 @@ Classically, cluster metadata and controller election lived in ZooKeeper — a s
 | You gain | You pay |
 |---|---|
 | Replay, multiple independent readers, cheap backlogs | Consumers must manage offsets, rebalances, lag — smart-consumer complexity |
-| Order of magnitude more throughput than smart brokers | Latency is good but batching-oriented; not the tool for lowest-possible per-message latency |
+| Typically far more throughput than smart brokers on the same hardware | Latency is good but batching-oriented; not the tool for lowest-possible per-message latency |
 | Tunable, well-defined durability (acks/ISR/min.insync) | You must actually understand that math — defaults alone don't guarantee it |
 | Per-key ordering with horizontal scale | Partition count is semi-permanent: increasing it breaks key→partition mapping for existing keys |
 | Ecosystem: Connect, Streams, Schema Registry | Heavy operational footprint ([[Kafka Operations]]) |

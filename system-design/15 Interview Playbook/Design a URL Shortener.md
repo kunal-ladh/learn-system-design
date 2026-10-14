@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: The hello-world design problem — key generation strategies compared, 301 vs 302 and the analytics trade-off, caching the hot redirect path, and the database reasoning.
 related: ["[[The System Design Interview Framework]]", "[[Design a Distributed ID Generator]]", "[[Hot Key Problem]]"]
 ---
@@ -38,7 +38,7 @@ Assume (and state) a bit.ly-class service: **100M new URLs per month**, read:wri
 
 - **Writes**: 100M / month ≈ 100,000,000 ÷ (30 × 86,400 s) = 100,000,000 ÷ 2,592,000 s ≈ **40 writes/sec** average; × 3 for peak ≈ **120/sec**. Tiny.
 - **Reads**: 40 × 100 = **4,000 redirects/sec** average; peak ≈ **12,000/sec**. This is the number that drives the design — read-heavy, cache-friendly.
-- **Storage**: keep links 5 years → 100M × 12 × 5 = **6 billion rows**. Each row ≈ 500 bytes (long URL averages ~200 bytes, plus code, timestamps, metadata) → 6 × 10⁹ × 500 B = **3 TB**. Comfortable for one replicated database; sharding is optional headroom, not a day-one need.
+- **Storage**: keep links 5 years → 100M × 12 × 5 = **6 billion rows**. Each row ≈ 500 bytes (long URL averages ~200 bytes, plus code, timestamps, metadata) → 6 × 10⁹ × 500 B = **3 TB** raw (~9 TB at 3× replication). Comfortable for one replicated database; sharding is optional headroom, not a day-one need.
 - **Bandwidth**: reads 4,000/sec × ~500 B ≈ **2 MB/sec** egress. Negligible — say so, and move on.
 - **Key space**: Base62 (a–z, A–Z, 0–9) with 7 characters gives 62⁷ ≈ **3.5 trillion** codes — 580x our 6B need. Seven characters is the answer; six (62⁶ ≈ 57B) would work but leaves less headroom.
 
@@ -81,7 +81,7 @@ Write path: `POST` → generate code → insert row → return. Read path: as di
 
 ### 1. Key generation — three approaches, compared
 
-**(a) Counter + Base62.** Keep a global auto-incrementing counter; Base62-encode each value (`125` → `cb`). Encoding is a repeated divide-by-62: e.g. 11157 = 2×62² + 55×62 + 59 → `c3X` (0→`a` mapping). Collisions are impossible by construction, codes are short, generation is O(1). The catch: the counter itself is a single point of coordination — exactly the problem [[Design a Distributed ID Generator]] exists to solve (Snowflake-style IDs, or per-node counter ranges) — and sequential codes are **enumerable**: a scraper can walk `a9Xk2Bq`, `a9Xk2Br`, … and harvest every private link. Mitigation: bijectively scramble the counter value (fixed permutation) before encoding.
+**(a) Counter + Base62.** Keep a global auto-incrementing counter; Base62-encode each value (`125` → `cb`). Encoding is a repeated divide-by-62: e.g. 11157 = 2×62² + 55×62 + 59 → `c37` (alphabet a–z, A–Z, 0–9, so 0→`a`, 55→`3`, 59→`7`). Collisions are impossible by construction, codes are short, generation is O(1). The catch: the counter itself is a single point of coordination — exactly the problem [[Design a Distributed ID Generator]] exists to solve (Snowflake-style IDs, or per-node counter ranges) — and sequential codes are **enumerable**: a scraper can walk `a9Xk2Bq`, `a9Xk2Br`, … and harvest every private link. Mitigation: bijectively scramble the counter value (fixed permutation) before encoding.
 
 **(b) Hash + collision handling.** `code = first 7 chars of base62(MD5(longUrl))`. No coordination needed and the same URL maps to the same code (free dedup). But truncating a hash to 7 chars *will* collide eventually (birthday problem — with billions of keys, truncated-hash collisions are a certainty, not a risk), so every insert needs a collision check: insert with the code as a unique key; on conflict, append a salt and re-hash. Writes become retry loops under load.
 
@@ -97,16 +97,16 @@ Recommended answer: **KGS or counter-with-scrambling**, and explicitly link the 
 
 ### 2. 301 vs 302 — and the analytics implication
 
-- **301 Moved Permanently**: the browser **caches the mapping** and on future clicks goes straight to the long URL without touching your servers. Lowest latency and server load — but you are now **blind**: no request means no click counted, so per-link analytics are impossible, and you cannot later change or expire the mapping for that browser.
+- **301 Moved Permanently**: absent explicit cache headers, the browser **caches the mapping** (heuristically, often indefinitely) and on future clicks goes straight to the long URL without touching your servers. Lowest latency and server load — but you are now **blind**: no request means no click counted, so per-link analytics are impossible, and you cannot later change or expire the mapping for that browser.
 - **302 Found** (temporary): the browser comes back to you **every click**. Every click is countable, expiry and link-editing work — at the cost of serving every redirect yourself.
 
-The business of real shorteners *is* the click data, so **bit.ly-style services use 302 (or 307)**. Say the trade-off aloud: "301 offloads traffic but forfeits analytics and control; if analytics are in scope, 302 is forced." This tiny question is the most reliable differentiator in this interview.
+The business of real shorteners *is* the click data, so the textbook answer is **302 (or 307)**. Production shorteners often reach the same goal with a 301 whose caching is bounded explicitly: observed 2026-10, bit.ly answers `301` with `Cache-Control: private, max-age=90` and TinyURL `301` with `Cache-Control: no-store`, so browsers keep coming back. Say the trade-off aloud: "a browser-cached 301 offloads traffic but forfeits analytics and control; if analytics are in scope, use 302, or a 301 with a short or zero `Cache-Control` max-age." This tiny question is the most reliable differentiator in this interview.
 
 ### 3. Caching the redirect path — and the viral link
 
-With 100:1 skew, a small cache absorbs almost all reads: cache the `code → longUrl` mapping in Redis ([[Caching Strategies|cache-aside]], as diagrammed) with a TTL. Even caching only the ~20% hottest links serves the overwhelming majority of traffic ([[Why Caching Works]]).
+With a 100:1 read:write ratio and immutable mappings, a small cache absorbs almost all reads: cache the `code → longUrl` mapping in Redis ([[Caching Strategies|cache-aside]], as diagrammed) with a TTL. Even caching only the ~20% hottest links serves the overwhelming majority of traffic ([[Why Caching Works]]).
 
-The sharp edge: **a viral link is a textbook [[Hot Key Problem]]**. One code tweeted by a celebrity can draw tens of thousands of requests/sec — all hashing to one Redis shard, which melts while the rest of the cluster idles. Mitigations, in escalation order: an **in-process local cache** on each app server for the current top-N codes (immutable mappings make staleness harmless), key replication (`code#1..code#k` copies read round-robin), and [[CDN]]-edge caching of the redirect response itself. Mention also negative caching of known-missing codes to blunt enumeration scrapes hitting the DB.
+The sharp edge: **a viral link is a textbook [[Hot Key Problem]]**. One code tweeted by a celebrity can draw tens of thousands of requests/sec — all hashing to one Redis shard; at 50K/sec one key alone consumes about half of a single node's ~10⁵ ops/sec ceiling on top of that shard's normal share, so it saturates first while the rest of the cluster idles. Mitigations, in escalation order: an **in-process local cache** on each app server for the current top-N codes (immutable mappings make staleness harmless), key replication (`code#1..code#k` copies read round-robin), and [[CDN]]-edge caching of the redirect response itself. Mention also negative caching of known-missing codes to blunt enumeration scrapes hitting the DB.
 
 ### 4. Database choice
 
@@ -139,7 +139,7 @@ The workload is a pure key-value lookup at 6B rows / 3 TB, no relational queries
 > You can't deliver them for existing users: browsers that already followed a 301 cached the mapping and will never hit your servers again for that link, so those clicks are invisible and uncountable. You'd switch to 302 for future traffic, but historical reach is unmeasurable and cached 301s keep bypassing you until browser caches expire. This is why the status-code decision must be made from the analytics requirement, not after it.
 
 > [!question]- Q: A link goes viral at 50,000 requests/sec. Walk through what breaks and your mitigation ladder.
-> All 50K/sec hash to one Redis shard — a classic hot key; that shard's CPU/network saturates while others idle, latency spikes, and on cache failure the stampede hits the DB. Ladder: in-process local cache on every app server (safe because the mapping is immutable), then replicate the key across shards and read round-robin, then push the redirect response to the CDN edge. The database tier barely notices because the mapping is one cacheable row.
+> All 50K/sec hash to one Redis shard — a classic hot key; against a ~10⁵ ops/sec single-node ceiling ([[Hot Key Problem]]) that is half the shard's capacity on top of its normal share, so that shard saturates first while others idle, latency spikes, and on cache failure the stampede hits the DB. Ladder: in-process local cache on every app server (safe because the mapping is immutable), then replicate the key across shards and read round-robin, then push the redirect response to the CDN edge. The database tier barely notices because the mapping is one cacheable row.
 
 > [!question]- Q: Why is 7 the right code length, shown with the math?
 > Base62 gives 62 symbols per character. 62⁶ ≈ 5.7 × 10¹⁰ (57 billion); 62⁷ ≈ 3.5 × 10¹² (3.5 trillion). At 100M new links/month for 5 years we need ~6 billion codes. Six characters covers it ~9x; seven covers it ~580x, leaving decades of headroom and slack for a KGS to discard or lose batches freely. Seven is the standard answer.
@@ -149,7 +149,7 @@ The workload is a pure key-value lookup at 6B rows / 3 TB, no relational queries
 
 ## Sources
 
-- *System Design Interview Vol. 1* (Alex Xu) — chapter "Design a URL Shortener"; the estimation shape and KGS discussion follow it.
-- *Grokking the System Design Interview* (Design Gurus) — "Designing a URL Shortening Service like TinyURL", source of the KGS pattern's popularity.
+- *System Design Interview Vol. 1* (Alex Xu) — chapter "Design a URL Shortener"; the hash-plus-collision vs Base62-conversion comparison and the 301/302 discussion follow it.
+- *Grokking the System Design Interview* (Design Gurus) — "Designing a URL Shortening Service like TinyURL", source of the estimation shape (100:1 read:write, 5-year retention, 500-byte rows) and of the KGS pattern's popularity.
 - MDN Web Docs — HTTP `301 Moved Permanently` and `302 Found`, for the caching semantics.
 - *Designing Data-Intensive Applications* (Kleppmann), ch. 5–6 — replication and partitioning reasoning applied here.

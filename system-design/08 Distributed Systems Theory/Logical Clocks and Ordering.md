@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: Why wall clocks can't order events across machines, and how happens-before, Lamport clocks, vector clocks, and TrueTime each solve part of the ordering problem.
 related: ["[[Consistency Models]]", "[[The Dynamo Paper]]", "[[Bigtable and Spanner]]", "[[Split Brain and Fencing]]"]
 ---
@@ -21,9 +21,9 @@ Ordering decides real outcomes: which of two concurrent profile updates wins, wh
 
 ### Why wall clocks lie
 
-- **Skew:** every machine's quartz clock drifts (commonly parts-per-million — order of milliseconds per hour unmanaged). Two "synchronized" servers legitimately disagree by milliseconds; Google's Spanner paper treats hundreds of microseconds to milliseconds of uncertainty as the *good* case.
+- **Skew:** every machine's quartz clock drifts (commonly tens of parts-per-million — 10 ppm is 36 ms per hour, 864 ms per day unmanaged; Spanner's paper assumes a worst case of 200 ppm). Two "synchronized" servers legitimately disagree by milliseconds; Google's Spanner paper treats hundreds of microseconds to milliseconds of uncertainty as the *good* case.
 - **NTP corrections:** NTP can *step* a clock backwards or slew it faster/slower. A timestamp taken after another can be numerically smaller on the same machine. `System.currentTimeMillis()` is not monotonic; Java's `System.nanoTime()` is monotonic but meaningless across machines.
-- **Leap seconds and smearing:** UTC occasionally inserts a leap second; providers "smear" it across hours (Google/AWS style), meaning different infrastructures literally run different clocks that day. Unsmeared leap seconds have crashed production systems (the 2012 Linux leap-second bug took down several major sites).
+- **Leap seconds and smearing:** UTC occasionally inserts a leap second (none since the end of 2016, and the CGPM decided in 2022 to stop inserting them by 2035); providers "smear" it across hours (Google/AWS style), meaning different infrastructures literally run different clocks that day. Unsmeared leap seconds have crashed production systems (the 2012 Linux leap-second bug took down several major sites).
 - **Pauses:** between reading the clock and acting on it, a GC pause or VM migration can freeze a process for seconds — the timestamp is stale before it's used (the lease problem in [[Split Brain and Fencing]]).
 
 Conclusion: timestamps from different machines must never be compared to decide causality or uniqueness unless the uncertainty is explicitly bounded (TrueTime) — and even same-machine timestamps need the monotonic clock, not wall time, for measuring durations ([[Timeouts Retries and Exponential Backoff]]).
@@ -42,8 +42,8 @@ If neither A → B nor B → A, the events are **concurrent** — not "simultane
 
 Each process keeps an integer counter `L`:
 
-- Before each local event: `L = L + 1`.
-- On send: attach `L` to the message.
+- Before each local event, including a send: `L = L + 1`.
+- On send: attach the incremented `L` to the message.
 - On receive: `L = max(L_local, L_message) + 1`.
 
 **Guarantee:** if A → B then `L(A) < L(B)`. **Not guaranteed (the converse):** `L(A) < L(B)` does *not* imply A → B — the events may be concurrent. So Lamport timestamps can **order** (break ties by process ID to get a total order consistent with causality — useful for e.g. fair distributed mutexes, Lamport's original application) but can **never detect concurrency**: given two timestamps you cannot tell "ordered" from "concurrent". That missing bit is exactly what vector clocks add.
@@ -53,7 +53,7 @@ Each process keeps an integer counter `L`:
 | Step | P1 | P2 | P3 | What happened |
 |---|---|---|---|---|
 | 1 | 1 | 0 | 0 | P1 does local work |
-| 2 | 2 | 0 | 0 | P1 does more local work, then sends a message stamped 2 |
+| 2 | 2 | 0 | 0 | P1 sends a message — the send is its event, stamped 2 |
 | 3 | 2 | 0 | 1 | P3 does unrelated local work — nothing to do with P1 |
 | 4 | 2 | 3 | 1 | P2 receives P1's message: `max(0, 2) + 1 = 3` |
 | 5 | 2 | 4 | 1 | P2 does local work after the receive |
@@ -168,6 +168,6 @@ Classic follow-ups: why LWW loses data; vector clock growth and truncation; what
 - Colin Fidge (1988) and Friedemann Mattern (1989) — vector clocks, independently.
 - DeCandia et al., "Dynamo: Amazon's Highly Available Key-value Store", SOSP 2007 — vector clocks for conflict detection in production.
 - Corbett et al., "Spanner: Google's Globally-Distributed Database", OSDI 2012 — TrueTime and commit-wait.
-- Martin Kleppmann, *DDIA*, Chapter 8 — "Unreliable Clocks" (the LWW data-loss discussion) and "Ordering and Causality".
+- Martin Kleppmann, *DDIA*, Chapter 8 — "Unreliable Clocks" (the LWW data-loss discussion); Chapter 9 — "Ordering and Causality" and Lamport timestamps.
 - Kulkarni et al., "Logical Physical Clocks" (HLC paper), OPODIS 2014 — the hybrid used by CockroachDB.
 - Shapiro et al., "Conflict-free Replicated Data Types", SSS 2011 — the formal treatment of merge-without-coordination.

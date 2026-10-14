@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-03
+updated: 2026-10-05
 summary: Why nearest-neighbor search over embeddings needs special indexes (HNSW, IVF), how the recall-vs-latency knob works, and when pgvector-in-your-existing-DB beats a dedicated vector engine.
 related: ["[[RAG Architecture]]", "[[LLM Serving Infrastructure]]", "[[Database Indexes]]", "[[Choosing a Database]]"]
 ---
@@ -113,7 +113,7 @@ The honest market take, as of ~2026:
 
 ## In your stack
 
-- **Start with what you run — but check your versions first.** Both MongoDB and Redis moved vector search out of their managed-only products in 2025: MongoDB Search and Vector Search went GA for self-managed Community and Enterprise at **server 8.2**, and **Redis 8** folded the Query Engine (formerly the separate RediSearch module) into core open source. Both capabilities are therefore version-gated — an older `mongod`, or a plain Redis 6/7 without the module, has nothing — so confirm what your clusters actually run before designing around it; otherwise pgvector is the realistic first step. A dedicated engine is a new stateful system on EKS or a new SaaS vendor — justify it with scale numbers, not fashion.
+- **Start with what you run — but check your versions first.** Both MongoDB and Redis moved vector search out of their managed-only products: **Redis 8** (GA May 2025) folded the Query Engine (formerly the separate RediSearch module) into core open source, and MongoDB Search and Vector Search for self-managed Community and Enterprise shipped as a public preview with **server 8.2** (September 2025) and went GA in June 2026 — running on a separate `mongot` search process beside `mongod`. Both capabilities are therefore version-gated — an older `mongod` (or an 8.2 one with no `mongot` deployed), or a plain Redis 6/7 without the module, has nothing — so confirm what your clusters actually run before designing around it; otherwise pgvector is the realistic first step. A dedicated engine is a new stateful system on EKS or a new SaaS vendor — justify it with scale numbers, not fashion.
 - **Fintech similarity use cases** are mostly candidate generation: similar support tickets for agents, near-duplicate KYC document detection, transaction-description clustering. Each one tolerates approximate recall because a human or a deterministic rule verifies downstream — which is exactly where ANN belongs under an RBI-regulated correctness bar.
 - **Treat the vector index as derived data.** Source of truth stays in MongoDB; the index rebuilds from it. That one decision defuses the scariest failure modes (drift, version skew) into "rerun the pipeline" instead of "restore the database".
 - **Cost shape**: HNSW cost scales with *corpus size × dimensions* (RAM), query cost with *QPS × efSearch*; re-embedding cost scales with *corpus size × model price* and recurs on every model upgrade. Name all three in any proposal.

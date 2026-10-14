@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Designing a YouTube-class video service — resumable uploads, an async transcoding pipeline, adaptive bitrate over CDN, and why egress dominates the cost structure.
 related: ["[[The System Design Interview Framework]]", "[[CDN]]", "[[Netflix Architecture]]", "[[Why Async Messaging Exists]]"]
 ---
@@ -44,7 +44,7 @@ related: ["[[The System Design Interview Framework]]", "[[CDN]]", "[[Netflix Arc
 
 **Egress — the number that dominates**
 
-- Assume 1 billion watch-hours/day (YouTube has cited more; keep it round) at an average delivered bitrate of ~3 Mbps:
+- Assume 1 billion watch-hours/day (YouTube's own figure as of 2017, higher since; keep it round) at an average delivered bitrate of ~3 Mbps:
 - 10⁹ h × 3,600 s/h × 3 Mbps = 1.08 × 10¹³ Mb. Convert: ÷ 8 = 1.35 × 10¹² MB = 1.35 × 10⁶ TB = **1.35 EB/day delivered**. Average egress rate = 1.35 × 10¹⁸ B ÷ 86,400 s ≈ **~15.6 TB/s ≈ 125 Tbps**.
 - **The cost shape**: egress scales with *watch time × bitrate* — linearly with success. Transcode cost scales with *upload volume*; storage with *upload volume × retention*. Egress at commodity CDN pricing (even fractions of a cent per GB) on exabytes/day is why Netflix built Open Connect and YouTube peers directly with ISPs ([[Netflix Architecture]]): at this scale you build or barter your own delivery, because egress is the dominant line item and the only one that grows every time the product succeeds.
 
@@ -108,10 +108,10 @@ Transcoding is not one job but a **DAG**: probe/validate → split source into s
 
 ### 5. View counts at scale
 
-A naive `UPDATE views SET count = count + 1` on a viral video is a textbook [[Hot Key Problem|hot key]] — millions of increments/s on one row.
+A naive `UPDATE views SET count = count + 1` on a viral video is a textbook [[Hot Key Problem|hot key]] — thousands of increments/s on one row (10M views/hour ≈ 2,800/s).
 
 - **Buffer**: players emit view events to a log ([[Kafka Architecture|Kafka]]-class); nothing writes the DB per view.
-- **Aggregate**: stream processors window and sum per video (e.g., per 10 s), writing *one* increment per video per window — turning 1M writes/s into dozens.
+- **Aggregate**: stream processors window and sum per video (e.g., per 10 s), writing *one* increment per video per window — turning thousands of writes/s on a hot row into one write every 10 s.
 - **Shard the counter** if even windowed increments are hot: N sub-counters, read = sum — the classic sharded-counter pattern.
 - Accept and state the consistency consequence: counts are **eventually consistent and approximate in real time**, exact in daily batch reconciliation — fine for views, and the same pipeline feeds analytics and creator dashboards. (Fraud filtering — bots inflating views — runs in this pipeline too; worth one sentence in an interview.)
 
@@ -145,7 +145,7 @@ A naive `UPDATE views SET count = count + 1` on a viral video is a textbook [[Ho
 > CDN: edges miss initially; origin shield absorbs the miss storm; within minutes the segments are hot at edges worldwide and origin traffic drops back to noise. Metadata: the video record becomes a hot cache key — served from Redis with stampede protection; DB sees almost nothing. View counts: the event pipeline windows millions of events into per-window increments; sharded counters absorb the write; the displayed count lags by seconds-to-minutes, by design. Token issuance scales statelessly. The master/renditions don't change at all — immutability means popularity is purely a caching event.
 
 > [!question]- Q: Design the variant — live streaming for 1M concurrent viewers of a single event.
-> Ingest becomes a continuous contribution feed (RTMP/SRT) to redundant ingest points; transcoding becomes a real-time pipeline (encode each rendition with a fixed small latency budget, no DAG backfill); packaging shifts to short segments or LL-HLS/chunked transfer for lower glass-to-glass latency (~5–15 s typical; sub-second needs WebRTC — a different architecture, name the fork). Delivery is still CDN segments — but all viewers want the *same newest* segment within the same seconds, so edge-request collapsing/origin shielding is existential, not an optimization. No long-tail storage problem; instead a single white-hot object. DVR/rewind = retaining the segment history. State the key inversion: VOD's problem is breadth of catalog; live's problem is depth of simultaneity on one object.
+> Ingest becomes a continuous contribution feed (RTMP/SRT) to redundant ingest points; transcoding becomes a real-time pipeline (encode each rendition with a fixed small latency budget, no DAG backfill); packaging shifts to short segments or LL-HLS/chunked transfer for lower glass-to-glass latency (LL-HLS reaches low single-digit seconds versus ~15–30 s for classic segmented HLS live; sub-second needs WebRTC — a different architecture, name the fork). Delivery is still CDN segments — but all viewers want the *same newest* segment within the same seconds, so edge-request collapsing/origin shielding is existential, not an optimization. No long-tail storage problem; instead a single white-hot object. DVR/rewind = retaining the segment history. State the key inversion: VOD's problem is breadth of catalog; live's problem is depth of simultaneity on one object.
 
 ## Sources
 

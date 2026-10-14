@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How poison messages create infinite redelivery loops, how max-receive policies and dead letter queues contain them, what a DLQ message must carry to be triageable, and why a write-only DLQ is worse than none.
 related: ["[[Delivery Semantics]]", "[[Message Ordering]]", "[[Backpressure and Flow Control]]", "[[SQS and SNS]]"]
 ---
@@ -86,16 +86,18 @@ The default settings are dangerous in a way that only becomes obvious when multi
 Each message's life is: receive, fail in 50 ms, wait out the 30-second visibility timeout, receive, fail, wait, receive, fail → dead-lettered. **About 60–90 seconds from first receipt to the DLQ.** So after the first minute and a half of a partner outage, essentially the entire message flow is being dead-lettered:
 
 ```
-60-minute outage × 200 msg/s  =  720,000 healthy messages in the DLQ
+60-minute outage × 200 msg/s  =  720,000 messages arriving
+less the last ~60 s of arrivals    (third attempt lands after recovery)
+                              ≈  708,000 healthy messages in the DLQ
 ```
 
 Not one of them is poison. Every one needs redriving, and every one is a customer's transfer or KYC callback. Compare the three configurations:
 
-- **No backoff, cap 3** — three attempts span ~90 seconds. Anything longer than a 90-second blip dead-letters the whole flow. 720,000 messages.
-- **Exponential backoff via retry tiers** at 30 s, 2 min, 8 min, 32 min — four attempts span `0.5 + 2 + 8 + 32 = 42.5 minutes`. A 30-minute blip is absorbed entirely; this 60-minute outage still exhausts the tiers, but on a far smaller fraction of the flow.
-- **Pause on open circuit** — zero dead-lettered. The 720,000 messages wait in the source queue, durable and cheap, and you then face an ordinary drain problem ([[Backpressure and Flow Control]]) instead of a 720,000-message redrive project.
+- **No backoff, cap 3** — three attempts span ~90 seconds. Anything longer than a 90-second blip dead-letters the whole flow. ~708,000 messages.
+- **Exponential backoff via retry tiers** at 30 s, 2 min, 8 min, 32 min — four retries span `0.5 + 2 + 8 + 32 = 42.5 minutes`. A 30-minute blip is absorbed entirely; this 60-minute outage still exhausts the tiers, but on a far smaller fraction of the flow.
+- **Pause on open circuit** — zero dead-lettered. The 720,000 messages wait in the source queue, durable and cheap, and you then face an ordinary drain problem ([[Backpressure and Flow Control]]) instead of a ~708,000-message redrive project.
 
-One more clock to know about: in SQS a message's 14-day expiry is computed from its **original** enqueue timestamp, and moving it to a DLQ does not reset it. A message that spent 4 days failing in the source queue arrives in the DLQ with 10 days left, not 14. A DLQ is not a fresh two-week window.
+One more clock to know about: in an SQS **standard** queue a message's expiry (retention is 4 days by default, 14 at most) is computed from its **original** enqueue timestamp, and moving it to a DLQ does not reset it — FIFO queues, by contrast, reset the timestamp on the move. A message that spent 4 days failing in the source queue arrives in the DLQ with 10 days left, not 14. A DLQ is not a fresh two-week window.
 
 ### What this looks like at 3am
 
@@ -157,7 +159,7 @@ SQS's automatic redrive preserves the body and increments metadata but does *not
 - SQS redrive policies make the mechanical half trivial — the audit question for your fleet is the operational half: does every DLQ have a non-zero-depth alarm and a named owning team? The 14-day retention clock is running on every stuck KYC callback in there.
 - Moving to [[Redis Streams]] means building what SQS gave you free: delivery-count checks in your `XAUTOCLAIM` reclaim loop, a dead-letter stream, trimming policy for it, and redrive tooling. Budget this as real work in the migration, not an afterthought.
 - Many services at 1 replica: when the single consumer pod is the thing failing (bad deploy, crash-loop), messages pile up in-queue rather than dead-lettering, because a pod that cannot start never increments a receive count — DLQ depth and consumer lag are *different* alarms and you need both. The inverse is the nastier case: a pod that starts successfully and then fails every message *does* dead-letter at full rate, with no second replica to compare against and no canary to catch it. On a single-replica consumer, a bad deploy and a dependency outage produce the same DLQ graph, so correlate dead-lettering against deploy timestamps before you go looking at partners.
-- RabbitMQ in the legacy estate: classic queues have no delivery counter, so retry counting was application-side via `x-death`. Quorum queues (RabbitMQ 3.8+) added `x-delivery-limit`, which dead-letters after N deliveries natively — worth knowing if any legacy flows remain, because the two topologies need different retry code for identical behaviour.
+- RabbitMQ in the legacy estate: classic queues have no delivery counter, so retry counting was application-side via `x-death`. Quorum queues (RabbitMQ 3.8+) added `x-delivery-limit`, which dead-letters after N deliveries natively (default 20 since 4.0; since 4.3 explicit returns no longer count toward it) — worth knowing if any legacy flows remain, because the two topologies need different retry code for identical behaviour.
 - Fintech triage rule: a dead-lettered money-movement message is an incident artifact. Discarding one should require the same rigor as a manual ledger adjustment — recorded decision, four eyes, audit trail.
 
 ## Interview angle
@@ -186,7 +188,7 @@ Classic follow-ups:
 > The source queue is not draining into completed work — it is draining into the DLQ, which is why DLQ depth and source depth are moving in opposite directions at the same rate. That correlation is the first check and it takes ten seconds. Second: poison or environmental? Sample five DLQ messages without deleting them. Heterogeneous, valid payloads all carrying one identical downstream exception means environmental — a dependency is down and these are healthy messages. Structurally similar payloads with deserialization or validation errors means poison — a producer or schema problem with a bounded blast radius. Forty thousand in minutes is almost certainly environmental. Third, and before any triage: **stop the bleeding** by pausing consumption, so the next 40,000 accumulate in the source queue where no redrive is needed — every minute of delay here converts another ~12,000 messages at 200/s into manual recovery work. Only then diagnose the dependency. Recovery afterwards is canary redrive of ~10, verify end to end, then throttled bulk redrive — and the config change that prevents a recurrence is backoff plus a pause-on-open-circuit, not a larger `maxReceiveCount`.
 
 > [!question]- Q: Your DLQ has had 12 messages sitting in it for 10 days, no alert fired. What is wrong, in order of severity?
-> (1) No depth/age alarm — the DLQ is a write-only graveyard; the mechanism exists but the operation doesn't. (2) Retention: at 14 days (SQS) the evidence self-deletes in 4 days — imminent silent data loss. (3) No owner/runbook, implied by 10 days of inaction. (4) Unknown blast radius: 12 messages might be 12 customers with stuck money. Fix order: alarm now, triage and redrive/record-discard now, then assign ownership and an SLA, then ask why the steady state wasn't zero.
+> (1) No depth/age alarm — the DLQ is a write-only graveyard; the mechanism exists but the operation doesn't. (2) Retention: at 14 days (SQS maximum) the evidence self-deletes in at most 4 days — sooner on a standard queue if the messages spent time failing in the source queue first — imminent silent data loss. (3) No owner/runbook, implied by 10 days of inaction. (4) Unknown blast radius: 12 messages might be 12 customers with stuck money. Fix order: alarm now, triage and redrive/record-discard now, then assign ownership and an SLA, then ask why the steady state wasn't zero.
 
 ## Sources
 

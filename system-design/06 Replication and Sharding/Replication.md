@@ -1,10 +1,11 @@
 ---
 title: Replication
+aliases: [Read Replicas, Replicas, Leader Follower Replication]
 tags: [system-design, sharding]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Why systems keep multiple copies of the same data, the three replication topologies (leader-follower, multi-leader, leaderless), and what sync vs async replication risks.
 related: ["[[Failover]]", "[[Read Your Own Writes and Replica Lag Anomalies]]", "[[Sharding]]", "[[Quorum Reads and Writes]]"]
 ---
@@ -19,7 +20,7 @@ Picture a growing product with one database server. Three separate pains appear,
 
 1. **The machine will die.** Disks fail, instances get terminated, data centres lose power. With one copy, a dead machine means downtime at best and permanent data loss at worst. You need a second copy just to sleep at night.
 2. **Reads outgrow one box.** Most applications read far more than they write (often 10:1 to 100:1). One machine has a fixed ceiling of CPU, memory, and IOPS. You want to spread read traffic across several machines that all hold the data.
-3. **Users are far away.** A user in India talking to a database in Virginia pays ~200 ms round trip *per query* — physics, not engineering (see [[Latency Numbers Every Engineer Should Know]]). Putting a copy of the data near each user population cuts that to single-digit milliseconds.
+3. **Users are far away.** A user in India talking to a database in Virginia pays ~200 ms round trip *per query* — physics, not engineering (see [[Latency Numbers Every Engineer Should Know]]). Putting a copy of the data near each user population cuts that to a regional round trip — tens of milliseconds for the user, a few milliseconds per query for an app server in the same region.
 
 All three pains have the same shape of answer — more copies — and the same new problem: **the copies must agree with each other while data keeps changing**. If data never changed, replication would be `rsync` and this module would not exist.
 
@@ -76,15 +77,15 @@ Orthogonal to topology: **when does the leader tell the client "your write is sa
 
 | Mode | Leader acks after | You gain | You risk |
 |---|---|---|---|
-| **Synchronous** | at least one (or all) followers confirm | An acked write survives leader death — real durability | Write latency includes the slowest required follower; a dead sync follower **blocks all writes** (with "all followers" sync, any node down = system down) |
+| **Synchronous** | every follower confirms | An acked write survives the loss of any node — real durability | Write latency includes the slowest follower; any one follower down or slow **blocks all writes** — one node down = system down |
 | **Asynchronous** | writing locally only | Fastest writes; followers can die with zero write impact | Leader dies before followers catch up → **acknowledged writes are lost**. The client was told "saved"; it wasn't |
-| **Semi-synchronous** | one designated follower confirms; the rest are async | Guaranteed second copy without waiting for everyone | Still only tolerates patterns where leader and the sync follower don't die together; sync follower lag still slows writes |
+| **Semi-synchronous** | at least one follower confirms receipt (DDIA: one designated sync follower; MySQL: any one replica by default); the rest are async | Guaranteed second copy without waiting for everyone | Loses acked writes if the leader and the follower that acked them die together; that follower's round trip slows every write; MySQL silently degrades to async when no ack arrives within `rpl_semi_sync_source_timeout` (default 10 s, as of MySQL 8.4) — alert on it |
 
 In practice fully-sync is rare; most deployments are async or semi-sync. MySQL's **semi-sync** plugin and MongoDB's `w: "majority"` write concern are the mainstream middle ground. Kafka's `acks=all` with `min.insync.replicas` is the same idea wearing a different hat ([[Kafka Architecture]]).
 
 ### Replication lag
 
-With async replication, followers are always *somewhat* behind — normally milliseconds, but under load, during bulk writes, or after a network blip it can stretch to seconds or minutes. Lag is not a bug; it is the design. But it produces user-visible anomalies — you post a comment, refresh, and it's gone — covered in [[Read Your Own Writes and Replica Lag Anomalies]]. Monitor lag as a first-class metric (e.g. MySQL `Seconds_Behind_Source`, Mongo `replication lag` in `rs.status()`).
+With async replication, followers are always *somewhat* behind — normally milliseconds, but under load, during bulk writes, or after a network blip it can stretch to seconds or minutes. Lag is not a bug; it is the design. But it produces user-visible anomalies — you post a comment, refresh, and it's gone — covered in [[Read Your Own Writes and Replica Lag Anomalies]]. Monitor lag as a first-class metric (e.g. MySQL `Seconds_Behind_Source`, Mongo `rs.printSecondaryReplicationInfo()`, or the `optimeDate` gap in `rs.status()`).
 
 ### What actually travels over the wire
 
@@ -123,7 +124,7 @@ Three levels of abstraction for shipping changes, concept-level:
 
 - **MongoDB replica sets** are leader-follower with automatic failover: one primary, N secondaries, Raft-like elections. Your write/read concern settings (`w: "majority"`, `readPreference`) are exactly the sync-vs-async dial in this note.
 - **Redis replication is asynchronous, full stop.** A Redis primary acks before replicas have the data; failover can lose acked writes. Fine for cache, a real design constraint if Redis Streams becomes a system of record for messaging (see [[Redis Streams]], [[Redis Cluster and Sentinel]]).
-- **Kafka/MSK**: partitions replicated across brokers; `acks=all` + `min.insync.replicas=2` is semi-sync replication by another name.
+- **Kafka/MSK**: partitions replicated across brokers; `acks=all` waits for every replica currently in the ISR (in-sync replica set), and `min.insync.replicas=2` refuses `acks=all` writes once fewer than 2 remain in it — synchronous to the in-sync set, with laggards evicted from it, which is how it avoids the fully-sync availability trap.
 - **Correctness beats latency** at Niyo: for money-movement reads, prefer leader/majority reads and accept the milliseconds. Save replica reads for dashboards, history screens, and anything idempotent to staleness.
 - Many of your services run **1 replica by cost decision** — worth internalising that the *database* layer (Mongo replica set) is usually the only truly replicated tier in such services, so its replication settings carry the whole durability story.
 

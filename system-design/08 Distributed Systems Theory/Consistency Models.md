@@ -1,10 +1,11 @@
 ---
 title: Consistency Models
+aliases: [Eventual Consistency, Strong Consistency, Causal Consistency]
 tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-05
 summary: The spectrum from linearizability through sequential and causal down to eventual consistency, plus session guarantees, each defined with a tiny two-client example.
 related: ["[[CAP Theorem]]", "[[Read Your Own Writes and Replica Lag Anomalies]]", "[[Logical Clocks and Ordering]]", "[[Replication]]"]
 ---
@@ -35,7 +36,7 @@ graph TD
   WFR --> NoneG
 ```
 
-Three things the picture teaches that a list does not. The session guarantees sit *below* causal consistency and *beside* each other — causal consistency implies all of them, but each can be bought on its own, which is why they are so much cheaper than the model above them. The only path upward is through coordination: every arrow costs a round trip to somebody, which is the entire content of [[PACELC]]'s ELC half.
+Three things the picture teaches that a list does not. The session guarantees sit *below* causal consistency and *beside* each other — causal consistency implies all of them, but each can be bought on its own, which is why they are so much cheaper than the model above them. The only path upward is through more machinery: the steps up to causal cost metadata carried with the data, and the steps above causal cost coordination — a round trip to somebody, which is the entire content of [[PACELC]]'s ELC half.
 
 And note where eventual consistency is *not*: it has no box, because it is not a point on this safety ordering at all. Eventual consistency is the bottom of this diagram — no read-time guarantee — *plus* a separate promise about liveness, that replicas converge once writes stop. The two halves are independent, which is why a system can honour read-your-writes and still never converge, or converge reliably and still show you your own write missing.
 
@@ -121,7 +122,7 @@ Documentation describes the datastore; your *system* is the datastore plus every
 
 ## Common misconceptions
 
-- **"Strong consistency" has one meaning.** Vendors use it for linearizability (etcd), for quorum-recency (DynamoDB "strongly consistent reads"), and loosely for "reads from primary". Always ask: *which anomalies are excluded?*
+- **"Strong consistency" has one meaning.** Vendors use it for linearizability (etcd), for leader-served read-latest-write (DynamoDB "strongly consistent reads", served by the partition's leader replica), and loosely for "reads from primary". Always ask: *which anomalies are excluded?*
 - **Eventual consistency means "slightly delayed but orderly".** No — it permits reordering, flicker, and unbounded staleness until convergence. Order needs causal or stronger.
 - **Linearizability = serializability.** Different axes: recency of single objects vs isolation of multi-object transactions ([[Transaction Isolation Levels]]).
 - **Quorums give linearizability automatically.** They don't — see the anomaly walkthrough in [[Quorum Reads and Writes]].

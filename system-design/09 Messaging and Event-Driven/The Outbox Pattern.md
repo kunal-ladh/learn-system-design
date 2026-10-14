@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 summary: Why writing to a database and publishing to a broker cannot be made atomic directly (the dual-write problem), and how an outbox table in the same transaction plus a relay process closes the gap — with its at-least-once and ordering fine print.
 related: ["[[Change Data Capture]]", "[[Delivery Semantics]]", "[[Idempotency]]", "[[Two-Phase Commit and Distributed Transactions]]"]
 ---
@@ -88,7 +88,7 @@ The relay has its own dual-write: publish to broker, then mark published. A cras
 
 ### The fine print: ordering
 
-- A **single** relay publishing in outbox-ID order gives clean global publish order — and is a throughput bottleneck and single point of failure (restart = lag, not loss).
+- A **single** relay publishing in outbox-ID order gives clean global publish order — and is a throughput bottleneck and single point of failure (restart = lag, not loss). One trap for a *polling* relay: an auto-increment ID is assigned at insert, not at commit, so with concurrent writers row 101 can commit and be polled before row 100 commits, and the poller publishes 101 first. Per aggregate this is usually harmless when the business-row update (which takes the row lock) precedes the outbox insert, serialising that aggregate's transactions; a CDC relay avoids it entirely because it reads commit order.
 - **Parallel relays** (or publishing a batch concurrently) reorder events. If order matters per aggregate, partition relay work by `aggregate_id` (and key broker messages by it) so each aggregate's events stay in one ordered lane — mirroring how [[Kafka Architecture|Kafka keys]] work.
 - Broker-side retries can still reorder ([[Message Ordering]]); per-aggregate sequence numbers in the payload let consumers detect gaps and staleness.
 
@@ -155,7 +155,7 @@ Classic follow-ups:
 > Both relays select the same unpublished rows (no claim protocol) and each publishes them. Fix: make row claiming atomic — `SELECT ... FOR UPDATE SKIP LOCKED` batches in SQL, or an atomic claim-update (set `claimed_by`, `claimed_at`) in MongoDB — so each row has one publisher; add a claim-expiry so a crashed claimant's rows are reclaimed. Keep consumer dedup regardless: claims shrink duplicates, the crash window still exists.
 
 > [!question]- Q: Mini-design — add reliable `transfer.initiated` / `transfer.completed` events to an existing Spring Boot + MongoDB transfer service feeding SQS. Sketch the pieces and the two alerts you'd ship with it.
-> (1) In the service's Mongo transaction (replica set): write/update the `transfers` document and insert an `outbox` document `{_id, aggregateId: transferId, seq, type, payload, correlationId, createdAt, publishedAt: null}`. (2) Relay: either a scheduled poller claiming batches atomically and publishing to SQS (message dedup/group ID = transferId for FIFO lanes), or a Mongo change-stream listener on the outbox collection. (3) Consumers: inbox-table dedup on outbox `_id`. (4) Pruning: TTL-index or archival job on published rows after N days (archive, not delete, for audit). Alerts: oldest-unpublished-outbox-age (relay health, loss-equivalent lag) and outbox collection size vs pruning watermark.
+> (1) In the service's Mongo transaction (replica set): write/update the `transfers` document and insert an `outbox` document `{_id, aggregateId: transferId, seq, type, payload, correlationId, createdAt, publishedAt: null}`. (2) Relay: either a scheduled poller claiming batches atomically and publishing to SQS (for FIFO lanes: `MessageGroupId` = transferId, `MessageDeduplicationId` = the outbox `_id` — never the transferId, or `transfer.completed` sent within 5 minutes of `transfer.initiated` is silently dropped as a duplicate), or a Mongo change-stream listener on the outbox collection. (3) Consumers: inbox-table dedup on outbox `_id`. (4) Pruning: TTL-index or archival job on published rows after N days (archive, not delete, for audit). Alerts: oldest-unpublished-outbox-age (relay health, loss-equivalent lag) and outbox collection size vs pruning watermark.
 
 ## Sources
 
