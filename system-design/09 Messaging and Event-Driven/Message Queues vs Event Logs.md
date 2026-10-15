@@ -156,7 +156,7 @@ Classic follow-ups:
 
 - "How do you get fan-out in each model?" — queues: broker-side topology (exchange bindings, SNS→multiple SQS); logs: just add another consumer group.
 - "Poison message in each model?" — queue: redeliver count then DLQ, rest of queue unaffected; log: it blocks its partition — skip it, or copy to a retry/DLQ topic and advance the offset ([[Dead Letter Queues and Poison Messages]]).
-- "Why can't Kafka consumers outnumber partitions usefully?" — within a consumer group, a partition has exactly one owner; extra consumers idle. Capacity planning = partition planning. (Kafka 4.2's share groups lift the cap by dropping per-partition ordering — the queue model again; not yet on MSK as of Oct 2026.)
+- "Why can't Kafka consumers outnumber partitions usefully?" — within a consumer group, a partition has exactly one owner; extra consumers idle. Capacity planning = partition planning. (Kafka 4.2's share groups lift the cap by dropping per-partition ordering — the queue model again; on MSK as of Oct 2026 only as 4.1's preview on Standard brokers.)
 - "Which model for X?" — reason aloud from the task-vs-fact question; the interviewer is testing the framework, not the brand name.
 
 ## Check yourself

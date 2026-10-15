@@ -63,7 +63,7 @@ sequenceDiagram
 
 ### Trimming: MAXLEN and MINID
 
-Nothing expires by itself; unbounded `XADD` eventually eats all memory. You cap streams with `XADD ... MAXLEN ~ 1000000` (the `~` makes trimming approximate — whole macro-nodes — and much cheaper) or `XTRIM` with `MAXLEN`/`MINID`. Critically, **trimming ignores consumer groups by default**: entries are evicted by count/ID even if the slowest group never read them — the same silent-loss race as Kafka retention vs lag ([[Kafka Operations]]), with a much smaller window because RAM is the disk. (Redis 8.2, 2025, added an `ACKED` trim option and `XACKDEL` that respect groups; Valkey gains them only in 9.2, at release candidate as of Sep 2026 — check whether your Redis/ElastiCache engine version has them.)
+Nothing expires by itself; unbounded `XADD` eventually eats all memory. You cap streams with `XADD ... MAXLEN ~ 1000000` (the `~` makes trimming approximate — whole macro-nodes — and much cheaper) or `XTRIM` with `MAXLEN`/`MINID`. Critically, **trimming ignores consumer groups by default**: entries are evicted by count/ID even if the slowest group never read them — the same silent-loss race as Kafka retention vs lag ([[Kafka Operations]]), with a much smaller window because RAM is the disk. (Redis 8.2, 2025, added an `ACKED` trim option and `XACKDEL` that respect groups; Valkey 9.2 adds `XACKDEL`/`XDELEX` with `ACKED` but no `ACKED` trim option, and is only at release candidate as of Sep 2026 — check whether your Redis/ElastiCache engine version has them.)
 
 ### Monitoring it — the commands that replace CloudWatch
 

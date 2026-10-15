@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Why global message ordering cannot scale, how per-key ordering works (Kafka partitions, SQS FIFO message groups), the many things that silently break ordering, and how to design consumers that survive reordering.
 related: ["[[Message Queues vs Event Logs]]", "[[Delivery Semantics]]", "[[Consumer Groups and Rebalancing]]", "[[Logical Clocks and Ordering]]"]
 ---
@@ -70,7 +70,7 @@ Combine those two and the failure is obvious once you see it. Suppose batch A (r
 Two fixes, one clearly better than the other:
 
 - **`max.in.flight.requests.per.connection=1`** — only one unacknowledged request per connection, so a retry cannot overtake anything. Correct, and costly: you serialise the produce pipeline and lose a large fraction of throughput on any link with real latency.
-- **`enable.idempotence=true`** — the producer is assigned a producer ID and stamps each record batch with a per-partition **sequence number**. The broker accepts a batch only if its sequence continues the last one it wrote, rejecting anything out of order, so the client must resend in sequence. This preserves order *and* deduplicates retries, and it holds for `max.in.flight` up to **5**. This is the right answer, and since Kafka 3.0 it is the default (`enable.idempotence=true`, `acks=all`).
+- **`enable.idempotence=true`** — the producer is assigned a producer ID and stamps each record batch with a per-partition **sequence number**. The broker accepts a batch only if its sequence continues the last one it wrote, rejecting anything out of order, so the client must resend in sequence. This preserves order *and* deduplicates retries, and it holds for `max.in.flight` up to **5**. This is the right answer, and since Kafka 3.0 it is the default (`enable.idempotence=true`, `acks=all`; idempotence actually took effect from 3.0.1/3.1.1/3.2.0 — bug KAFKA-13598 left it off in 3.0.0 and 3.1.0).
 
 The practical upshot: on a modern client with defaults left alone, you are protected. The danger is an inherited config that turned idempotence off — often years ago, to pair with `acks=1` for throughput, since idempotence requires `acks=all`. Once idempotence is off, the default `max.in.flight` of 5 is enough to reorder, and raising it further widens the window.
 
