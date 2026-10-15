@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: RPO and RTO, backup strategies that actually restore, and the DR tier ladder from backup-restore to multi-region active-active — with the cost shape and data-conflict gotchas of each rung.
 related: ["[[Replication]]", "[[Failover]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -100,7 +100,7 @@ A quarterly drill is worth more than any architecture diagram. The checklist tha
 
 ### RBI / fintech data-residency note
 
-For India-regulated payment data, DR design has a jurisdictional constraint: RBI's 2018 directive on Storage of Payment System Data requires payment-system data to be stored in India (for cross-border transactions, a foreign copy of the foreign leg is permitted). Practical consequences: your DR region must also be in India (the standard AWS shape is Mumbai `ap-south-1` paired with Hyderabad `ap-south-2`), "just replicate to Singapore" is a compliance incident rather than a DR plan, and backup copies — including the cross-region, cross-account ones — inherit the same residency requirement. Data-localisation scope belongs in the DR design review, not discovered during the audit.
+For India-regulated payment data, DR design has a jurisdictional constraint: RBI's 2018 directive on Storage of Payment System Data requires payment-system data to be stored only in India (per RBI's June 2019 FAQ, for cross-border transactions a copy of the domestic component may also be stored abroad). Practical consequences: your DR region must also be in India (the standard AWS shape is Mumbai `ap-south-1` paired with Hyderabad `ap-south-2`), "just replicate to Singapore" is a compliance incident rather than a DR plan, and backup copies — including the cross-region, cross-account ones — inherit the same residency requirement. Data-localisation scope belongs in the DR design review, not discovered during the audit.
 
 ## Trade-offs
 
@@ -172,6 +172,6 @@ DR's failure modes are unusual in one respect: most of them are *invisible until
 
 - AWS Well-Architected whitepaper, "Disaster Recovery of Workloads on AWS: Recovery in the Cloud" — the four-strategy ladder this note follows.
 - Google SRE Book, ch. 26 "Data Integrity" — the 24 combinations of failure × recovery, and why restores (not backups) are the objective.
-- *Designing Data-Intensive Applications* (Kleppmann), ch. 5 — replication, multi-leader conflicts, and lag; the theory under the active-active gotchas.
+- *Designing Data-Intensive Applications* (Kleppmann), 1st ed. (2017), ch. 5 (1st-ed. numbering; a 2nd ed. with Chris Riccomini shipped March 2026) — replication, multi-leader conflicts, and lag; the theory under the active-active gotchas.
 - RBI circular "Storage of Payment System Data" (DPSS.CO.OD No.2785/06.08.005/2017-18, April 2018) — the India data-localisation directive.
-- MongoDB documentation: oplog-based point-in-time restore / Atlas Continuous Cloud Backup.
+- MongoDB documentation: oplog-based point-in-time restore / Atlas Continuous Cloud Backup (the current Atlas feature name as of 2026).

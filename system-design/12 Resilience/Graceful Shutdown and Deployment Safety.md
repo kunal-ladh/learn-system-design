@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How a pod should die — SIGTERM, readiness removal, the preStop race, connection draining, consumer rebalance — and why a rolling update at 1 replica is a planned outage unless you engineer around it.
 related: ["[[Deployment Strategies]]", "[[Health Checks and Service Discovery]]", "[[Consumer Groups and Rebalancing]]"]
 ---
@@ -42,7 +42,7 @@ Spring Boot ≥2.3 implements the web-server half with `server.shutdown=graceful
 Here is the trap. When a pod enters Terminating, two things start **in parallel**:
 
 - Path A: kubelet sends SIGTERM to the container.
-- Path B: the endpoint controller removes the pod's IP from the Service's endpoints, and *then* every consumer of that list — kube-proxy on every node, Kong/ALB/ingress target lists — converges on its own schedule, typically hundreds of milliseconds to several seconds.
+- Path B: the EndpointSlice controller marks the pod's endpoint terminating and not-ready (current Kubernetes keeps it listed with `ready: false` rather than deleting it outright), and *then* every consumer of that list — kube-proxy on every node, Kong/ALB/ingress target lists — converges on its own schedule, typically hundreds of milliseconds to several seconds.
 
 Nothing orders A after B. So a pod that exits quickly on SIGTERM dies *while traffic is still being routed to it* — connection refused, 502s at the LB. **Endpoint removal must effectively happen before the kill, and Kubernetes does not guarantee it; you buy the ordering with a delay.** The standard fix is a **preStop sleep**:
 
@@ -53,7 +53,7 @@ lifecycle:
       command: ["sleep", "10"]
 ```
 
-preStop runs *before* SIGTERM is sent (and counts against the grace period), so the pod keeps serving normally for ~10 s while endpoint removal propagates everywhere; only then does the drain sequence begin. Inelegant, universal, correct. Sizing: the sleep must cover endpoint-propagation time (plus LB deregistration delay if an external LB targets pods directly), and `terminationGracePeriodSeconds` must cover **sleep + drain + close** — a 10 s sleep inside a 30 s default grace period leaves only 20 s of real drain budget.
+Since Kubernetes 1.34 the native `sleep` handler is GA (`preStop: {sleep: {seconds: 10}}`), which needs no `sleep` binary in the image — useful for distroless JVM images. preStop runs *before* SIGTERM is sent (and counts against the grace period), so the pod keeps serving normally for ~10 s while endpoint removal propagates everywhere; only then does the drain sequence begin. Inelegant, universal, correct. Sizing: the sleep must cover endpoint-propagation time (plus LB deregistration delay if an external LB targets pods directly), and `terminationGracePeriodSeconds` must cover **sleep + drain + close** — a 10 s sleep inside a 30 s default grace period leaves only 20 s of real drain budget.
 
 ```mermaid
 sequenceDiagram
@@ -87,7 +87,7 @@ For Kafka/SQS/Redis Streams consumers, shutdown choreography is about the *group
 
 Everything above assumes *someone else serves while you die*. At `replicas: 1` that assumption fails, and the honest accounting is:
 
-- First, the defaults: a Deployment's rolling update defaults to `maxSurge: 25%` and `maxUnavailable: 25%`, and at one replica surge rounds **up** to 1 while unavailable rounds **down** to 0 — so an untouched Deployment already starts the new pod before killing the old one. The planned outage below comes from an explicit override, a `Recreate` strategy, or a chart default that sets it; check the rendered spec.
+- First, the defaults (unchanged as of 2026): a Deployment's rolling update defaults to `maxSurge: 25%` and `maxUnavailable: 25%`, and at one replica surge rounds **up** to 1 while unavailable rounds **down** to 0 — so an untouched Deployment already starts the new pod before killing the old one. The planned outage below comes from an explicit override, a `Recreate` strategy, or a chart default that sets it; check the rendered spec.
 - A rolling update with `maxUnavailable: 1, maxSurge: 0` is a **planned outage**: old pod dies, gap, new pod schedules, pulls, starts, JVM warms, passes readiness — easily 30–120 s of zero endpoints per deploy. The fix that exists — and the effective default at 1 replica: **`maxSurge: 1, maxUnavailable: 0`** — start the new pod first, kill the old only after the new is Ready. This closes the *deploy* gap (cost: brief 2× resources and tolerating two instances running concurrently — watch singleton assumptions like schedulers and non-grouped consumers).
 - **PDBs protect nothing at 1 replica.** A PodDisruptionBudget bounds *voluntary* disruptions (node drains, consolidation) — but with one replica, `minAvailable: 1` computes `disruptionsAllowed = 0` and blocks node drains outright (the cluster can't be maintained), while `maxUnavailable: 1` permits the drain and the outage it implies. There is no PDB setting that makes one replica drain-safe; the PDB is paperwork either way. Only a second replica closes the node-drain gap.
 - Graceful shutdown still earns its keep at 1 replica: the outage window is *bounded and clean* (no dropped mid-flight transactions, offsets committed) instead of ragged. But it cannot make the window zero.

@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Netflix's Chaos Monkey and Simian Army, and the discipline they grew into — steady-state hypotheses, blast-radius control, game days — plus right-sized chaos for small teams and the prerequisites that come first.
 related: ["[[Failure Modes in Distributed Systems]]", "[[Graceful Shutdown and Deployment Safety]]", "[[Netflix Architecture]]"]
 ---
@@ -40,9 +40,9 @@ Chaos Monkey got siblings, each targeting a failure class. The first four rows a
 | Chaos Gorilla | An entire availability zone's outage | Zone redundancy actually fails over |
 | Chaos Kong | An entire AWS **region** evacuation | Traffic shifts cross-region; described in Netflix's September 2015 "Chaos Engineering Upgraded" post as a regular full-scale exercise |
 
-(Latency Monkey proved the hardest of the family to run safely — Netflix's 2014 FIT (Failure Injection Testing) post notes it occasionally caused unintended cascading failures, which motivated scoped injection. Degrading a service *partially* can trip failure modes that clean termination never finds, which is exactly why it's valuable and why it needs the discipline below.)
+(Latency Monkey proved the hardest of the family to run safely — Netflix's 2014 FIT (Failure Injection Testing) post says it had "bitten" developers: it hit every calling application whether or not they opted in, causing customer pain wherever fallbacks, timeouts or bulkheads failed — which motivated scoped injection. Degrading a service *partially* can trip failure modes that clean termination never finds, which is exactly why it's valuable and why it needs the discipline below.)
 
-Era note (2026): the 2011 roster also included Doctor, Janitor, Security, and 10–18 Monkeys. The Simian Army repository is no longer maintained; Chaos Monkey lives on as a standalone tool integrated with Spinnaker, and Janitor Monkey's job moved to Spinnaker's Swabbie. Cite the monkeys as history, not as current Netflix tooling.
+Era note (2026): the 2011 roster also included Doctor, Janitor, Security, and 10–18 Monkeys. The Simian Army repository is retired and archived (read-only) on GitHub; Chaos Monkey lives on as a standalone tool integrated with Spinnaker, and Janitor Monkey's job moved to Spinnaker's Swabbie. Cite the monkeys as history, not as current Netflix tooling.
 
 ### From monkeys to a discipline
 

@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How to survive more load than you can serve — admission control, priority shedding, fast rejection, brownouts, and degraded modes — because overload behavior is designed, not improvised.
 related: ["[[Rate Limiting]]", "[[Failure Modes in Distributed Systems]]", "[[Anatomy of 1M RPS]]"]
 ---
@@ -102,7 +102,7 @@ At 100 RPS, overload is a capacity bug you fix by scaling up. At 1M RPS, offered
 ## Failure modes
 
 - **Shedding too late (or by the wrong signal)**: thresholds set above the real collapse point, or keyed to CPU when the bottleneck is connections — the system still collapses, now with extra config. *Signal*: latency and queue depth climbing while the shed counter stays at zero. *Confirm*: overlay the shed-decision metric on the latency graph; if the threshold crosses after latency has already passed the deadline, it is calibrated above the collapse point ([[Capacity Planning]]).
-- **Unbounded queue upstream of the shedder**: Kong or the kernel accept-queue buffering thousands of doomed requests before your admission check runs — the queue *is* the overload. Concretely, in a default Spring Boot service your admission filter executes on a Tomcat worker thread, and Tomcat's defaults permit up to 8,192 open connections (`server.tomcat.max-connections`) plus an accept backlog of 100 (`server.tomcat.accept-count`) to be waiting *before any of your code runs*, against 200 worker threads. *Signal*: a gap between the gateway's observed latency and the application's own — the difference is queue time your shedder never saw. Bound every stage, including the ones you did not write.
+- **Unbounded queue upstream of the shedder**: Kong or the kernel accept-queue buffering thousands of doomed requests before your admission check runs — the queue *is* the overload. Concretely, in a default Spring Boot service your admission filter executes on a Tomcat worker thread, and Tomcat's defaults (Spring Boot, as of 2026) permit up to 8,192 open connections (`server.tomcat.max-connections`) plus an accept backlog of 100 (`server.tomcat.accept-count`) to be waiting *before any of your code runs*, against 200 worker threads. *Signal*: a gap between the gateway's observed latency and the application's own — the difference is queue time your shedder never saw. Bound every stage, including the ones you did not write.
 - **Clients ignoring `Retry-After`**: mobile apps hammering retries turn your polite 429s into a second storm. *Signal*: your 429 rate and your total request rate rising together — polite refusal is supposed to *reduce* offered load, and if it does not, the clients are not listening. Pair shedding with SDK backoff and edge rate limits.
 - **Degraded mode serving dangerous staleness**: a cached balance shown before a transfer, an FX rate hours old presented as live. *Signal*: none, which is exactly the danger — stale-but-plausible values generate support tickets and reconciliation breaks, not alerts. *Confirm*: emit the age of every served-stale value as a metric so staleness is observable at all, and enforce caps per data class in code.
 - **Untested brownout flags**: the first time the flag flips is during the incident, and the "cheap" fallback path throws. *Signal*: an incident that gets *worse* the moment someone enables degraded mode. Exercise degraded modes on a schedule, in production, at low traffic ([[Chaos Engineering]]).

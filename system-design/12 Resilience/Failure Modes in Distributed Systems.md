@@ -4,7 +4,7 @@ tags: [system-design, resilience]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: A field taxonomy of how distributed systems actually die — cascading failure, retry amplification, thundering herd, metastable failure, gray failure, correlated failure — with the signature, a real example, and the defense for each.
 related: ["[[Timeouts Retries and Exponential Backoff]]", "[[Circuit Breakers]]", "[[Chaos Engineering]]"]
 ---
@@ -50,7 +50,7 @@ The taxonomy at a glance:
 
 **Mechanism.** A resource everyone wants becomes available at one instant — a service returns, a popular cache key expires, a leader is re-elected — and every waiter acts simultaneously. The recovering resource, cold (empty caches, fresh JIT, unwarmed pools), faces its worst-ever second of traffic at its weakest-ever moment and dies again.
 **Signature.** Sawtooth: recover, spike, collapse, repeat. Also appears as periodic spikes aligned to synchronized TTLs or cron schedules.
-**Real example.** The cache-expiry variant is so common it has its own note — [[Cache Stampede and Thundering Herd]]. Facebook's September 2010 outage is a canonical public telling: a configuration value was pushed that every client independently judged invalid, and every client simultaneously queried the database holding the correct value to repair itself.
+**Real example.** The cache-expiry variant is so common it has its own note — [[Cache Stampede and Thundering Herd]]. Facebook's September 2010 outage is a canonical public telling: a change to the persistent copy of a configuration value was interpreted as invalid, so every client independently tried to repair it by querying the same database cluster, overwhelming it; each failed query was itself read as an invalid value and its cache key deleted, so the query stream continued even after the original value was fixed.
 **Defense.** Jittered backoff and jittered TTLs; request coalescing (one flight refreshes, others wait); slow-start/warm-up ramps at the LB ([[Load Balancers]]); for leader churn, randomized election timeouts ([[Consensus and Raft]]).
 
 ### Metastable failure
@@ -175,4 +175,4 @@ The post-incident finding is not "Mongo had an election" — elections are routi
 - Google SRE Book, ch. 22 "Addressing Cascading Failures" — the cascade/amplification playbook.
 - AWS Builders' Library — "Timeouts, retries, and backoff with jitter"; "Using load shedding to avoid overload".
 - Michael Nygard, *Release It!* (2nd ed., 2018) — stability antipatterns with production war stories.
-- Cloudflare postmortem, "Cloudflare outage on July 2, 2019" — one WAF regex deployed fleet-wide, the reference case for config-push correlation.
+- Cloudflare postmortem, "Details of the Cloudflare outage on July 2, 2019" — one WAF regex deployed fleet-wide, the reference case for config-push correlation.
