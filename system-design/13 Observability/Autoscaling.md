@@ -64,7 +64,7 @@ CPU is the *right* signal for genuinely CPU-bound work (encoding, crypto, serial
 
 ### The other two autoscalers
 
-- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, and still awkward alongside HPA-on-CPU since both react to the same signal. Its other historic cost, a pod restart to apply new requests, is era-specific: in-place pod resize graduated to beta in Kubernetes v1.33 (2025) and to stable in v1.35 (December 2025), and VPA's `InPlaceOrRecreate` mode uses it (alpha in VPA 1.4, GA in 1.6).
+- **VPA (Vertical Pod Autoscaler)**, one line: it adjusts a pod's CPU/memory *requests* instead of the replica count — useful for right-sizing, and still awkward alongside HPA-on-CPU since both react to the same signal. Its other historic cost, a pod restart to apply new requests, is era-specific: in-place pod resize graduated to beta in Kubernetes v1.33 (2025) and to stable in v1.35 (December 2025), and VPA's `InPlaceOrRecreate` mode uses it (alpha in VPA 1.4, GA in 1.6; VPA 1.7 in 2026 added an `InPlace` mode that never evicts).
 - **Cluster Autoscaler**: pods are scheduled onto nodes, and when new pods don't fit, they sit `Pending` until the cluster autoscaler provisions a node — adding **minutes** to scale-up latency on top of pod startup. **Pod priority and preemption** decide who waits when capacity is tight: give user-facing services higher `priorityClass` so a scale-up evicts batch/cron pods instead of queueing behind them. A common trick is a low-priority "balloon" deployment of placeholder pods that reserve warm node capacity and get evicted the instant real workloads need it.
 
 ### Scaling lag vs bursts: why headroom survives

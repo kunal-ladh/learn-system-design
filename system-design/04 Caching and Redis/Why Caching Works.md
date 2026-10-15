@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why keeping a small copy of hot data close to the reader gives outsized speedups — locality, access skew, and the hit-ratio arithmetic that decides whether a cache pays for itself.
 related: ["[[Caching Strategies]]", "[[Latency Numbers Every Engineer Should Know]]", "[[CDN]]", "[[Hot Key Problem]]"]
 ---
@@ -178,7 +178,7 @@ The capacity-masking point deserves emphasis because it is invisible until the d
 
 ## In your stack
 
-- Your read path already traverses most of the ladder: CloudFront (CDN) → Kong (gateway) → Spring Boot service → Redis → MongoDB (whose WiredTiger storage engine has its own internal cache, default the larger of 50% of (RAM − 1 GB) or 256 MB). When you measure "is caching helping", identify *which* layer hit.
+- Your read path already traverses most of the ladder: CloudFront (CDN) → Kong (gateway) → Spring Boot service → Redis → MongoDB (whose WiredTiger storage engine has its own internal cache, default the larger of 50% of (RAM − 1 GB) or 256 MB, as of 2026). When you measure "is caching helping", identify *which* layer hit.
 - Fintech skews the trade: for balances, KYC status, or transaction state, a stale read can be a correctness bug and a regulatory problem, not a UX blemish. Cache aggressively for reference data (IFSC codes, product configs, feature flags); be deliberately conservative for money state. Correctness beats latency.
 - JWT validation is a textbook win: the IAM service's public keys (JWKS) change rarely and are read on every authenticated request — ideal for an app-local cache with a short refresh, saving a network hop per request.
 - With many services pinned at 1 replica, an app-local (Caffeine) L1 in front of Redis is unusually attractive for you: no cross-replica incoherence to worry about, and it shields Redis from your hottest keys ([[Hot Key Problem]]).

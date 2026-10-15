@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How 2PC makes a transaction atomic across machines, why its coordinator-crash window blocks participants and kills availability, and why the industry moved to sagas and idempotency.
 related: ["[[Saga Pattern]]", "[[Idempotency]]", "[[Consensus and Raft]]", "[[ACID Transactions]]"]
 ---
@@ -66,7 +66,7 @@ Two readings. First, the protocol is *safe* in every row where the coordinator's
 
 **3PC footnote.** Three-phase commit adds a `pre-commit` round so participants can decide without the coordinator, making the protocol non-blocking — but only under a synchronous model with bounded delays and no network partitions. Under real partitions 3PC can produce *divergent outcomes* (one side commits, the other aborts), which is worse than blocking; combined with an extra round trip, it never saw serious production adoption. The honest statement of the limit is FLP territory ([[Consensus and Raft]]): with asynchrony and failures you don't get atomic commit that is simultaneously safe, non-blocking, and partition-tolerant.
 
-**XA in practice.** XA is the standard API binding a transaction manager (Atomikos, Narayana, app-server JTA) to XA-capable resources (most RDBMSs; classic JMS brokers). Real-world experience: throughput collapses under lock hold times; "in-doubt" transactions need DBA tooling (`XA RECOVER` in MySQL) and occasionally heuristic commits/aborts that *break* atomicity and get reported after the fact; many modern datastores and brokers (MongoDB, SQS, Kafka, Redis) simply never implemented XA (Kafka 4.1 added a non-XA prepare/complete API for joining an external 2PC, KIP-939, but no XA binding), so the protocol can't even span the stacks people actually run. Heterogeneous distributed transactions quietly faded as these costs became clear.
+**XA in practice.** XA is the standard API binding a transaction manager (Atomikos, Narayana, app-server JTA) to XA-capable resources (most RDBMSs; classic JMS brokers). Real-world experience: throughput collapses under lock hold times; "in-doubt" transactions need DBA tooling (`XA RECOVER` in MySQL) and occasionally heuristic commits/aborts that *break* atomicity and get reported after the fact; many modern datastores and brokers (MongoDB, SQS, Kafka, Redis) simply never implemented XA (KIP-939, a non-XA prepare/complete API for joining an external 2PC, was still unfinished as of 2026 — only its producer config shipped, in Kafka 4.1 — and has no XA binding), so the protocol can't even span the stacks people actually run. Heterogeneous distributed transactions quietly faded as these costs became clear.
 
 ## Trade-offs
 

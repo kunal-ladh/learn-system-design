@@ -5,7 +5,7 @@ tags: [system-design, foundations, interview]
 type: note
 status: evergreen
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-15
 summary: One-page revision sheet — latency tiers, availability math, estimation conventions, quorum and retry formulas. Everything you should be able to recall without looking it up.
 related: ["[[System Design Index]]", "[[Practice Drills]]", "[[Latency Numbers Every Engineer Should Know]]", "[[Back of the Envelope Estimation]]"]
 ---
@@ -28,11 +28,11 @@ Burn in the **tiers**, not the decimals. Each step is roughly 1–3 orders of ma
 | Main memory reference | ~100 ns |
 | NVMe SSD random 4 KB read | ~20–100 µs |
 | Same-datacenter round trip | ~0.5 ms |
-| Cross-AZ round trip, same region | ~1–2 ms |
+| Cross-AZ round trip, same region | ~0.5–2 ms |
 | HDD seek | ~10 ms |
 | Mumbai ↔ US East round trip | **~200 ms** |
 
-The three that decide designs: **memory is ~1000× faster than a same-DC network hop; a same-DC hop is ~400× faster than crossing the planet; the speed of light is not negotiable.**
+The three that decide designs: **memory is ~5,000× faster than a same-DC network hop (100 ns vs 0.5 ms); a same-DC hop is ~400× faster than crossing the planet; the speed of light is not negotiable.**
 
 Practical lookups, same DC:
 
@@ -42,7 +42,7 @@ Practical lookups, same DC:
 | Indexed point read, warm MongoDB/MySQL | ~1–5 ms |
 | TLS 1.3 handshake, same region | ~1 RTT ≈ 1–5 ms |
 
-> An India-based user calling a US-hosted API pays ~200 ms per round trip **before any server work happens**. Cold connection setup (DNS + TCP + TLS) is ~3 round trips ≈ 600 ms. This single fact justifies CDNs, regional deployments, and geo-replication.
+> An India-based user calling a US-hosted API pays ~200 ms per round trip **before any server work happens**. A cold HTTPS call needs ~3 round trips ≈ 600 ms — TCP, TLS 1.3, then the request itself (DNS is usually answered by a nearby resolver; TLS 1.2 adds a fourth). This single fact justifies CDNs, regional deployments, and geo-replication.
 
 ---
 
@@ -118,7 +118,7 @@ Two anchors worth memorizing: **1M DAU doing 10 actions/day ≈ 100 RPS average*
 | Claim | Reality check |
 |---|---|
 | One modest Postgres box | comfortably thousands of simple TPS |
-| One Redis instance | ~10⁵ ops/sec, single-threaded |
+| One Redis instance | ~10⁵ ops/sec with I/O threads off; Redis reports >1M ops/sec on 8.2 with I/O threads (2025) — command execution stays single-threaded |
 | One Kafka broker | ~10⁵–10⁶ msgs/sec with batching |
 | Working set fits in RAM? | the single most important question for read latency |
 
@@ -147,7 +147,7 @@ A cluster of **2f + 1** nodes tolerates **f** failures. So 3 nodes tolerate 1; 5
 ```
 load multiplier = (attempts per layer) ^ (number of layers)
 ```
-**Restate every policy in _attempts_ before multiplying** — this is the step teams get wrong. Spring's `maxAttempts: 3` means one call plus two retries, not three retries. Calling it "2 retries" and computing 2×2 reports 4×; the dependency actually sees 3×3 = 9.
+**Restate every policy in _attempts_ before multiplying** — this is the step teams get wrong. Libraries count differently: Resilience4j's `maxAttempts: 3` is one call plus two retries, while Spring Framework 7's built-in `@Retryable` counts *retries* — `maxRetries` defaults to 3, which is four attempts. Calling it "2 retries" and computing 2×2 reports 4×; the dependency actually sees 3×3 = 9.
 
 > 3 layers at 3 attempts each → **27×** the original load. If each layer does 3 *retries* (4 attempts), it is 4³ = **64×** — arriving exactly when the system is already failing.
 >

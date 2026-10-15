@@ -29,7 +29,7 @@ Every pattern below rests on the same property: Redis executes commands on a sin
 
 ### Counters and rate limiting — sound
 
-`INCR` is atomic for free, making Redis the default fleet-wide counter: page views, API quotas, login attempts. The classic [[Rate Limiting|rate limiter]] is a fixed window — `INCR rate:{user}:{minute}`, set `EXPIRE 60` on first increment, reject above the limit — upgraded to sliding windows with a zset of timestamps or token buckets in a Lua script (atomic read-compute-write in one event-loop turn). Loss semantics: counters reset → a window of over-admission. For abuse protection that's acceptable; fail-open is usually the right posture for a limiter anyway (a dead Redis shouldn't take the API down with it). If a *billing* number depends on the counter, Redis is the fast path, not the ledger.
+`INCR` is atomic for free, making Redis the default fleet-wide counter: page views, API quotas, login attempts. The classic [[Rate Limiting|rate limiter]] is a fixed window — `INCR rate:{user}:{minute}`, set `EXPIRE 60` on first increment, reject above the limit (Redis 8.8+ also offers `INCREX`, folding increment, bounds and expiry into one atomic command) — upgraded to sliding windows with a zset of timestamps or token buckets in a Lua script (atomic read-compute-write in one event-loop turn). Loss semantics: counters reset → a window of over-admission. For abuse protection that's acceptable; fail-open is usually the right posture for a limiter anyway (a dead Redis shouldn't take the API down with it). If a *billing* number depends on the counter, Redis is the fast path, not the ledger.
 
 ### Leaderboards — the showcase
 

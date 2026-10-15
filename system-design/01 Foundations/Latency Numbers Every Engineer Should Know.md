@@ -33,13 +33,13 @@ All values are **approximate orders of magnitude for typical 2020s server hardwa
 | Mutex lock/unlock (uncontended) | ~17–25 ns | 25 ns | |
 | Main memory reference | ~100 ns | 100 ns | stable for decades |
 | Compress 1 KB (fast codec e.g. Snappy) | ~1–3 µs | 3 µs | |
-| Send 1 KB over 10 Gbps network | ~1 µs | 10 µs (1 Gbps) | NICs got 10×+ faster; top EC2 instances reach 600 Gbps (2025) |
-| Read 4 KB randomly from NVMe SSD | ~20–100 µs | 150 µs | NVMe improved on SATA |
+| Send 1 KB over 10 Gbps network | ~1 µs | 10 µs (1 Gbps) | NICs got 10×+ faster; 600 Gbps on network-optimized EC2 (C8gn, 2025), 3.2–6.4 Tbps EFA on GPU instances (P5/P6) |
+| Read 4 KB randomly from NVMe SSD | ~20–100 µs | 150 µs | NVMe improved on SATA; enterprise drives spec ~70 µs median at QD1 (Micron 9400) |
 | Read 1 MB sequentially from memory | ~10–65 µs | 250 µs | memory bandwidth grew |
 | Round trip within same datacenter | ~100–500 µs | 500 µs | |
 | Read 1 MB sequentially from NVMe SSD | ~70 µs–0.5 ms | 1 ms (SATA-era) | PCIe 5.0 drive ~14 GB/s; max-provisioned EBS gp3 ~2 GB/s (2026) |
 | HDD seek | ~2–10 ms | 10 ms | physics of a moving arm |
-| Read 1 MB sequentially from HDD | ~3.5–4 ms | 20 ms | 240–285 MB/s on 2025 enterprise 7,200 rpm drives |
+| Read 1 MB sequentially from HDD | ~3.5–4.2 ms | 20 ms | 240–285 MB/s on 2025 enterprise 7,200 rpm drives |
 | Round trip same cloud region, cross-AZ | ~0.5–2 ms | — | AZs are km apart |
 | Round trip California ↔ Netherlands | ~150 ms | 150 ms | speed of light hasn't improved |
 
@@ -51,7 +51,7 @@ Supplementary rows you'll actually use in design work (approximate, steady-state
 | Indexed point read, warm MongoDB/MySQL, same DC | ~1–5 ms |
 | TLS 1.3 handshake, same region | ~1 RTT ≈ 1–5 ms |
 | TLS 1.2 handshake, cross-continent | 2 RTT ≈ 300–400 ms |
-| Mobile network (4G) first-hop latency | ~30–80 ms |
+| Mobile network (4G) first-hop latency | ~30–80 ms (rough; varies widely by operator and signal) |
 
 ### Cross-region round trips (the geography rows)
 
@@ -141,7 +141,7 @@ Everything else is "sequential is 10–100× cheaper per byte than random" plus 
 > (a) Sequential at ~2 GB/s (a max-provisioned EBS gp3 volume; a local PCIe 4.0/5.0 NVMe drive does 7–14 GB/s, ~35–70 s) → ~250 s ≈ 4 minutes. (b) Random 4 KB on HDD: 500 GB / 4 KB = ~125M reads × ~5–10 ms seek ≈ 7–14 days. The gap is ~2,500–5,000× — access *pattern* and medium matter more than any code optimization, which is why storage engines organize data for sequential access ([[B-Tree vs LSM-Tree]]) and why "just query it row by row" can turn minutes into weeks.
 
 > [!question]- Q: Which rows of the table have improved dramatically since 2010, and which are effectively frozen? Why does the distinction matter for design?
-> Improved: network throughput (1 → 10/100 Gbps NICs, up to 600 Gbps on 2025 EC2 instances), SSD random access (SATA → NVMe, ~150 µs → tens of µs), memory and SSD sequential bandwidth. Frozen: main-memory latency (~100 ns for decades), HDD seek (~ms, mechanical), and every geography row (speed of light). Design implication: architectures that bet on bandwidth keep getting faster for free; architectures that depend on shaving round trips or seeks stay exactly as constrained — so the durable wins are structural (fewer hops, sequential access, data placed near users), not hardware-assisted.
+> Improved: network throughput (1 → 10/100 Gbps NICs; 600 Gbps on network-optimized EC2 in 2025, Tbps-class EFA on GPU instances), SSD random access (SATA → NVMe, ~150 µs → tens of µs), memory and SSD sequential bandwidth. Frozen: main-memory latency (~100 ns for decades), HDD seek (~ms, mechanical), and every geography row (speed of light). Design implication: architectures that bet on bandwidth keep getting faster for free; architectures that depend on shaving round trips or seeks stay exactly as constrained — so the durable wins are structural (fewer hops, sequential access, data placed near users), not hardware-assisted.
 
 > [!question]- Q: Mini design prompt — you must show a Niyo user's account balance in under 300 ms p95 while they travel in the US, but the ledger must stay in India (data residency). Sketch the options against the latency floor.
 > Floor: ~200 ms RTT US↔India leaves ~100 ms for everything else — one round trip fits, two don't. Options: (1) single aggregated balance endpoint, one round trip, aggressively optimized server side (~fits, fragile); (2) edge-cache a short-TTL balance snapshot (CloudFront/regional cache) with clear staleness semantics — instant reads, but a money balance served stale needs product sign-off and an invalidation path ([[Cache Invalidation]]); (3) optimistic UI: show last-known balance immediately, refresh async. Likely answer: (3)+(1): compliance keeps truth in India, UX hides the ocean.
@@ -153,4 +153,4 @@ Everything else is "sequential is 10–100× cheaper per byte than random" plus 
 - Colin Scott, "Latency Numbers Every Programmer Should Know" (interactive visualization, github.com/colin-scott) — shows the numbers' evolution across years; source of several 2020s updates (its post-~2015 values are extrapolated from trend lines, not measured).
 - Dean & Barroso, "The Tail at Scale" (CACM 2013) — companion reading: what the *distribution* of these latencies does at scale ([[Latency vs Throughput vs Bandwidth]]).
 - Public cloud inter-region latency dashboards (e.g. AWS/GCP/Azure latency matrices, cloudping-style tools) — source of the approximate cross-region RTT ranges; rechecked October 2026 against the Azure network round-trip latency statistics page (learn.microsoft.com, P50 over 30 days to 2026-07-30).
-- Vendor data for the storage rows: Seagate Exos SATA product manual (Dec 2025: 240–285 MB/s sustained, 4.16 ms average latency); Solidigm D7-PS1010 and Kioxia CM7 spec pages (14–14.5 GB/s sequential read); AWS EBS gp3 documentation (up to 2,000 MiB/s).
+- Vendor data for the storage rows: Seagate Exos SATA product manual (Dec 2025: 240–285 MB/s sustained, 4.16 ms average latency); Solidigm D7-PS1010 and Kioxia CM7 spec pages (14–14.5 GB/s sequential read); AWS EBS gp3 documentation (up to 2,000 MiB/s); Micron 9400 product spec (69 µs typical 4 KB QD1 read). Network: AWS C8gn launch note (600 Gbps, June 2025) and P5/P6 pages (3,200–6,400 Gbps EFA). Cross-AZ: Azure availability-zones overview (inter-zone RTT target under ~2 ms) and AWS fault-isolation whitepaper ("single-digit millisecond").

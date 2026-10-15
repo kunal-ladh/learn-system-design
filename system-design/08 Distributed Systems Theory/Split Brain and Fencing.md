@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How a partition or a paused process produces two nodes that both believe they are leader, and how quorum elections, fencing tokens, and STONITH contain the damage.
 related: ["[[Failover]]", "[[Consensus and Raft]]", "[[Distributed Locking]]", "[[Network Partitions and Timeouts]]"]
 ---
@@ -63,7 +63,7 @@ The design's crucial property: correctness no longer depends on the old leader *
 | Source | Monotonic because | Good when | Watch out for |
 |---|---|---|---|
 | A consensus store's counter — etcd key revision, ZooKeeper zxid | Consensus guarantees it | You already run a consensus store | An operational dependency on that store being reachable |
-| A Kubernetes Lease's `leaseTransitions` counter | It increments each time the lease changes holder | Your workloads already talk to the API server | Kubernetes documents `resourceVersion` as opaque, so use the transitions counter rather than comparing versions arithmetically |
+| A Kubernetes Lease's `leaseTransitions` counter | It increments each time the lease changes holder | Your workloads already talk to the API server | `resourceVersion` was long documented as opaque; it is now orderable within one resource type (a conformance requirement from Kubernetes 1.35), but the transitions counter remains the portable choice |
 | A counter incremented by a conditional write in your primary datastore | The store serialises the increment | You want no new infrastructure | The increment must be majority-durable, or a failover can reissue a token |
 | A timestamp | **It is not monotonic** | Never, for fencing | Clock steps and skew reissue or reorder tokens ([[Logical Clocks and Ordering]]) |
 

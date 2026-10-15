@@ -4,7 +4,7 @@ tags: [system-design, caching]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: What happens when a popular cache key expires and every request simultaneously charges the database — and the four mitigations: coalescing, jittered TTLs, stale-while-revalidate, probabilistic early expiration.
 related: ["[[Cache Invalidation]]", "[[Why Caching Works]]", "[[Hot Key Problem]]", "[[Cache Eviction Policies]]"]
 ---
@@ -52,7 +52,7 @@ During the 500 ms recomputation window, ~500 requests miss and each independentl
 
 ### The arithmetic, with your actual connection pool
 
-The herd's size is just **arrival rate × recompute duration**: 1,000 req/s × 0.5 s = **500** simultaneous executions of the same query. What turns that number into an outage is the next constraint down, which is almost never the database's CPU — it is the connection pool. The MongoDB Java driver's default `maxPoolSize` is **100**, so of those 500 callers, 100 get a connection and 400 queue.
+The herd's size is just **arrival rate × recompute duration**: 1,000 req/s × 0.5 s = **500** simultaneous executions of the same query. What turns that number into an outage is the next constraint down, which is almost never the database's CPU — it is the connection pool. The MongoDB Java driver's default `maxPoolSize` is **100** (as of 2026), so of those 500 callers, 100 get a connection and 400 queue.
 
 Follow it through, using nothing but those three numbers:
 

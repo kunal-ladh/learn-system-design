@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Kafka as a replicated commit log — topics, partitions, segments, offsets, consumer groups, ISR and the acks durability math, and why sequential IO makes it fast.
 related: ["[[Message Queues vs Event Logs]]", "[[Kafka Operations]]", "[[Sharding]]", "[[Replication]]", "[[Consumer Groups and Rebalancing]]"]
 ---
@@ -79,7 +79,7 @@ Consumers sharing a `group.id` form a **consumer group**: each partition is assi
 
 ### Producer mechanics: batching, idempotence, transactions
 
-Producers don't send messages one at a time. Records accumulate per-partition in batches (`batch.size`), and `linger.ms` adds a small wait to let batches fill — trading single-digit milliseconds of latency for large throughput and compression gains (compression works per batch). The **idempotent producer** (default since Kafka 3.0: `enable.idempotence=true`) attaches a producer ID and sequence number to each batch, so broker-side dedup makes retries safe — no duplicates from the produce path, no reordering. **Transactions** extend this: a producer can atomically write to several partitions *and* commit consumer offsets, which is what Kafka Streams' exactly-once processing (`read-process-write` within Kafka) is built on. In one paragraph that's the honest scope: exactly-once *inside* a Kafka-to-Kafka pipeline; the moment a side effect leaves Kafka (a DB write, an HTTP call), you are back to at-least-once plus [[Idempotency]].
+Producers don't send messages one at a time. Records accumulate per-partition in batches (`batch.size`), and `linger.ms` adds a small wait to let batches fill — trading single-digit milliseconds of latency for large throughput and compression gains (compression works per batch). The **idempotent producer** (default since Kafka 3.0: `enable.idempotence=true` — effectively applied only from 3.0.1/3.1.1/3.2.0, since bug KAFKA-13598 left it off in 3.0.0 and 3.1.0) attaches a producer ID and sequence number to each batch, so broker-side dedup makes retries safe — no duplicates from the produce path, no reordering. **Transactions** extend this: a producer can atomically write to several partitions *and* commit consumer offsets, which is what Kafka Streams' exactly-once processing (`read-process-write` within Kafka) is built on. In one paragraph that's the honest scope: exactly-once *inside* a Kafka-to-Kafka pipeline; the moment a side effect leaves Kafka (a DB write, an HTTP call), you are back to at-least-once plus [[Idempotency]].
 
 ### Retention vs log compaction
 

@@ -108,7 +108,7 @@ GC pauses, VM migrations, page faults, long I/O — Kleppmann's point is that a 
 
 ### Redlock, and the Kleppmann–antirez debate
 
-**Redlock** (antirez's algorithm) attacks the single-point weakness: run N=5 *independent* Redis instances (no replication); to lock, acquire on each sequentially with short per-attempt timeouts; you hold the lock iff you got **a majority (≥3)** within a validity window computed as TTL minus elapsed acquisition time minus clock-drift allowance. Release everywhere. The majority property means one crashed/partitioned Redis doesn't grant two holders.
+**Redlock** (antirez's algorithm) attacks the single-point weakness: run N=5 *independent* Redis instances (no replication); to lock, try all N in parallel (the current redis.io spec; early versions said sequentially) with short per-attempt timeouts; you hold the lock iff you got **a majority (≥3)** within a validity window computed as TTL minus elapsed acquisition time minus clock-drift allowance. Release everywhere. The majority property means one crashed/partitioned Redis doesn't grant two holders.
 
 **Kleppmann's critique** ("How to do distributed locking", February 2016) makes two arguments. The narrow one: Redlock's validity window depends on **bounded clock drift and bounded pauses** — a system-clock jump (NTP step, admin error) or a GC pause can expire a lock the holder still believes in; Redlock is neither a proper asynchronous-model algorithm (like [[Consensus and Raft|Raft/Paxos]]-based locks) nor cheap, landing in an awkward middle. The broad one, which applies to **every** expiring lock including Chubby's and ZooKeeper's: even a perfect lock service cannot stop a *paused holder's delayed write* from landing after the lock moved on. Safety therefore requires cooperation from the **protected resource** — fencing.
 
@@ -200,9 +200,9 @@ Classic follow-ups: "Why Lua for release?" (atomic get-compare-del; two commands
 ## Sources
 
 - Martin Kleppmann, "How to do distributed locking" (martin.kleppmann.com, Feb 2016) — the critique, fencing tokens, efficiency-vs-correctness framing; expanded in *DDIA* Ch. 8 ("The Truth Is Defined by the Majority", leases and pauses) and Ch. 9.
-- Salvatore Sanfilippo (antirez), "Is Redlock safe?" (antirez.com, 2016) — the response; and the Redlock specification, "Distributed Locks with Redis" (redis.io).
+- Salvatore Sanfilippo (antirez), "Is Redlock safe?" (antirez.com, 2016) — the response; and the Redlock specification, "Distributed Locks with Redis" (redis.io), which as of 2026 shows `DELEX key IFEQ` as the release form (Lua for pre-8.4) and carries a "Disclaimer about consistency" recommending fencing tokens and noting that TTL expiry uses the wall clock, not a monotonic one.
 - Redis documentation — SET command (NX/PX semantics), EVAL/scripting atomicity guarantees.
 - Burrows, "The Chubby lock service for loosely-coupled distributed systems" (OSDI 2006) — sequencers (fencing tokens) in Google's production lock service.
-- Redisson documentation — RLock watchdog mechanics (what auto-renewal does and doesn't protect); the documented default is a 30 s lease renewed at a third of that interval, applied when `lock()` is called without an explicit lease time.
+- Redisson documentation — RLock watchdog mechanics (what auto-renewal does and doesn't protect); the documented default (as of 2026) is a 30 s lease renewed at a third of that interval, applied when `lock()` is called without an explicit lease time.
 - Kubernetes documentation — CronJob concept page, which states a Job may be created more than once for a single schedule and that jobs should therefore be idempotent.
 - MongoDB documentation — `findOneAndUpdate` single-document atomicity, read/write concern, and the guarantee that majority-committed writes are not rolled back by an election.

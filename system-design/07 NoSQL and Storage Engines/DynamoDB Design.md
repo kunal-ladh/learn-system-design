@@ -30,7 +30,7 @@ Amazon's own story explains the product. By the mid-2000s, Amazon's Oracle insta
 
 Every table has a **partition key** (hash key); optionally a **sort key** (range key). Items with the same partition key form an **item collection**, stored together and ordered by sort key — the same two-level model as wide-column stores ([[Cassandra and Wide-Column Stores]]).
 
-Under the hood the table is split into **partitions** — each a replicated storage unit (a leader and replicas across AZs, consensus-replicated; unlike Dynamo-the-paper there are no sloppy quorums, and strongly consistent reads are an option served by the leader). Each physical partition has hard per-partition limits — as documented: roughly **3,000 read capacity units and 1,000 write capacity units**, plus roughly **10 GB** of storage (a long-cited figure that current AWS docs no longer state). The table's total throughput is the sum over partitions, but *no single key can ever exceed one partition's share*. That sentence is the root of all hot-partition grief — see [[Hot Partition Problem]].
+Under the hood the table is split into **partitions** — each a replicated storage unit (a leader and replicas across AZs, consensus-replicated; unlike Dynamo-the-paper there are no sloppy quorums, and strongly consistent reads are an option served by the leader). Each physical partition has hard per-partition limits — as documented: roughly **3,000 read capacity units and 1,000 write capacity units**, plus roughly **10 GB** of storage (AWS's DynamoDB constraints page still names 10 GB as the maximum partition size, as of 2026). The table's total throughput is the sum over partitions, but *no single key can ever exceed one partition's share*. That sentence is the root of all hot-partition grief — see [[Hot Partition Problem]].
 
 The partition key is hashed to choose the partition ([[Consistent Hashing]] in spirit); partitions split as data or traffic grows.
 
@@ -48,7 +48,7 @@ graph TD
 ### Capacity modes
 
 - **Provisioned**: you declare read/write capacity units (RCU/WCU) per table. 1 RCU = one strongly consistent read of up to 4 KB per second (two eventually consistent); 1 WCU = one 1 KB write per second. Cheaper at steady load; you can attach auto-scaling, but it reacts in minutes, not milliseconds — bursts beyond provisioned capacity are throttled (`ProvisionedThroughputExceededException`).
-- **On-demand**: pay per request, no capacity declaration. It absorbs most spikes (new tables start at 4,000 writes/s and 12,000 reads/s, and it maintains headroom of double the previous peak; exceeding that within 30 minutes can still throttle), and costs more per request. AWS halved on-demand prices in November 2024 and now calls it the default recommended mode; switch to provisioned when traffic is steady, predictable and high.
+- **On-demand**: pay per request, no capacity declaration. It absorbs most spikes (new tables start at 4,000 writes/s and 12,000 reads/s as of 2026, and it maintains headroom of double the previous peak; exceeding that within 30 minutes can still throttle), and costs more per request. AWS halved on-demand prices in November 2024 and now calls it the default recommended mode; switch to provisioned when traffic is steady, predictable and high.
 
 ### Adaptive capacity — what it can and can't rescue
 

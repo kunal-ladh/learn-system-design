@@ -140,7 +140,7 @@ When the "up or out?" question lands on a specific service, walk these in order:
 
 ## Common misconceptions
 
-- **"Horizontal is modern, vertical is legacy."** Vertical is often the *correct* engineering answer: Stack Overflow famously served its global traffic for years on a handful of beefy servers. Complexity is a cost; a bigger box is sometimes the cheapest way to not pay it.
+- **"Horizontal is modern, vertical is legacy."** Vertical is often the *correct* engineering answer: Stack Overflow famously served its global traffic for years on a handful of beefy servers (it moved the public sites to Google Cloud in 2025). Complexity is a cost; a bigger box is sometimes the cheapest way to not pay it.
 - **"We're on Kubernetes, so we scale horizontally."** Your *stateless pods* do. If MongoDB or Redis is the bottleneck, adding pods does nothing ([[Scalability]]) — and a service pinned at 1 replica is effectively a vertically-scaled system wearing Kubernetes clothes.
 - **"Scaling out N× gives N× throughput."** Coordination overhead (shared caches, lock contention, [[Consensus and Raft|consensus]] traffic, cross-node chatter) means sublinear returns — Amdahl's law applied to fleets. The serialized fraction of the workload caps speedup no matter how many nodes you add.
 - **"Sticky sessions make horizontal scaling work with stateful servers."** They make it *limp*: load skews toward long-lived sessions, a server death still loses its sessions, and deploys drain painfully. It's a bridge, not a destination ([[Stateless vs Stateful Services]]).

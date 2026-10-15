@@ -150,4 +150,4 @@ Classic probes: "Why not log everything and grep?" (cost shape, no aggregation, 
 - Prometheus documentation — metric types; "naming and labels" guidance on cardinality.
 - Stripe engineering blog, "Fast and flexible observability with canonical log lines" — the one-wide-event-per-request pattern.
 - Charity Majors / Honeycomb writing on observability and high-cardinality events — the wide-events school.
-- *Designing Data-Intensive Applications* (Kleppmann), ch. 1 — percentiles and tail latency context.
+- *Designing Data-Intensive Applications* (Kleppmann), 1st ed. ch. 1, or ch. 2 of the 2nd ed. (Kleppmann & Riccomini, 2026) — percentiles and tail latency context.

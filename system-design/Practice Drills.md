@@ -167,7 +167,7 @@ Answer in 2–3 sentences each. If you can't, that module needs a re-read.
 113. Private-subnet services call S3 heavily and the bill spikes. Which component is charging per GB, and what removes it? → [[VPC and Networking]]
 114. An ALB in front of Kong starts returning 502s on long-running requests. Name the timeout mismatch and the direction the chain must satisfy. → [[ALB and NLB]]
 115. Name the four cost shapes that dominate an AWS bill — and the one that is free in one direction and billed in the other. → [[AWS Cost Shape]]
-116. Lambda triggered by SQS: the function takes 60 s and the queue's visibility timeout is 30 s. What happens to each message, and what's the rule? → [[Lambda]]
+116. An SQS-triggered Lambda has a 60 s timeout and the queue's visibility timeout is also 60 s. Some orders get processed twice. Why, and what should the visibility timeout be? → [[Lambda]]
 
 ---
 

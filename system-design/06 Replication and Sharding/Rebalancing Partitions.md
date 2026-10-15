@@ -42,7 +42,7 @@ Create far more partitions than nodes on day one — say 1024 partitions for a 1
 
 ### Scheme 2 — Dynamic splitting (HBase/MongoDB/Bigtable style)
 
-Start with few (even one) partitions; when a partition exceeds a size threshold (e.g. HBase region ~10 GB), **split** it into two at a key midpoint; a balancer process migrates regions/chunks to even out nodes. Merging handles shrinkage. MongoDB was the textbook example until 6.0.3, which stopped auto-splitting: its balancer now evens out *data size* per shard, migrating a range (default 128 MB since 5.2; 64 MB before) once two shards differ by three range sizes — 384 MB at the default.
+Start with few (even one) partitions; when a partition exceeds a size threshold (e.g. HBase's 10 GB default region size, as of 2026), **split** it into two at a key midpoint; a balancer process migrates regions/chunks to even out nodes. Merging handles shrinkage. MongoDB was the textbook example until 6.0.3, which stopped auto-splitting: its balancer now evens out *data size* per shard, migrating a range (default 128 MB since 5.2; 64 MB before) once two shards differ by three range sizes — 384 MB at the default.
 
 - Partition count tracks data volume automatically — no up-front guess.
 - MongoDB: config servers hold the chunk→shard map; the balancer moves chunks while `mongos` routers follow the versioned map ([[MongoDB Architecture]]).

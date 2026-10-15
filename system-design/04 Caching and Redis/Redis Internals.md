@@ -64,7 +64,7 @@ Since one thread does everything, the only capacity question that matters operat
 
 **How you find all of this in production**, roughly in the order you would reach for it:
 
-- `SLOWLOG GET 128` — the slowest recent commands *with their arguments*, so you see the offending key name. `slowlog-log-slower-than` defaults to 10,000 µs.
+- `SLOWLOG GET 128` — the slowest recent commands *with their arguments*, so you see the offending key name. `slowlog-log-slower-than` defaults to 10,000 µs (as of 2026).
 - `INFO commandstats` — calls, total µs and µs-per-call per command; this is where a command that looks cheap but averages badly shows itself.
 - `LATENCY LATEST` and `LATENCY DOCTOR`, once `latency-monitor-threshold` is set — these attribute spikes to a *cause* (`fork`, `expire-cycle`, `command`), which is the distinction that decides whether you are looking at a slow command or a background operation.
 - `redis-cli --bigkeys` — a `SCAN`-based pass reporting the largest key per type; `--hotkeys` does the same for access frequency but requires `maxmemory-policy` to be set to an LFU policy. Redis 8.6 added a server-side `HOTKEYS` command that ranks keys by share of CPU time and network bytes over a tracking window ([[Hot Key Problem]]).
@@ -121,7 +121,7 @@ Operational consequences: memory from mass expiries is reclaimed gradually, not 
 
 Redis [[Replication]] is a single-leader, asynchronous stream: the primary applies a write, acknowledges the client, then forwards the command to replicas. Two synchronization paths matter operationally:
 
-- **Partial resync:** the primary keeps a circular **replication backlog** (`repl-backlog-size`, default **1 MB** — small enough that the default is the problem on any write-hot instance). A replica that disconnects briefly reconnects with its last offset (`PSYNC`); if that offset is still inside the backlog, the primary replays just the gap — cheap and invisible.
+- **Partial resync:** the primary keeps a circular **replication backlog** (`repl-backlog-size`, default **1 MB** as of 2026 — small enough that the default is the problem on any write-hot instance). A replica that disconnects briefly reconnects with its last offset (`PSYNC`); if that offset is still inside the backlog, the primary replays just the gap — cheap and invisible.
 - **Full resync:** if the gap has scrolled out of the backlog (long disconnect, small backlog, high write rate), the primary must send *everything*: it forks (the same copy-on-write fork as BGSAVE, with the same memory-spike warning), produces an RDB, transfers it, and streams the delta accumulated during transfer. On a large, write-hot instance this is the single most expensive routine operation Redis performs, and several replicas resyncing at once (after a network blip) compounds it.
 
 Sizing `repl-backlog-size` generously relative to write throughput × plausible disconnect duration is the cheap insurance; the metric pair to watch is `sync_full` vs `sync_partial_ok` in `INFO stats` — rising full syncs mean your backlog is too small for your network reality. This machinery is the substrate that [[Redis Cluster and Sentinel]] failover sits on, and the reason an acknowledged write can die with a failing primary: the ack never waited for the stream.

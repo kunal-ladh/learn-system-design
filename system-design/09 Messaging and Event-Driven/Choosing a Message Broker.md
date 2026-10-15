@@ -4,7 +4,7 @@ tags: [system-design, messaging]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: A decision framework for picking between RabbitMQ, Kafka, SQS/SNS, Redis Streams and friends — the dimensions that matter, cost shapes, and how to migrate safely.
 related: ["[[Message Queues vs Event Logs]]", "[[Kafka Operations]]", "[[SQS and SNS]]", "[[Redis Streams]]", "[[RabbitMQ]]"]
 ---
@@ -49,7 +49,7 @@ Brokers get compared; workloads get forgotten. Answer these about the *workload*
 | Ordering | Per-queue | Per-partition key | Per FIFO group | Per stream |
 | Routing | Rich (exchanges) | By key only | SNS filters | None built in |
 | Durability floor | Quorum queues: strong | acks=all: strong, tunable | Strong by contract | Weakest (async repl, AOF window) |
-| Delays/TTL/DLQ built in | TTL + DLX yes; delays via plugin | No | Yes | No |
+| Delays/TTL/DLQ built in | TTL + DLX yes; delays via plugin (archived Sep 2026; quorum-queue delayed retry since 4.3, native delivery delay announced for 4.4) | No | Yes | No |
 | Ops burden | Medium, self-run | High (or pay MSK/Confluent) | ~Zero | Low *increment* on owned Redis |
 | Cost scales with | Instances + people | Brokers + storage + transfer (+premium) | Requests × fan-out | RAM × retention |
 | Sweet spot | Complex routing, moderate scale | Firehoses, replay, many readers | Default cloud queueing | Ephemeral low-latency pipelines |

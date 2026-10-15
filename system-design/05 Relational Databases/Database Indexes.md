@@ -18,7 +18,7 @@ An index is a sorted, separately maintained structure over some of a table's col
 
 A table — and a MongoDB collection — is not an in-memory array. It's a set of fixed-size pages sitting on disk ([[How Databases Store Data]] covers the full page/heap/WAL picture). `SELECT * FROM transactions WHERE user_id = 42` with no index gives the engine exactly one algorithm: read every page, inspect every row, keep what matches. That's a full scan — `Seq Scan` in Postgres, `COLLSCAN` in MongoDB.
 
-A worked hypothetical — the inputs are illustrative, the shape is universal. A 10 GB table at 8 KB pages is 10 GB / 8 KB ≈ **1.3 million pages**. A full scan issues roughly that many page reads. A modern NVMe SSD's sequential throughput commonly sits in the low-single-digit GB/s range, so reading 10 GB sequentially costs on the order of a few seconds of pure I/O — before any CPU cost of evaluating the predicate row by row. That is already too slow for a query an interactive user is waiting on.
+A worked hypothetical — the inputs are illustrative, the shape is universal. A 10 GB table at 8 KB pages is 10 GB / 8 KB ≈ **1.3 million pages**. A full scan issues roughly that many page reads. Sequential throughput runs from ~2 GB/s on a max-provisioned cloud volume (EBS gp3) to ~14 GB/s on a local PCIe 5.0 NVMe drive (2026 figures, see [[Latency Numbers Every Engineer Should Know]]), so reading 10 GB sequentially costs roughly 0.7–5 seconds of pure I/O — before any CPU cost of evaluating the predicate row by row. That is already too slow for a query an interactive user is waiting on.
 
 The deeper problem is that a 10 GB table rarely fits entirely in the buffer pool alongside every other table's hot pages: a full scan pulls in pages the cache doesn't have and evicts whatever else was resident, degrading every other query sharing that cache, not just this one.
 
@@ -233,7 +233,7 @@ graph LR
     C -->|"no"| F["FETCH the full document"]
 ```
 
-**The index-must-fit-in-RAM wall.** WiredTiger indexes are shallow B+-trees, but shallow only pays off if the pages you need are resident in the WiredTiger cache (by default the larger of 50% of RAM minus 1 GB, or 256 MB). An index that fits behaves like the 1-2-read figure earlier in this note: fast, nearly constant with collection size. An index that has outgrown the cache does not degrade gracefully — needed pages get evicted and reread from disk, and because secondary-index access is effectively random, that's random I/O at a scale the tree's shallow depth can no longer hide.
+**The index-must-fit-in-RAM wall.** WiredTiger indexes are shallow B+-trees, but shallow only pays off if the pages you need are resident in the WiredTiger cache (by default the larger of 50% of (RAM minus 1 GB), or 256 MB). An index that fits behaves like the 1-2-read figure earlier in this note: fast, nearly constant with collection size. An index that has outgrown the cache does not degrade gracefully — needed pages get evicted and reread from disk, and because secondary-index access is effectively random, that's random I/O at a scale the tree's shallow depth can no longer hide.
 
 This is literally act one of [[Discord Message Storage Evolution]]: secondary indexes over a message collection outgrowing available RAM turned lookups into disk-bound random reads and forced the migration off MongoDB. Habit: check index size against WiredTiger cache size for your largest collections, not just against disk space — an index that "fits on disk" can already be past the wall that matters.
 

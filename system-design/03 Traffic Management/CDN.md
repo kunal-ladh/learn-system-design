@@ -15,7 +15,7 @@ A **content delivery network (CDN)** is a globally distributed fleet of caching 
 
 ## The problem that created it
 
-Your servers are in Mumbai. A user in São Paulo requests your page. The physics: a round trip across ~15,000 km of fiber costs on the order of 150–300 ms *before any processing* — and a page load takes many round trips (DNS, TCP handshake, [[TLS and HTTPS|TLS handshake]], then requests for dozens of assets). No amount of backend optimization fixes this; the photons simply take that long.
+Your servers are in Mumbai. A user in São Paulo requests your page. The physics: a round trip across ~15,000 km of fiber costs roughly 300 ms *before any processing* (Azure's measured P50 for Brazil South ↔ Central India was ~304 ms in July 2026) — and a page load takes many round trips (DNS, TCP handshake, [[TLS and HTTPS|TLS handshake]], then requests for dozens of assets). No amount of backend optimization fixes this; the photons simply take that long.
 
 Second problem, independent of distance: the same logo, JS bundle, and product image are fetched millions of times a day. Serving identical bytes from application infrastructure wastes origin capacity, and a traffic spike (product launch, viral moment) hits the origin with its full force.
 
@@ -112,7 +112,7 @@ Cached content is served by edge nodes that never consult your application — s
 - **CloudFront fronts your edge** (CloudFront → ALB → Kong → EKS). Org convention places TLS and CORS at this layer. Static app assets and app-download binaries are the obvious cacheable set; API routes pass through with `no-store` semantics.
 - **Fintech caution dominates**: responses carrying account data, KYC status, or anything personalized must be explicitly non-cacheable — one wrong `Cache-Control` on an authenticated route is a data-leak incident, not a perf bug. Correctness beats latency, per the house rule.
 - **Signed URLs fit document delivery**: statements or KYC documents in S3, delivered via CloudFront signed URLs with short expiry — the app authorizes (authn + authz + ownership check, as always), the edge enforces, the object never becomes a shareable public link.
-- Cost shape to name in any proposal: CDN spend scales with *egress GB + requests + invalidation paths*, plus a per-request charge for Origin Shield. Transfer from AWS origins (ALB, S3) to CloudFront is free, so misses cost origin compute and requests rather than origin egress; a non-AWS origin pays its own egress. Offload ratio is the lever that moves the bill.
+- Cost shape to name in any proposal: on pay-as-you-go pricing, CDN spend scales with *egress GB + requests + invalidation paths*, plus a per-request charge for Origin Shield (since November 2025 CloudFront also sells flat-rate monthly plans with no overage charges, which flatten this shape). Transfer from AWS origins (ALB, S3) to CloudFront is free, so misses cost origin compute and requests rather than origin egress; a non-AWS origin pays its own egress. Offload ratio is the lever that moves the bill.
 - Your `x-correlation-id` convention starts at the CDN only if injected there; otherwise Kong is the first stamping point, since the ALB injects only its own `X-Amzn-Trace-Id` and will not mint your correlation header for you — relevant when tracing a request that may have been an edge hit (it never reached Kong at all).
 
 ## Interview angle

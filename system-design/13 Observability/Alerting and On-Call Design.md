@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How to design alerts that page humans only for real, actionable, user-facing problems — symptom-based alerting, SLO burn rates, and the on-call practices that keep the system honest.
 related: ["[[SLA SLO SLI and Error Budgets]]", "[[Logs Metrics and Traces]]", "[[Failure Modes in Distributed Systems]]"]
 ---
@@ -92,7 +92,7 @@ Every alerting rule should survive this audit quarterly:
 3. **When true, did a human act?** No action ever → ticket, dashboard, or deletion.
 4. **Was the action automatable?** Then automate it and delete the alert.
 
-The cultural rule that makes this work: *every page is either actionable or it is deleted.* Teams that track "pages per on-call shift" as a health metric (the SRE book's guideline is a maximum of **two incidents per 12-hour shift**, on the reasoning that fewer gives too little practice and more gives no time to handle each properly) catch fatigue before it becomes an outage. Noise is not a cosmetic problem — it is the mechanism by which real outages go unanswered.
+The cultural rule that makes this work: *every page is either actionable or it is deleted.* Teams that track "pages per on-call shift" as a health metric (the SRE book's guideline is a maximum of **two incidents per 12-hour shift**, on the reasoning that one incident plus its root-cause analysis, remediation and postmortem averages about 6 hours) catch fatigue before it becomes an outage. Noise is not a cosmetic problem — it is the mechanism by which real outages go unanswered.
 
 ### Runbooks attached to alerts
 

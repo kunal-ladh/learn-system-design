@@ -108,7 +108,7 @@ Worth literally memorizing before an interview loop:
 - 2¹⁰ ≈ 10³: KB→MB→GB→TB→PB each ×1,000.
 - Storage = writes/day × size × retention × **3 (replication)**; add ~50% for indexes on row stores.
 - Cache ≈ hot **20%** of the working set; 1M cached objects × 1 KB = 1 GB.
-- One modern server: ~10K+ simple RPS, GB/s-scale NVMe sequential I/O; one Redis node: ~100K+ simple ops/sec ([[Latency Numbers Every Engineer Should Know]]).
+- One modern server: ~10K+ simple RPS, GB/s-scale NVMe sequential I/O; one Redis node: ~100K+ simple ops/sec, as of 2026 ([[Latency Numbers Every Engineer Should Know]]).
 
 ## Common misconceptions
 
@@ -122,7 +122,7 @@ Worth literally memorizing before an interview loop:
 
 - Run the pipeline on any new Niyo feature before the design review: e.g. "push transaction notifications" — X DAU × Y txns/day ÷ 10⁵ → events/sec into SQS; × payload → bandwidth; × retention → [[Message Queues vs Event Logs|queue/log]] storage. Ten minutes of this decides whether the consumer needs 1 pod or a [[Consumer Groups and Rebalancing|scaled group]].
 - Fintech peak factors are vicious and calendar-shaped: salary days, festival sales, bill-due dates. A 10× peak factor on the 1st of the month is realistic for transaction flows — size queues and single-replica services against *that*, not the monthly average ([[Capacity Planning]]).
-- Storage envelopes matter for compliance: regulatory retention (at least 5 years from the transaction date under PMLA and RBI's KYC Master Direction; longer where other rules or internal policy apply) × per-record size × growth tells you when MongoDB collections need archiving tiers or [[Time Series and Analytics Stores|separate analytics stores]] — compute it before the collection hits billions of documents.
+- Storage envelopes matter for compliance: regulatory retention (at least 5 years from the transaction date under PMLA and RBI's KYC Master Direction, as of 2026; longer where other rules or internal policy apply) × per-record size × growth tells you when MongoDB collections need archiving tiers or [[Time Series and Analytics Stores|separate analytics stores]] — compute it before the collection hits billions of documents.
 - Mongo-specific multipliers: working set must fit in RAM for predictable latency; indexes on a busy collection can rival data size. An envelope that ignores index size undersizes the cluster ([[MongoDB Architecture]], [[Database Indexes]]).
 
 ## Interview angle

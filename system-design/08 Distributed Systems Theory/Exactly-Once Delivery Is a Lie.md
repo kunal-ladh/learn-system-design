@@ -4,7 +4,7 @@ tags: [system-design, distributed-theory]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why message delivery can only be at-most-once or at-least-once, what Kafka's "exactly-once semantics" really is and isn't, and why consumer-side dedup is the correct mental model.
 related: ["[[Idempotency]]", "[[Delivery Semantics]]", "[[Kafka Architecture]]", "[[The Fallacies of Distributed Computing]]"]
 ---
@@ -67,7 +67,7 @@ So Kafka EOS = **exactly-once stream processing within Kafka's own ecosystem**: 
 
 ### What it doesn't cover
 
-The boundary is **side effects to external systems**. The moment your consumer calls a bank API, writes MongoDB, sends an email, or pushes to SQS, Kafka's transaction cannot enclose that effect — the external system doesn't participate in Kafka's commit protocol. (Since Kafka 4.1, KIP-939 lets a transactional producer join an *externally* coordinated two-phase commit via `transaction.two.phase.commit.enable` — useful only when something else runs a 2PC coordinator, and still no help for an email or a partner API call.) Crash after the HTTP call but before the offset commit → redelivery → the call happens again. Kafka's own documentation is explicit that EOS applies to Kafka-to-Kafka processing. For external effects, you're back to the only general answer: **at-least-once delivery + consumer-side dedup** — idempotency keys, conditional writes, or transactional "process + record offset" in the *destination* datastore (store the consumed offset in Mongo in the same transaction as the business write, and skip already-recorded offsets on replay). That last pattern is sometimes called the "transactional inbox" — the mirror image of [[The Outbox Pattern]].
+The boundary is **side effects to external systems**. The moment your consumer calls a bank API, writes MongoDB, sends an email, or pushes to SQS, Kafka's transaction cannot enclose that effect — the external system doesn't participate in Kafka's commit protocol. (KIP-939 is meant to let a transactional producer join an *externally* coordinated two-phase commit — but as of 2026 only its `transaction.two.phase.commit.enable` config has shipped, from Kafka 4.1, with the prepare/complete producer API still unreleased through 4.3; even when done it is useful only when something else runs a 2PC coordinator, and still no help for an email or a partner API call.) Crash after the HTTP call but before the offset commit → redelivery → the call happens again. Kafka's own documentation is explicit that EOS applies to Kafka-to-Kafka processing. For external effects, you're back to the only general answer: **at-least-once delivery + consumer-side dedup** — idempotency keys, conditional writes, or transactional "process + record offset" in the *destination* datastore (store the consumed offset in Mongo in the same transaction as the business write, and skip already-recorded offsets on replay). That last pattern is sometimes called the "transactional inbox" — the mirror image of [[The Outbox Pattern]].
 
 ### What each mechanism actually covers
 

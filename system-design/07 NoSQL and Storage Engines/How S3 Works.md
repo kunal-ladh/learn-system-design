@@ -34,7 +34,7 @@ Objects are **immutable**: you cannot append to or edit byte 5,000 of an object 
 
 ### Prefix-based request-rate scaling
 
-S3's index (the key→location mapping) is itself partitioned by key prefix. Each partition sustains, as documented, at least **3,500 PUT/COPY/POST/DELETE and 5,500 GET/HEAD requests per second per prefix**, and S3 repartitions automatically as traffic grows. Two implications:
+S3's index (the key→location mapping) is itself partitioned by key prefix. Each partition sustains, as documented (2026), at least **3,500 PUT/COPY/POST/DELETE and 5,500 GET/HEAD requests per second per prefix**, and S3 repartitions automatically as traffic grows. Two implications:
 
 - Throughput is effectively unlimited *if your keys spread across prefixes* — parallel readers across many prefixes aggregate linearly.
 - Sequential key designs (`2026-10-01-000001`, `-000002`, …) concentrate writes on one index partition — the [[Hot Partition Problem]] again, in storage-service clothing. Since a 2018 change S3 no longer requires manual key randomization for most workloads, but burst-heavy pipelines still benefit from spreading keys (e.g. hash prefix first).
@@ -68,7 +68,7 @@ For its first 14 years S3 was eventually consistent for overwrites and lists —
 
 ### Multipart upload
 
-Objects above ~100 MB should upload in parts: initiate, upload N parts in parallel (each 5 MB–5 GB, up to 10,000 parts), complete. Benefits: parallel bandwidth, per-part retry (a dropped connection costs one part, not the whole file), and pause/resume. Since December 2025 the maximum object size *is* a consequence of these numbers: 10,000 parts × 5 GiB = 50,000 GiB, about 48.8 TiB, which AWS rounds to "50 TB" (the earlier 5 TB cap was a separate service limit). Incomplete multipart uploads invisibly accrue storage cost — a lifecycle rule to abort them after N days is standard hygiene.
+Objects above ~100 MB should upload in parts: initiate, upload N parts in parallel (each 5 MiB–5 GiB, up to 10,000 parts, as of 2026), complete. Benefits: parallel bandwidth, per-part retry (a dropped connection costs one part, not the whole file), and pause/resume. Since December 2025 the maximum object size *is* a consequence of these numbers: 10,000 parts × 5 GiB = 50,000 GiB, about 48.8 TiB, which AWS rounds to "50 TB" (the earlier 5 TB cap was a separate service limit). Incomplete multipart uploads invisibly accrue storage cost — a lifecycle rule to abort them after N days is standard hygiene.
 
 The part-count cap is also a sizing constraint people meet late. Uploading a 5 TB object within 10,000 parts requires each part to be at least 5 × 1,048,576 ÷ 10,000 ≈ **524 MB**, and an object at the 50 TB ceiling needs every part at the full 5 GiB; a client hard-coded to 8 MB parts tops out at 8 MB × 10,000 = 80,000 MB, roughly 78 GB, and fails on anything larger. Production uploaders therefore choose part size from the object size rather than from a constant.
 
@@ -159,6 +159,7 @@ Classic follow-ups: *explain erasure coding vs replication* (same fault toleranc
 ## Sources
 
 - AWS documentation — "Amazon S3 data consistency model" (strong consistency announcement, Dec 2020), "Best practices design patterns: optimizing Amazon S3 performance" (per-prefix request rates), "Storage classes", "Multipart upload".
+- AWS News Blog — "Twenty years of Amazon S3 and building what's next", 13 March 2026 (the 500-trillion-object and 200-million-requests-per-second figures).
 - AWS re:Invent talks — "Deep dive on Amazon S3" (the architecture-and-durability series, e.g. 2021–2023 editions, where the erasure-coding and repair framing comes from).
 - Werner Vogels, All Things Distributed — posts on S3's design evolution and the strong-consistency launch (2020–2021).
 - Patterson, Gibson, Katz — "A Case for Redundant Arrays of Inexpensive Disks", 1988 (the ancestral redundancy math; Reed–Solomon coding dates to 1960).

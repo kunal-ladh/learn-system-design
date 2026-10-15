@@ -4,7 +4,7 @@ tags: [system-design, observability]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How to find your system's real ceiling with load testing, size headroom with N+1 and safety-factor math, apply the USE method, and decide how much overprovisioning an outage is worth.
 related: ["[[Autoscaling]]", "[[Back of the Envelope Estimation]]", "[[Scalability]]"]
 ---
@@ -147,4 +147,4 @@ Classic follow-ups: "Utilization vs saturation?" (busy vs queued; queues are whe
 - Google SRE Book (2016), ch. 18 "Software Engineering in SRE" (capacity planning context) and *SRE Workbook* (2018), ch. 11 "Managing Load".
 - AWS Builders' Library — "Using load shedding to avoid overload" and "Reliability, constant work" essays on headroom and overload behavior.
 - k6 and Gatling official documentation — test types and scripting models.
-- *Designing Data-Intensive Applications* (Kleppmann), ch. 1 — percentiles, SLO framing, and why tail latency governs capacity.
+- *Designing Data-Intensive Applications* (Kleppmann), 1st ed. ch. 1, or ch. 2 "Defining Nonfunctional Requirements" of the 2nd ed. (Kleppmann & Riccomini, 2026) — percentiles, SLO framing, and why tail latency governs capacity.
