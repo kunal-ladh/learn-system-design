@@ -136,7 +136,7 @@ A lookup table, not a lesson. When a word in another note is unfamiliar, find it
 | StorageClass | Names a kind of storage and its provisioner, so a claim can request storage dynamically. | [[Kubernetes Configuration and Resources]] |
 | Taint | A mark on a node that repels pods unless they tolerate it; the NoExecute effect also evicts running pods. | [[Kubernetes Architecture]] |
 | Terminating | Pod with a deletion timestamp that is shutting down; it lingers on an unreachable node until the node returns, its Node object is deleted, or it is force-deleted. | [[Graceful Shutdown and Deployment Safety]] |
-| terminationGracePeriodSeconds | How long the kubelet waits between SIGTERM and SIGKILL, with preStop time counted inside it. | [[Graceful Shutdown and Deployment Safety]] |
+| terminationGracePeriodSeconds | The pod's whole shutdown budget, counted from when deletion starts: preStop runs first, then SIGTERM, and SIGKILL when the budget runs out. | [[Graceful Shutdown and Deployment Safety]] |
 | Toleration | A pod's permission to land on, or stay on, a node carrying a matching taint; it permits but never attracts. | [[Kubernetes Architecture]] |
 | Topology spread | Constraint that spreads a workload's pods across nodes or zones within a maximum skew. | [[Kubernetes Architecture]] |
 | Version skew | The allowed version gap between components: a kubelet must never be newer than the API server and may lag it by up to three minor versions. | [[Kubernetes Architecture]] |
