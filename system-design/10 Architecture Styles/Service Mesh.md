@@ -4,7 +4,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: What a service mesh is — sidecar proxies plus a control plane giving mTLS, retries, traffic shifting, and telemetry without touching app code — and why most fleets shouldn't run one.
 related: ["[[Communication Patterns Between Services]]", "[[API Gateway]]", "[[Distributed Tracing]]"]
 ---
@@ -31,7 +31,7 @@ The mesh's move: since every service's traffic already flows through the kernel,
 
 Two parts: a **data plane** of proxies that carry traffic, and a **control plane** that programs them.
 
-- **Data plane**: an **Envoy** proxy (or Linkerd's purpose-built Rust micro-proxy) runs as a **sidecar** container in each pod. iptables rules (set up by an init container or CNI plugin) transparently redirect all inbound and outbound pod traffic through the proxy, so the application still thinks it's dialing `payments:8080` directly. The proxy terminates/originates mTLS, applies retry/timeout policy, picks endpoints (load balancing with outlier ejection), and emits metrics and spans.
+- **Data plane**: an **Envoy** proxy (or Linkerd's purpose-built Rust micro-proxy; since February 2024 the Linkerd project publishes only edge releases, with stable builds coming from vendors such as Buoyant) runs as a **sidecar** container in each pod. iptables rules (set up by an init container or CNI plugin) transparently redirect all inbound and outbound pod traffic through the proxy, so the application still thinks it's dialing `payments:8080` directly. The proxy terminates/originates mTLS, applies retry/timeout policy, picks endpoints (load balancing with outlier ejection), and emits metrics and spans.
 - **Control plane**: **Istio**'s `istiod` or **Linkerd**'s control plane watches Kubernetes (services, endpoints, and mesh CRDs like `VirtualService`/`DestinationRule`), acts as the certificate authority issuing short-lived per-service certs (identity from the pod's service account), and pushes configuration to every proxy via Envoy's xDS APIs. Policy is declared once, centrally; proxies enforce it everywhere.
 
 ```mermaid

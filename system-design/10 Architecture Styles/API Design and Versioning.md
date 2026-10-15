@@ -4,7 +4,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How to design service APIs as long-lived contracts — versioning, non-breaking change discipline, pagination, idempotency keys, error formats, and rate-limit headers.
 related: ["[[Communication Patterns Between Services]]", "[[Idempotency]]", "[[Event Schema Evolution]]"]
 ---
@@ -65,7 +65,7 @@ Default to **cursor** for anything user-facing, growing, or hot; offset is accep
 
 ### Idempotency keys on POST
 
-`GET`, `PUT`, and `DELETE` are idempotent by HTTP semantics; `POST` ("create a transfer") is not — and networks fail *after* the server commits but *before* the client hears ([[Network Partitions and Timeouts]]). A client that retries a timed-out POST may create the thing twice. The fix: the client sends an **`Idempotency-Key`** header (a UUID per logical operation); the server atomically records the key with the operation's result and, on a retried key, returns the stored result instead of re-executing. Keys get a TTL (Stripe stores 24h), and a retry with the same key but *different body* should be rejected (409/422) — same key means "the same operation", not "deduplicate whatever". This is the API-layer face of [[Idempotency]], and in fintech it is table stakes: a double-charged transfer is an incident with a regulator's name on it.
+`GET`, `PUT`, and `DELETE` are idempotent by HTTP semantics; `POST` ("create a transfer") is not — and networks fail *after* the server commits but *before* the client hears ([[Network Partitions and Timeouts]]). A client that retries a timed-out POST may create the thing twice. The fix: the client sends an **`Idempotency-Key`** header (a UUID per logical operation); the server atomically records the key with the operation's result and, on a retried key, returns the stored result instead of re-executing. Keys get a TTL (Stripe's v1 API honours a key for 24h, its v2 API for 30 days, as of 2026), and a retry with the same key but *different body* should be rejected (409/422) — same key means "the same operation", not "deduplicate whatever". This is the API-layer face of [[Idempotency]], and in fintech it is table stakes: a double-charged transfer is an incident with a regulator's name on it.
 
 The subtlety most implementations miss is the **concurrent** retry — the second request arriving while the first is still executing, which is exactly what an aggressive client timeout produces. A store that only records results after completion has nothing to match against, so both requests execute. The mechanism needs three states, not two: the key is *claimed* before the work starts, *completed* with the stored result afterwards, and a request that finds a claimed-but-incomplete key is told to retry shortly rather than being allowed through.
 

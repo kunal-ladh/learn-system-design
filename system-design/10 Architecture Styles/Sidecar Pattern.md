@@ -5,7 +5,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why cross-cutting concerns moved out of per-language libraries into a second container sharing a pod's network namespace — the mechanism under Envoy, Istio, and Kubernetes' native sidecar containers — plus the non-mesh uses and the real per-pod resource tax.
 related: ["[[Service Mesh]]", "[[Circuit Breakers]]", "[[Graceful Shutdown and Deployment Safety]]", "[[Health Checks and Service Discovery]]"]
 ---
@@ -135,7 +135,7 @@ Not every sidecar sits at the same point on that cost line: a full mTLS-terminat
 
 - At one replica per pod — the shape of much of your EKS fleet — a sidecar's resource tax is paid in full with nothing to average it against: there's no second pod sharing the cost, and (per [[Service Mesh]]) a mesh's per-endpoint tricks like outlier ejection have nowhere to apply either. Before adding *any* sidecar to a service at this shape, size it the same way you'd size the mesh question: this sidecar's memory/CPU request, times every pod that gets it, as a standing line in cluster capacity — not a rounding error, a number.
 - Kong already owns your edge concerns (authn, rate limiting, routing) at the gateway tier, and the central IAM service issuing JWTs means most inter-service auth is a header/token check, not a per-hop mTLS problem — which is exactly the gap a gateway-plus-library combination covers without a sidecar on every pod. A mesh (Envoy sidecars fleet-wide) is the heavier version of this same pattern and, per [[Service Mesh]]'s own "when not to use it," isn't justified at your current fleet size.
-- Non-mesh sidecars are the more plausible near-term use: if any batch Job or CronJob runs a helper container (a secrets-fetcher, a log-flusher) alongside the main workload, check your EKS cluster's minor version — native sidecar semantics need 1.29+ (beta, default-on) and are stable from 1.33 — before assuming `restartPolicy: Always` is available; below 1.29 the Job-never-completes failure mode above is live, not historical.
+- Non-mesh sidecars are the more plausible near-term use: if any batch Job or CronJob runs a helper container (a secrets-fetcher, a log-flusher) alongside the main workload, check your EKS cluster's minor version — native sidecar semantics need 1.29+ (beta, default-on) and are stable from 1.33 — before assuming `restartPolicy: Always` is available; below 1.29 the Job-never-completes failure mode above is live, not historical. As of October 2026 the oldest version EKS offers is 1.31 (extended support).
 - If RBI/audit scope ever requires per-hop evidence of *which workload* called which (not just which user), that requirement — and not a general resilience wish-list — is what would turn "add a sidecar here" into "consider a mesh"; scope it as that specific requirement, the same way [[Service Mesh]] frames it.
 - Before anyone proposes a per-pod log or metrics sidecar, check what already runs cluster-wide on EKS: a DaemonSet-based log forwarder or node-level metrics agent solves the same problem for every pod on a node at once, and a per-pod sidecar is only the right call on top of that if a specific service needs in-process parsing the cluster-wide agent can't do.
 

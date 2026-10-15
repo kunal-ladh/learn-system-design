@@ -4,7 +4,7 @@ tags: [system-design, architecture]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How services should talk — synchronous vs asynchronous, orchestration vs choreography, and how to do cross-service reads — with the latency and availability math of call chains.
 related: ["[[Why Async Messaging Exists]]", "[[Saga Pattern]]", "[[The Distributed Monolith Anti-Pattern]]"]
 ---
@@ -171,5 +171,5 @@ Classic follow-ups: "Service B is down — what happens to A?" (answer per patte
 - Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021) — ch. 4 "Microservice Communication Styles".
 - Chris Richardson, microservices.io — patterns: "Messaging", "Remote Procedure Invocation", "API Composition", "CQRS", "Saga".
 - Gregor Hohpe & Bobby Woolf, *Enterprise Integration Patterns* (Addison-Wesley, 2003) — request-reply over messaging, correlation identifier, command vs event message.
-- Martin Kleppmann, *Designing Data-Intensive Applications* (O'Reilly, 2017) — ch. 11 on derived data and event streams feeding materialized views.
+- Martin Kleppmann, *Designing Data-Intensive Applications* (O'Reilly, 2017; a 2nd edition with Chris Riccomini followed in March 2026) — 1st ed. ch. 11 on derived data and event streams feeding materialized views.
 - Jeff Dean & Luiz Barroso, "The Tail at Scale" (CACM, 2013) — why fan-out makes tail latency everyone's problem.
