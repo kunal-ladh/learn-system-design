@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The JWT mechanics end to end — header.payload.signature structure, HS256 vs RS256/ES256 signing, standard claims, the validation checklist in order, and why asymmetric keys plus JWKS are the right shape for microservices.
 related: ["[[Sessions vs Tokens]]", "[[JWT Pitfalls]]", "[[Designing an IAM Service]]"]
 ---
@@ -67,7 +67,7 @@ The third segment is `HMAC-SHA256(base64url(header) + "." + base64url(payload), 
 | Who can mint tokens | Every party that can verify | Only the issuer |
 | Key distribution | Secret to every verifying service | Public key published freely (JWKS) |
 | Blast radius of a verifier compromise | Attacker can forge tokens | Attacker can only verify |
-| Speed / size | Fastest by far (~1 µs), 32-byte tag | RSA-2048: slow to sign, fast to verify, 256-byte signature; ES256: fast to sign, slower to verify than RSA, 64-byte signature — both tens of µs per verify, still negligible per request |
+| Speed / size | Fastest by far (~1 µs), 32-byte tag | RSA-2048: slow to sign, fast to verify, 256-byte signature; ES256: fast to sign, slower to verify than RSA, 64-byte signature — both tens of µs per verify (OpenSSL 4.0 on a 2021 laptop CPU, measured 2026: RSA-2048 ~15 µs verify and ~0.55 ms sign, ES256 ~55 µs verify and ~18 µs sign), still negligible per request |
 
 **Why asymmetric wins for microservices**: with HS256, *verifying* and *forging* are the same capability — so thirty services verifying tokens means thirty copies of a secret that can mint arbitrary identities, and your security equals your sloppiest service. With RS256/ES256, the private key lives only inside the IAM service (ideally an HSM — [[Designing an IAM Service]]); services fetch the **public** key from a **JWKS** (JSON Web Key Set, RFC 7517) endpoint like `https://iam.example.com/.well-known/jwks.json`. The token's header carries a `kid` (key ID) naming which published key signed it, which is also what makes zero-downtime key rotation possible. A leaked verifier compromises nothing but the ability to check signatures. HS256 remains fine when issuer and verifier are the *same* deployment or two tightly coupled services — provided the secret is long and random (a human-memorable string is brute-forceable offline; see [[JWT Pitfalls]]).
 
@@ -102,7 +102,7 @@ A mature library (jjwt or Spring Security's resource-server support in your worl
 
 ### Clock skew leeway
 
-`exp` compares the token's timestamp with the *verifier's* clock, and fleet clocks drift. A token minted to expire at 12:00:00 may be rejected at 11:59:58 by a fast verifier or accepted at 12:00:02 by a slow one. Standard practice is a small fixed **leeway** (30–60 seconds; Spring Security defaults to 60) applied when checking `exp`/`nbf`. Keep it small relative to token lifetime — a 5-minute leeway on a 15-minute token quietly extends every token by a third — and run NTP so the leeway covers drift, not broken clocks.
+`exp` compares the token's timestamp with the *verifier's* clock, and fleet clocks drift. A token minted to expire at 12:00:00 may be rejected at 11:59:58 by a fast verifier or accepted at 12:00:02 by a slow one. Standard practice is a small fixed **leeway** (30–60 seconds; Spring Security's resource server defaults to 60, as of 2026) applied when checking `exp`/`nbf`. Keep it small relative to token lifetime — a 5-minute leeway on a 15-minute token quietly extends every token by a third — and run NTP so the leeway covers drift, not broken clocks.
 
 ### Issue → use → verify
 
@@ -158,7 +158,7 @@ Token size is a genuine cost: a JWT with many claims rides in a header on *every
 
 - Your IAM issues JWTs that Kong and each Spring Boot service verify independently — the exact issue→use→verify picture above. Find your fleet's `alg` and whether verification keys come from a JWKS URL or a baked-in secret; that answer determines your key-compromise blast radius.
 - `sub` in your tokens is the oneAppUserId — a system identifier your logging convention explicitly keeps in operational logs (it isn't PII), which is what lets you trace a user's request chain next to `x-correlation-id` ([[Distributed Tracing]]).
-- Spring Security's `spring-boot-starter-oauth2-resource-server` with `jwk-set-uri` is the idiomatic Java verifier: it fetches and caches JWKS, honors `kid`, and runs checklist steps 1–7 against configured `iss`/`aud`.
+- Spring Security's resource-server starter (`spring-boot-starter-security-oauth2-resource-server` since Spring Boot 4.0, which deprecated the old `spring-boot-starter-oauth2-resource-server` name) with `jwk-set-uri` is the idiomatic Java verifier: it fetches and caches JWKS, honors `kid`, and runs checklist steps 1–7 against configured `iss`/`aud`.
 - Kong validating at the edge ([[API Gateway]]) plus services re-verifying internally is defense in depth — the gateway rejects garbage early; services don't blindly trust anything that made it past the gate. The trade-off discussion lives in [[Designing an IAM Service]].
 
 ## Interview angle
@@ -185,6 +185,6 @@ Token size is a genuine cost: a JWT with many claims rides in a header on *every
 
 - RFC 7519 — *JSON Web Token (JWT)*: structure and registered claims.
 - RFC 7515 (JWS) and RFC 7517 (JWK/JWKS) — signature mechanics and key-set publication.
-- RFC 8725 — *JWT Best Current Practices*: the official validation and algorithm guidance.
+- RFC 8725 — *JWT Best Current Practices*: the official validation and algorithm guidance. Its successor, draft-ietf-oauth-rfc8725bis, was approved and sits in the RFC Editor queue as of October 2026; once published it obsoletes RFC 8725.
 - jwt.io (Auth0) — interactive decoder for building structure intuition.
 - OWASP JSON Web Token Cheat Sheet for Java — validation guidance in the reader's language.

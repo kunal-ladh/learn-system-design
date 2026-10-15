@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The two main authorization models — role-based (simple, auditable, prone to role explosion) and attribute/policy-based (flexible, harder to audit) — plus where permission checks should happen (token vs lookup) and maker-checker as fintech authorization.
 related: ["[[Designing an IAM Service]]", "[[JWT Pitfalls]]", "[[How JWT Works]]"]
 ---
@@ -170,7 +170,7 @@ Two fixes, and you want both. Alert on dead-letter depth and consumer lag for th
 
 ## Sources
 
-- NIST RBAC model (Sandhu, Ferraiolo and Kuhn, 2000; standardised as INCITS 359-2004) — the formal role model.
+- NIST RBAC model (Sandhu, Ferraiolo and Kuhn, 2000; standardised as INCITS 359-2004, revised as INCITS 359-2012) — the formal role model.
 - NIST SP 800-162 — *Guide to Attribute Based Access Control (ABAC) Definition and Considerations*.
 - Google, "Zanzibar: Google's Consistent, Global Authorization System" (USENIX ATC 2019) — the ReBAC reference.
 - Open Policy Agent documentation (openpolicyagent.org) — Rego, PDP/PEP architecture, testing.

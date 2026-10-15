@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: OAuth 2.0 as delegated authorization (the four roles, authorization code + PKCE as the one flow to know, client credentials for machines) and OIDC as the identity layer on top — id_token, userinfo, discovery — plus scopes vs claims.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[Single Sign-On]]"]
 ---
@@ -43,7 +43,7 @@ In your company's setup the IAM service is the authorization server and every Sp
 
 One flow matters for anything involving a human: **authorization code with PKCE**. Everything else for users is historical or niche. The design constraint it solves: tokens must reach the client *without* transiting the browser's URL bar, history, or referrer headers, and the redirect back to the app must be bindable to the party that started the flow.
 
-**PKCE** (Proof Key for Code Exchange, RFC 7636, "pixy") exists because the authorization *code* travels through the browser redirect and can be intercepted (malicious apps registering the same redirect URI on mobile, leaky logs). The client invents a one-time secret per flow — a random `code_verifier` — and sends only its SHA-256 hash (`code_challenge`) when starting. To redeem the code it must present the original verifier; an attacker who stole the code can't, because the hash doesn't reverse. Originally designed for mobile apps that can't hold a static secret, PKCE is now recommended for *all* clients (RFC 9700) and **required** in the OAuth 2.1 draft.
+**PKCE** (Proof Key for Code Exchange, RFC 7636, "pixy") exists because the authorization *code* travels through the browser redirect and can be intercepted (malicious apps registering the same redirect URI on mobile, leaky logs). The client invents a one-time secret per flow — a random `code_verifier` — and sends only its SHA-256 hash (`code_challenge`) when starting. To redeem the code it must present the original verifier; an attacker who stole the code can't, because the hash doesn't reverse. Originally designed for mobile apps that can't hold a static secret, PKCE is now recommended for *all* clients (RFC 9700) and **required** in the OAuth 2.1 draft (still an Internet-Draft as of October 2026, not yet an RFC).
 
 ```mermaid
 sequenceDiagram
@@ -117,7 +117,7 @@ Rule of thumb: **access token = what you may do** (resource servers read it); **
 
 - **First-party, single-app, server-rendered product with no third parties and no SSO ambitions** — a session cookie is less machinery ([[Sessions vs Tokens]]). Adopt OAuth when the *delegation or federation* problem actually appears.
 - **Internal service-to-service where a mesh already provides mTLS identity** ([[Service Mesh]]) — adding client-credentials tokens on top may duplicate what SPIFFE-style certs give you; pick one primary machine-identity mechanism.
-- **Don't use implicit or password grants ever** — not "not recommended"; removed in OAuth 2.1.
+- **Don't use implicit or password grants ever** — not "not recommended"; removed in the OAuth 2.1 draft and deprecated by RFC 9700.
 
 ## In your stack
 
@@ -141,7 +141,7 @@ Rule of thumb: **access token = what you may do** (resource servers read it); **
 > OAuth issues access tokens proving *authorization to call APIs*, not identity assertions. "Login with OAuth" means inferring identity from token possession — which breaks under token substitution: an app that accepts any valid access token as login proof can be fed a token the attacker legitimately obtained for their *own* malicious app, asserting the victim's resources. OIDC's id_token fixes it: signed, audience-bound to *this client*, nonce-bound to *this session* — an actual authentication statement. The imprecision bites exactly when someone builds login from raw OAuth and skips those bindings.
 
 > [!question]- Q: What happens if a mobile OS lets a malicious app register the same custom-URL redirect scheme as your banking app — with and without PKCE?
-> Without PKCE: the malicious app can receive the redirect carrying the authorization code and (for a public client with no secret) redeem it at the token endpoint — full account access. With PKCE: it receives the code but not the `code_verifier`, which exists only in the legitimate app's memory; the token endpoint hashes the presented verifier against the stored challenge and refuses. This interception scenario is precisely why PKCE was created for mobile and is now mandatory for public clients in OAuth 2.1.
+> Without PKCE: the malicious app can receive the redirect carrying the authorization code and (for a public client with no secret) redeem it at the token endpoint — full account access. With PKCE: it receives the code but not the `code_verifier`, which exists only in the legitimate app's memory; the token endpoint hashes the presented verifier against the stored challenge and refuses. This interception scenario is precisely why PKCE was created for mobile and is now mandatory for public clients under RFC 9700 and the OAuth 2.1 draft.
 
 > [!question]- Q: Mini design prompt — your fleet needs service A to call service B with provable identity and least privilege. Sketch it with OAuth machinery.
 > Client credentials: A holds its own credential (prefer private-key JWT or mTLS over a static secret) and requests a token from the IAM with `aud` = B and a minimal scope like `b:ledger:read`. B validates signature, `iss`, `aud`, scope — locally, via JWKS ([[How JWT Works]]). Tokens live minutes and are cached by A until near expiry; no refresh tokens. Rotation of A's credential goes through the secrets manager ([[API Security Essentials]]). Now B's logs show *which service* called with *which authority* — and revoking A is one IAM-side change, not a redeploy of B.
@@ -150,6 +150,6 @@ Rule of thumb: **access token = what you may do** (resource servers read it); **
 
 - RFC 6749 — *The OAuth 2.0 Authorization Framework*; RFC 6750 — bearer token usage.
 - RFC 7636 — *PKCE*; RFC 8628 — device authorization grant.
-- RFC 9700 — *Best Current Practice for OAuth 2.0 Security*; OAuth 2.1 draft (draft-ietf-oauth-v2-1) — the consolidated modern ruleset.
+- RFC 9700 — *Best Current Practice for OAuth 2.0 Security* (January 2025, BCP 240); OAuth 2.1 draft (draft-ietf-oauth-v2-1, revision -16 of September 2026, IESG submission targeted for December 2026) — the consolidated modern ruleset.
 - OpenID Connect Core 1.0 (openid.net) — id_token, userinfo; OpenID Connect Discovery 1.0 — `/.well-known/openid-configuration`.
 - oauth.net and Aaron Parecki's *OAuth 2.0 Simplified* — the most readable flow-by-flow walkthroughs.

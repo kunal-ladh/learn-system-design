@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The defense layers around an API beyond user login — TLS and mTLS, HMAC request signing and when it beats bearer tokens, replay protection, audience-scoped short tokens, secret management, rate limiting as a security control, and webhook verification.
 related: ["[[TLS and HTTPS]]", "[[How JWT Works]]", "[[Designing an IAM Service]]"]
 ---
@@ -43,7 +43,7 @@ A bearer token is detachable: whoever holds it can attach it to *any request* �
 
 TLS stops an active man-in-the-middle, but a *legitimate request captured elsewhere* (logs, a compromised partner system) can be re-sent verbatim — a valid signature and all. Replaying "transfer ₹10,000" is a real money attack. Two standard mechanisms, usually combined:
 
-- **Timestamp window**: the signed request includes its creation time; the server rejects anything outside a window of N minutes. S3, for example, rejects a signed request whose timestamp is more than 15 minutes from its own clock, with `RequestTimeTooSkewed` — the tolerance is per-service, not one AWS-wide constant. Bounds replay to the window; requires sane clocks (same leeway logic as [[How JWT Works]]).
+- **Timestamp window**: the signed request includes its creation time; the server rejects anything outside a window of N minutes. S3, for example, rejects a signed request whose timestamp is more than 15 minutes from its own clock (as of 2026), with `RequestTimeTooSkewed` — the tolerance is per-service, not one AWS-wide constant. Bounds replay to the window; requires sane clocks (same leeway logic as [[How JWT Works]]).
 - **Nonce**: a unique random value per request, signed, and remembered by the server (Redis set with TTL = the timestamp window) — a seen nonce is a replay, rejected. The nonce store only needs to span the window, so it stays small.
 
 Note the sibling concept: [[Idempotency]] keys make *retries safe* (same operation, once); replay protection makes *re-sends rejected* (attacker's copy, never). Payment APIs typically need both — idempotency for the client's own retries, replay rejection for everyone else.
@@ -187,6 +187,6 @@ The generalisable rule is worth more than the fix: **a security check placed ins
 
 - AWS documentation: *Signature Version 4 signing process* — the reference HMAC request-signing design.
 - RFC 2104 (HMAC); RFC 8705 (OAuth 2.0 mTLS client authentication and certificate-bound tokens).
-- OWASP API Security Top 10 (2023) and OWASP Secrets Management Cheat Sheet.
+- OWASP API Security Top 10 (2023 — still the current edition as of October 2026) and OWASP Secrets Management Cheat Sheet.
 - Stripe documentation: *Checking webhook signatures* — the canonical webhook-verification pattern.
 - SPIFFE/SPIRE documentation — workload identity and mTLS at fleet scale.

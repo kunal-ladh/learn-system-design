@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why auth systems issue two tokens — a short-lived access token and a long-lived refresh token — and how rotation with reuse detection turns a stolen refresh token into a tripwire instead of a skeleton key.
 related: ["[[How JWT Works]]", "[[JWT Pitfalls]]", "[[OAuth 2 and OpenID Connect]]"]
 ---
@@ -67,7 +67,7 @@ A static refresh token that lives for 90 days is a 90-day skeleton key: stolen o
 2. All of a session's tokens form a **family** (lineage) tracked server-side.
 3. If a token that was *already used* is ever presented again — RT1 arrives after RT2 was issued — someone has a copy. Legitimate clients never replay an old token, so this is near-proof of theft. The IAM **revokes the entire family**, killing both attacker and victim sessions, and forces re-authentication.
 
-This is the **stolen-refresh-token tripwire**: the attacker can still race one refresh ahead of the victim, but the moment the *other* party (victim or attacker) presents the now-stale token, the family burns. Theft converts from indefinite silent access into a bounded window ending at the next legitimate refresh — plus an alertable security event. OAuth 2.0 Security Best Current Practice (RFC 9700) recommends exactly this (rotation with revocation on reuse) for public clients, and the OAuth 2.1 draft requires refresh tokens for public clients to be either sender-constrained or one-time-use.
+This is the **stolen-refresh-token tripwire**: the attacker can still race one refresh ahead of the victim, but the moment the *other* party (victim or attacker) presents the now-stale token, the family burns. Theft converts from indefinite silent access into a bounded window ending at the next legitimate refresh — plus an alertable security event. OAuth 2.0 Security Best Current Practice (RFC 9700) recommends exactly this (rotation with revocation on reuse) for public clients, and the OAuth 2.1 draft (still not an RFC as of October 2026) requires refresh tokens for public clients to be either sender-constrained or one-time-use.
 
 One operational wrinkle: flaky networks cause *innocent* reuse — the client sends RT1, the response with RT2 is lost, the client retries RT1. Production IAMs allow a short grace period (reusing the immediately-previous token within ~a minute returns the same RT2) to avoid logging users out on packet loss, at a small cost in tripwire sharpness.
 
@@ -176,6 +176,6 @@ The fix is jitter, and it is cheap. Randomise each access token's lifetime by ±
 
 - RFC 6749 §1.5, §6 — *OAuth 2.0*: refresh token definition and the refresh grant.
 - RFC 9700 — *Best Current Practice for OAuth 2.0 Security*: rotation, reuse detection, sender-constraining.
-- OAuth 2.1 draft (draft-ietf-oauth-v2-1) — refresh-token requirements for public clients.
+- OAuth 2.1 draft (draft-ietf-oauth-v2-1, revision -16, September 2026) — refresh-token requirements for public clients.
 - Auth0 engineering blog, "Refresh token rotation" — the family/tripwire model with grace-period practicalities.
 - OWASP Session Management Cheat Sheet — absolute vs idle timeouts.

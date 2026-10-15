@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Retrieval-augmented generation as a system design problem — the async ingestion pipeline, the query path, freshness via CDC, evaluation, and the failure modes that actually bite in production.
 related: ["[[Vector Databases and Similarity Search]]", "[[LLM Serving Infrastructure]]", "[[Change Data Capture]]", "[[Why Async Messaging Exists]]"]
 ---
@@ -76,7 +76,7 @@ sequenceDiagram
 
 **Hybrid search**, one line: run keyword search (BM25) *and* vector search in parallel, then merge with **reciprocal rank fusion** — score each document as the sum of `1 / (k + rank)` over every list it appears in, where the constant `k` (60 in the original paper) is the actual trick: it damps the pull of any one list's top hit, and because the formula consumes only *ranks*, you never have to reconcile a BM25 score with a cosine distance — lexical search catches exact identifiers and rare terms that embeddings blur, vector search catches paraphrases; together they beat either alone.
 
-Two numbers dominate the read path's latency budget: retrieval (tens of milliseconds) and the LLM call (seconds). That asymmetry is why adding a rerank stage — tens of milliseconds for a small local cross-encoder, a couple of hundred for a hosted rerank API, in exchange for noticeably better context — is usually worth it against an LLM call measured in seconds, and why optimizing the vector query below ~50 ms is effort spent on the wrong term of the sum.
+Two numbers dominate the read path's latency budget (rough orders of magnitude, not benchmarks): retrieval (tens of milliseconds) and the LLM call (seconds). That asymmetry is why adding a rerank stage — tens of milliseconds for a small local cross-encoder, a couple of hundred for a hosted rerank API, in exchange for noticeably better context — is usually worth it against an LLM call measured in seconds, and why optimizing the vector query below ~50 ms is effort spent on the wrong term of the sum.
 
 ### Freshness
 

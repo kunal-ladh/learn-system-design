@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The known ways JWT deployments get broken or painful — alg=none and algorithm confusion, weak secrets, missing aud/iss checks, long-lived tokens, mutable data in immutable tokens, the logout problem, and header bloat — with the standard mitigations.
 related: ["[[How JWT Works]]", "[[Refresh Tokens and Token Rotation]]", "[[Sessions vs Tokens]]"]
 ---
@@ -51,7 +51,7 @@ Note what the attacker never needed: a private key, a leaked secret, or any acce
 
 ### 3. Weak HS256 secrets
 
-HMAC verification is fast, which means *offline brute force is fast*: an attacker with any one valid token can try secrets at GPU speed (hundreds of millions of HMAC-SHA256 guesses per second) with zero requests to your servers, and a hit mints unlimited tokens for any user. Human-chosen secrets — `secret`, the company name, anything in a wordlist — fall in seconds.
+HMAC verification is fast, which means *offline brute force is fast*: an attacker with any one valid token can try secrets at GPU speed (roughly 1–4 billion HMAC-SHA256 guesses per second on a single RTX 4090 in hashcat mode 16500, per figures posted on hashcat's forum in 2023) with zero requests to your servers, and a hit mints unlimited tokens for any user. Human-chosen secrets — `secret`, the company name, anything in a wordlist — fall in seconds.
 
 An HS256 secret must be ≥256 bits of CSPRNG output, stored in a secrets manager, rotated like a signing key. Better: this pitfall is one more reason asymmetric signing wins for anything multi-service ([[How JWT Works]]).
 
@@ -62,7 +62,7 @@ Signature validity proves *the issuer minted it* — not that it was minted *for
 - **Cross-service**: a token legitimately issued for the low-stakes notifications API is presented to the payments API. Both verify against the same IAM keys; without an `aud` check, payments accepts it.
 - **Cross-issuer**: a service trusting multiple issuers (common after mergers or with third-party IdPs) accepts a token from staging IAM in production because nobody compared `iss`.
 
-Every verifier must check `iss` equals its expected issuer and `aud` contains its own identifier. Libraries only enforce these if configured — an unset expected-audience usually means the check silently doesn't run. In Spring Security the default validates `exp` and (if set) `iss`, not `aud`; audience needs explicit configuration — the `spring.security.oauth2.resourceserver.jwt.audiences` property in current Spring Boot, or an audience validator added via `JwtValidators`.
+Every verifier must check `iss` equals its expected issuer and `aud` contains its own identifier. Libraries only enforce these if configured — an unset expected-audience usually means the check silently doesn't run. In Spring Security the default validates `exp` and (if set) `iss`, not `aud`; audience needs explicit configuration — the `spring.security.oauth2.resourceserver.jwt.audiences` property in Spring Boot (as of 2026), or an audience validator added via `JwtValidators`.
 
 ### 5. Long-lived access tokens
 
@@ -89,7 +89,7 @@ Production systems converge on **short expiry + refresh as the baseline**, addin
 
 ### 8. Token size bloat
 
-A JWT rides in the `Authorization` header of **every request**. Teams add claims (roles, permissions arrays, feature flags, profile fields) until tokens hit several KB. Costs: bandwidth multiplied by your busiest endpoints; header-size limits in proxies and servers (nginx's default `large_client_header_buffers 4 8k` means 8 KB per *header line*, not 8 KB of headers in total; Node's `--max-http-header-size` defaults to 16 KB for the whole header block; CDNs and ALBs impose their own ceilings) producing errors that never name the token — nginx answers `400`, servers implementing RFC 6585 answer `431`; and every extra claim is more frozen state (pitfall 6). A healthy access token is a few hundred bytes — identity, audience, expiry, scopes. If someone proposes embedding a permissions matrix, the answer is a lookup, not a bigger token.
+A JWT rides in the `Authorization` header of **every request**. Teams add claims (roles, permissions arrays, feature flags, profile fields) until tokens hit several KB. Costs: bandwidth multiplied by your busiest endpoints; header-size limits in proxies and servers (defaults as of 2026: nginx's `large_client_header_buffers 4 8k` means 8 KB per *header line*, not 8 KB of headers in total; Node's `--max-http-header-size` defaults to 16 KB for the whole header block; CDNs and ALBs impose their own ceilings) producing errors that never name the token — nginx answers `400`, servers implementing RFC 6585 answer `431`; and every extra claim is more frozen state (pitfall 6). A healthy access token is a few hundred bytes — identity, audience, expiry, scopes. If someone proposes embedding a permissions matrix, the answer is a lookup, not a bigger token.
 
 ### 9. Trusting the token's own key locators — `kid`, `jku`, `x5u`
 
@@ -169,7 +169,7 @@ A compact review list for any JWT deployment — each line traces to a pitfall a
 
 ## Sources
 
-- RFC 8725 — *JSON Web Token Best Current Practices*: the official catalog of these attacks and mitigations.
+- RFC 8725 — *JSON Web Token Best Current Practices*: the official catalog of these attacks and mitigations. Its successor, draft-ietf-oauth-rfc8725bis, is in the RFC Editor queue as of October 2026 and will obsolete it.
 - Tim McLean, "Critical vulnerabilities in JSON Web Token libraries" (Auth0 blog, 2015) — the original alg=none / key-confusion disclosure.
 - OWASP JSON Web Token Cheat Sheet — practical validation and storage guidance.
 - RFC 7009 — *OAuth 2.0 Token Revocation*: the standardized revocation endpoint shape.

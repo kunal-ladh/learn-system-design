@@ -4,7 +4,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How SSO actually works — IdP vs SP, SAML vs OIDC, the two-session model that explains both the magic and the logout mess — plus workforce vs customer identity and where Okta, Entra, Auth0, and Cognito fit.
 related: ["[[OAuth 2 and OpenID Connect]]", "[[Designing an IAM Service]]", "[[Sessions vs Tokens]]"]
 ---
@@ -149,4 +149,4 @@ The market splits on who the users are, and the products barely overlap:
 - OpenID Connect Core 1.0, plus the Front-Channel and Back-Channel Logout specs (openid.net) — the OIDC SSO and SLO mechanics.
 - RFC 7522 — SAML 2.0 profile for OAuth 2.0 client authentication and authorization grants (where the two worlds meet).
 - Okta and Auth0 developer documentation — the clearest practitioner explanations of IdP/SP flows and logout limitations.
-- NIST SP 800-63C — *Digital Identity Guidelines: Federation and Assertions*.
+- NIST SP 800-63C-4 (July 2025, superseding the 2017 revision) — *Digital Identity Guidelines: Federation and Assertions*.

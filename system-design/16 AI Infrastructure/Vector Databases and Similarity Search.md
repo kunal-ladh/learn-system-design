@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why nearest-neighbor search over embeddings needs special indexes (HNSW, IVF), how the recall-vs-latency knob works, and when pgvector-in-your-existing-DB beats a dedicated vector engine.
 related: ["[[RAG Architecture]]", "[[LLM Serving Infrastructure]]", "[[Database Indexes]]", "[[Choosing a Database]]"]
 ---
@@ -123,7 +123,7 @@ The honest market take, as of ~2026:
 - Interviewers probe whether you know **why kNN needs a special index** (no total ordering in high dimensions — B-trees don't apply) and whether you say the word **recall** unprompted. "ANN trades recall for latency, tunable per query" is the sentence that signals understanding.
 - **60-second version**: "Embeddings turn content into points where distance means semantic similarity. Exact nearest-neighbor is a full scan, so at scale we use approximate indexes: HNSW navigates a layered neighbor graph — the default, great recall, RAM-hungry; IVF clusters the space and scans only nearby clusters — far faster to build, and pairs with quantization to reach billion scale. Both expose a recall-vs-latency knob. Metadata filtering is the awkward part — pre-filter degrades the index, post-filter starves selective queries. At modest scale I'd use pgvector or an existing-DB extension; dedicated engines earn their complexity at tens of millions of vectors or heavy filtered multi-tenant load. The hidden trap is embedding versioning: a model upgrade means re-embedding the entire corpus."
 - Classic follow-ups: "Why not a B-tree?" (one-dimensional ordering); "What happens when you change embedding models?" (full reindex — have a migration plan); "How do you filter by tenant?" (pre vs post, filter-aware indexes); "How do you *measure* retrieval quality?" (recall@k against a golden set).
-- A sizing follow-up worth pre-computing: "How much RAM for N vectors?" — `N × dims × 4 bytes` for float32 vectors, plus roughly `2 × M × 4 bytes` per vector of neighbour ids at the base graph layer (~128 B at the common default M = 16, which is noise next to a 1536-dim vector but ~8% on top of a 384-dim one); doing the arithmetic aloud (the [[Back of the Envelope Estimation]] habit) is the strongest signal you've operated one rather than read about one.
+- A sizing follow-up worth pre-computing: "How much RAM for N vectors?" — `N × dims × 4 bytes` for float32 vectors, plus roughly `2 × M × 4 bytes` per vector of neighbour ids at the base graph layer (~128 B at pgvector's default M = 16 as of 2026, which is noise next to a 1536-dim vector but ~8% on top of a 384-dim one); doing the arithmetic aloud (the [[Back of the Envelope Estimation]] habit) is the strongest signal you've operated one rather than read about one.
 
 ## Check yourself
 
@@ -144,7 +144,7 @@ The honest market take, as of ~2026:
 - Malkov & Yashunin, "Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs" (the HNSW paper — arXiv:1603.09320, 2016; published in IEEE TPAMI vol. 42 no. 4, April 2020. The DOI carries a misleading `2018`, which is its early-access date, not the publication year).
 - FAISS documentation (Meta AI) — IVF, product quantization, and the practical index-selection guidelines.
 - Subramanya et al., "DiskANN: Fast Accurate Billion-point Nearest Neighbor Search on a Single Node" (NeurIPS 2019) — the disk-resident ANN approach.
-- pgvector project documentation — HNSW and IVFFlat index options inside Postgres. Read the CHANGELOG, not just the README: filtered-query behaviour changed materially at 0.8.0 (2024).
+- pgvector project documentation — HNSW and IVFFlat index options inside Postgres. Read the CHANGELOG, not just the README: filtered-query behaviour changed materially at 0.8.0 (October 2024); the current release is 0.8.7 (October 2026), and HNSW indexes the `vector` type only up to 2,000 dimensions (`halfvec` to 4,000).
 - Pinecone learning center — accessible HNSW and ANN explainers (vendor, but technically solid).
 - Qdrant and Milvus official documentation — filterable HNSW and segment-based architecture; useful for seeing how dedicated engines attack the pre-filter problem.
 - *Designing Data-Intensive Applications*, Kleppmann — ch. 3 (indexing fundamentals this note contrasts against) and ch. 12 (derived data — the right mental bucket for a vector index).

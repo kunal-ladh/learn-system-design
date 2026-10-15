@@ -4,7 +4,7 @@ tags: [system-design, ai-infra]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why serving LLMs breaks normal web-service intuition — KV cache memory pressure, continuous batching, token streaming over SSE, TTFT vs throughput metrics, token-based rate limits, and GPU autoscaling pain.
 related: ["[[RAG Architecture]]", "[[Vector Databases and Similarity Search]]", "[[WebSockets Server-Sent Events and Long Polling]]", "[[Rate Limiting]]", "[[Autoscaling]]"]
 ---
@@ -15,7 +15,7 @@ Serving an LLM looks like serving any API — request in, response out — until
 
 ## The problem that created it
 
-An LLM generates text **autoregressively**: it produces one **token** (roughly a word fragment, ~4 characters of English) at a time, and each token requires a full forward pass through the model using everything generated so far. A 500-token answer is 500 sequential model passes. There is no "compute the whole response at once" — the output is inherently a loop, so a single request occupies the server for seconds to minutes, not milliseconds. Your p99-latency intuition from [[Latency Numbers Every Engineer Should Know]] needs a new row: "LLM generates one token: ~10–50 ms; a full answer: seconds."
+An LLM generates text **autoregressively**: it produces one **token** (roughly a word fragment, ~4 characters of English) at a time, and each token requires a full forward pass through the model using everything generated so far. A 500-token answer is 500 sequential model passes. There is no "compute the whole response at once" — the output is inherently a loop, so a single request occupies the server for seconds to minutes, not milliseconds. Your p99-latency intuition from [[Latency Numbers Every Engineer Should Know]] needs a new row: "LLM generates one token: very roughly ~10–50 ms on GPU serving of a large model (an unbenchmarked order of magnitude that varies widely with model size, load and hardware); a full answer: seconds."
 
 The second break is the bottleneck. Web services bottleneck on CPU, connections, or downstream I/O. LLM serving bottlenecks on **GPU memory**: the model weights alone consume tens of GB of scarce, expensive VRAM, and — the part people miss — *each in-flight request consumes additional GPU memory that grows with its length* (the KV cache, below). Concurrency is capped not by threads or sockets but by how many requests' working state fits in VRAM alongside the weights. GPUs are also brutally expensive, so utilization isn't a nice-to-have; it's the difference between a viable cost per request and an absurd one.
 
@@ -64,7 +64,7 @@ Two refinements worth one line each:
 
 ### Streaming tokens to clients
 
-Since tokens are produced one at a time over seconds, holding the response until completion both wastes the incremental output and makes the app feel broken. Production systems stream. Among the options in [[WebSockets Server-Sent Events and Long Polling]], **SSE (Server-Sent Events) is the standard choice** — the flow is strictly server→client, SSE is plain HTTP (passes proxies, gateways, and LBs without protocol upgrades), and every major LLM API ships SSE streaming. WebSockets buy bidirectionality nobody needs here at the cost of connection-management complexity. One operational note: seconds-long open connections mean your gateway/LB idle-timeout settings and per-node connection limits suddenly matter — and the defaults are hostile, since both an ALB's idle timeout and Kong's upstream `read_timeout` ship at 60 seconds. Raise them above your worst-case generation time or streams die mid-answer.
+Since tokens are produced one at a time over seconds, holding the response until completion both wastes the incremental output and makes the app feel broken. Production systems stream. Among the options in [[WebSockets Server-Sent Events and Long Polling]], **SSE (Server-Sent Events) is the standard choice** — the flow is strictly server→client, SSE is plain HTTP (passes proxies, gateways, and LBs without protocol upgrades), and every major LLM API ships SSE streaming. WebSockets buy bidirectionality nobody needs here at the cost of connection-management complexity. One operational note: seconds-long open connections mean your gateway/LB idle-timeout settings and per-node connection limits suddenly matter — and the defaults are hostile, since both an ALB's idle timeout and Kong's upstream `read_timeout` ship at 60 seconds (defaults as of 2026). Raise them above your worst-case generation time or streams die mid-answer.
 
 ### The metrics that matter
 

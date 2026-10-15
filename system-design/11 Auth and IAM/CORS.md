@@ -5,7 +5,7 @@ tags: [system-design, auth]
 type: note
 status: evergreen
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Why browsers block cross-origin reads by default, how CORS lets a server opt specific origins back in, the preflight/credentials/Vary mechanics that trip people up, and why none of this is a server-side security control.
 related: ["[[API Security Essentials]]", "[[Sessions vs Tokens]]", "[[How JWT Works]]", "[[API Gateway]]", "[[CDN]]", "[[API Design and Versioning]]"]
 ---
@@ -65,7 +65,7 @@ Preflight response carries:
 - `Access-Control-Allow-Methods` — methods the server accepts from that origin.
 - `Access-Control-Allow-Headers` — headers the server accepts; must list every non-safelisted header the real request will send. A wildcard `*` here is a convenience, not a universal one: per the Fetch standard it does **not** cover `Authorization`, which must be named explicitly — a sharp edge for any Bearer-token API.
 - `Access-Control-Allow-Credentials` — `true` if a *credentialed* cross-origin exchange is permitted at all. It is not what makes the browser attach credentials: the calling script does that, with `credentials: "include"`. This header is the server's consent — without it a credentialed preflight fails and a credentialed response is never exposed to the script. "Credentials" is a precise term in the Fetch standard: **cookies, TLS client certificates, and HTTP authentication entries** — the things the browser attaches on its own. An `Authorization: Bearer` header that JavaScript sets explicitly is **not** a credential in this sense; it is an ordinary non-safelisted header, governed by `Access-Control-Allow-Headers`, and it works perfectly well against `Access-Control-Allow-Origin: *`. Conflating the two is the single most common misreading of this header.
-- `Access-Control-Max-Age` — seconds the browser may cache this answer before preflighting again. The Fetch standard's default when the header is absent is 5 seconds; browsers additionally cap whatever the server asks for — Chromium at 7200s / 2 hours since v76 (2019), Firefox at 86400s / 24 hours — so a server asking for more gets silently truncated, not denied.
+- `Access-Control-Max-Age` — seconds the browser may cache this answer before preflighting again. The Fetch standard's default when the header is absent is 5 seconds; browsers additionally cap whatever the server asks for — Chromium at 7200s / 2 hours since v76 (2019), Firefox at 86400s / 24 hours (both unchanged as of 2026) — so a server asking for more gets silently truncated, not denied.
 
 If the preflight is answered favourably, the browser sends the real request, and the *actual response* must itself carry `Access-Control-Allow-Origin` (and `-Credentials` if relevant) — the preflight's approval doesn't retroactively apply to a response that forgot its own headers. One more default worth knowing: JavaScript can only read seven safelisted response headers — `Cache-Control`, `Content-Language`, `Content-Length`, `Content-Type`, `Expires`, `Last-Modified`, `Pragma` — unless the server lists additional ones in `Access-Control-Expose-Headers` — a custom header like `x-correlation-id` is invisible to `fetch(...).headers.get(...)` without it. A header added later as part of an otherwise routine API change — a deprecation notice, a new pagination cursor — needs `Access-Control-Expose-Headers` updated in lockstep, the same additive-change discipline any other contract evolution requires ([[API Design and Versioning]]).
 
