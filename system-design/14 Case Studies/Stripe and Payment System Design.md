@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How Stripe engineers correctness at money-scale — idempotency keys as an API contract, double-entry ledgers, exactly-once effects from at-least-once delivery, surgical load shedding, and date-pinned API versioning.
 related: ["[[Idempotency]]", "[[Design a Payment System]]", "[[Exactly-Once Delivery Is a Lie]]", "[[Rate Limiting]]"]
 ---
@@ -15,7 +15,7 @@ Every other case study in this module optimizes for throughput or latency; Strip
 
 ## The scale of the problem
 
-- Stripe disclosed processing **over $1 trillion in total payment volume in 2023** (annual letter, published 2024 — era-label it). Internal request rates, datastore sizes, and fleet shapes are largely **not public**; this case study is about *published mechanisms*, not leaked numbers.
+- Stripe disclosed processing **$1 trillion in total payment volume in 2023** (annual letter, published 2024) and **$1.9 trillion in 2025** (annual letter, February 2026) — era-label both. Internal request rates, datastore sizes, and fleet shapes are largely **not public**; this case study is about *published mechanisms*, not leaked numbers.
 - The hard part is not raw QPS — payments traffic is modest next to Twitter reads. It is that the workload combines:
   1. **Unreliable clients and networks.** Merchants' servers time out and retry; mobile networks drop responses after the charge succeeded. Every ambiguous outcome is a potential double charge ([[Network Partitions and Timeouts]]).
   2. **No tolerance for partial failure.** A charge touches card networks, balances, fees, payouts, invoices, webhooks — these must end mutually consistent, always.
@@ -26,7 +26,7 @@ Every other case study in this module optimizes for throughput or latency; Strip
 
 ### Idempotency keys — retry safety as a public contract
 
-Stripe's API accepts an **`Idempotency-Key` header** on mutating requests: a client-generated unique string (a UUID) per *logical* operation. The server stores the key with the **result of the first execution** (status code and response body) and, on any retry with the same key, **replays the stored response instead of re-executing**. Keys are retained for a bounded window (Stripe documents pruning after 24 hours). The client contract: generate a fresh key per logical operation; on timeout or 5xx, **retry with the same key** (with exponential backoff and jitter — [[Timeouts Retries and Exponential Backoff]]).
+Stripe's API accepts an **`Idempotency-Key` header** on mutating requests: a client-generated unique string (a UUID) per *logical* operation. The server stores the key with the **result of the first execution** (status code and response body) and, on any retry with the same key, **replays the stored response instead of re-executing**. Keys are retained for a bounded window (Stripe documents pruning after 24 hours on API v1; v2 endpoints use a 30-day replay window and re-execute failed work rather than replaying a stored error, as of 2026). The client contract: generate a fresh key per logical operation; on timeout or 5xx, **retry with the same key** (with exponential backoff and jitter — [[Timeouts Retries and Exponential Backoff]]).
 
 ```mermaid
 sequenceDiagram
@@ -110,7 +110,7 @@ Retries happen everywhere — merchant→Stripe (idempotency keys), Stripe→car
 | Worker utilization load shedder | Worker pool saturation | Severe overload | Traffic by class — test mode sheds first, critical live traffic last |
 
   The principle: *degrade in order of business harm, never uniformly*.
-- API compatibility ("APIs as infrastructure", 2017): each API version is a **date** (e.g. `2017-05-24`); an account is **pinned** to the version current at its first request and can send a version header per request. Internally, code targets the latest version, and a chain of small **version-change modules (gates)** transforms responses backward, version by version, for older consumers. Breaking changes ship behind a new date without breaking a decade of integrations.
+- API compatibility ("APIs as infrastructure", 2017): each API version is a **date** (e.g. `2017-05-24`; since `2024-09-30.acacia` the date carries a release name, with monthly non-breaking releases and a twice-yearly major release that may break — current `2026-09-30.endive` as of October 2026); an account is **pinned** to the version current at its first request and can send a version header per request. Internally, code targets the latest version, and a chain of small **version-change modules (gates)** transforms responses backward, version by version, for older consumers. Breaking changes ship behind a new date without breaking a decade of integrations.
 
 ## Key decisions and why
 
@@ -165,7 +165,7 @@ This is the mechanism, not a Stripe incident — but it is the most common way a
 - **"Exactly-once delivery is achievable with the right broker."** It is not, over an unreliable network ([[Exactly-Once Delivery Is a Lie]]). What is achievable is at-least-once delivery plus deterministic dedup at the receiver, which yields exactly-once *effects*. Stripe's entire design is an instance of that equation, and saying it precisely is worth real credit in an interview.
 - **"Double-entry means writing to two tables."** It means every movement is recorded as a debit and an equal credit, so the system's total is conserved by construction. You can implement it in a single table with a sign column. The **invariant** is the idea; the schema is an implementation detail.
 - **"A ledger is an audit log."** An audit log *describes* what happened alongside the real state; a ledger **is** the state, with balances computed from it. The test: delete one row. If the reported balance does not change, you have a log sitting next to a mutable balance field — and that balance will drift, silently, and you will find out from a customer.
-- **"Idempotency keys make an operation safe to retry forever."** Stripe documents retaining results for **24 hours**. Once the window expires, the same key is a brand-new operation. Any client retry policy whose tail extends past the server's retention window — a dead-letter replay the next morning, a manual re-run of a failed batch — is silently unsafe, and nothing in the mechanism will warn you.
+- **"Idempotency keys make an operation safe to retry forever."** Stripe documents retaining results for **24 hours** on API v1 (30 days on v2). Once the window expires, the same key is a brand-new operation. Any client retry policy whose tail extends past the server's retention window — a dead-letter replay the next morning, a manual re-run of a failed batch — is silently unsafe, and nothing in the mechanism will warn you.
 - **"Reconciliation is a nightly batch chore."** Here it is the *detection layer*, and its frequency is literally the length of time corruption stays invisible. A nightly job means a worst case of roughly 24 hours of undetected drift. That may be the right choice, but it should be a stated SLO with a number attached ([[SLA SLO SLI and Error Budgets]]), not a side effect of what the scheduler happened to be set to.
 
 ## In your stack
@@ -203,11 +203,11 @@ This is your home turf — Niyo is RBI-regulated money movement and KYC, so the 
 
 ## Sources
 
-- Stripe API documentation — "Idempotent requests" (the `Idempotency-Key` contract, 24-hour retention) and webhook delivery documentation (redelivery and event-ID dedup).
+- Stripe API documentation — "Idempotent requests" (the `Idempotency-Key` contract, 24-hour retention on v1), the API v2 overview (30-day idempotency window), "Versioning" (named releases since 2024-09-30.acacia) and webhook delivery documentation (redelivery and event-ID dedup).
 - Brandur Leach, "Designing robust and predictable APIs with idempotency" — Stripe engineering blog, 2017.
 - Paul Tarjan, "Scaling your API with rate limiters" — Stripe engineering blog, 2017 (the four limiters and shedding order).
 - Brandur Leach, "APIs as infrastructure: future-proofing Stripe with versioning" — Stripe engineering blog, 2017 (date-pinned versions, version-change gates).
 - Ilya Ganelin, "Ledger: Stripe's system for tracking and validating money movement" — Stripe engineering blog, February 2024 (double-entry model, immutability, reconciliation).
 - Stripe, "Root cause analysis: significantly elevated error rates on 2019-07-10" — the published post-mortem behind the outage described under "What broke".
-- Stripe annual letter (2024) — the >$1T total payment volume in 2023 figure.
+- Stripe annual letters (March 2024 and February 2026) — the $1T (2023) and $1.9T (2025) total volume figures.
 - *Designing Data-Intensive Applications* (Kleppmann), ch. 12 — correctness, exactly-once effects, and end-to-end dedup arguments this note leans on.

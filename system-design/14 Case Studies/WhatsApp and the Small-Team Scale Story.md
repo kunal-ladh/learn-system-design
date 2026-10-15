@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How roughly 50 engineers ran a messaging system for ~900 million users — Erlang/OTP, FreeBSD tuning, store-and-forward messaging, and ruthless product simplicity.
 related: ["[[Design a Chat System]]", "[[Discord Message Storage Evolution]]", "[[Stateless vs Stateful Services]]", "[[Anatomy of 1M RPS]]"]
 ---
@@ -42,7 +42,7 @@ graph LR
 ```
 
 - **Modified ejabberd core.** WhatsApp started from **ejabberd**, an open-source XMPP server written in **Erlang**, then rewrote and stripped it heavily (including replacing XMPP's verbose XML with a custom binary protocol) until little of the original remained. Starting from a working open-source base and specializing it was itself a small-team move.
-- **Erlang/OTP as the runtime.** Each connected phone is handled by an **Erlang process** — not an OS thread but a runtime-managed green process costing a few KB — a newly spawned process is 327 words, about 2.6 KB on a 64-bit VM, per the Erlang efficiency guide. Millions of them run inside one BEAM VM, scheduled across cores. OTP supplies supervision trees (crashed processes are restarted in isolation — "let it crash") and **hot code reload**: new code is loaded into the running VM without dropping the millions of live connections. For a system whose core asset *is* open connections, deploys without disconnects are an enormous operational win.
+- **Erlang/OTP as the runtime.** Each connected phone is handled by an **Erlang process** — not an OS thread but a runtime-managed green process costing a few KB — a newly spawned process is 327 words, about 2.6 KB on a 64-bit VM, per the Erlang efficiency guide (OTP 27 figure). Millions of them run inside one BEAM VM, scheduled across cores. OTP supplies supervision trees (crashed processes are restarted in isolation — "let it crash") and **hot code reload**: new code is loaded into the running VM without dropping the millions of live connections. For a system whose core asset *is* open connections, deploys without disconnects are an enormous operational win.
 - **FreeBSD, tuned hard.** WhatsApp ran on **FreeBSD** servers with aggressive kernel tuning — raising file-descriptor and socket limits, sizing network buffers, and working with the network stack (`kqueue`-based event handling) — to reach the famous **2M+ connections per server (2012 era)**. The lesson is not the specific sysctl values (they are era-specific); it is that the team treated the OS as part of the system and measured until the kernel, not the application, was the limit.
 - **Mnesia and friends for state.** Transient state (sessions, offline queues) lived largely in Erlang-native storage (Mnesia/ETS) rather than a separate database tier, keeping the moving-parts count low. Details beyond that are not public in depth.
 - **Store-and-forward messaging.** The server's job is relay, not archive. A message is persisted only while the recipient is offline; **once delivered, the server deletes it**. The durable message history lives on the phones. This is the exact opposite of Discord's store-everything model ([[Discord Message Storage Evolution]]), and it deletes an entire planet-scale problem — trillions-of-rows message storage — from the architecture. (It also later made end-to-end encryption, rolled out fully in 2016, architecturally natural: the server never needed to read message bodies.)

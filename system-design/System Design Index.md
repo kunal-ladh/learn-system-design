@@ -249,7 +249,7 @@ How the giants actually do it. Read these *after* the theory — they're applica
 - [[DynamoDB in Production]] — adaptive capacity, on-demand scaling, real failure stories; Global Tables' two consistency modes
 - [[S3 Deep Dive]] — scale numbers, durability engineering, strong consistency (2020 change)
 - [[Netflix Architecture]] — microservices at extreme scale, Open Connect CDN, resilience culture
-- [[WhatsApp and the Small-Team Scale Story]] — 50 engineers, 900M users: Erlang, simplicity
+- [[WhatsApp and the Small-Team Scale Story]] — 50 engineers, 900M users (2015): Erlang, simplicity
 - [[Discord Message Storage Evolution]] — MongoDB → Cassandra → ScyllaDB: a migration story in three acts
 - [[Uber Architecture]] — geo-indexing (H3), dispatch, the DOMA model
 - [[Twitter Timeline Design]] — fan-out on write vs read: the canonical hot-key case study

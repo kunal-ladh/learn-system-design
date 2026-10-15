@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: What actually changes at each order of magnitude from 100 RPS to 1M RPS — what breaks first, what you add, and which new failure class each tier introduces.
 related: ["[[Scalability]]", "[[Load Shedding and Graceful Degradation]]", "[[Sharding]]", "[[Back of the Envelope Estimation]]"]
 ---
@@ -25,7 +25,7 @@ First, calibrate the numbers ([[Back of the Envelope Estimation]]):
 | 2 | ~1,000 | A popular consumer app in one country | ~86M |
 | 3 | ~10,000 | A top-100 web property; all of India's UPI on an average second (Aug 2025: 20.01B txns/month, ~645M/day ≈ 7.5K TPS) | ~860M |
 | 4 | ~100,000 | A large social platform's read path | ~8.6B |
-| 5 | ~1,000,000 | A very large consumer platform's API front door — hyperscaler stores run 100× beyond this (S3 serves 200M+ req/s, 2026; DynamoDB peaked at 146M req/s, Prime Day 2024) | ~86B |
+| 5 | ~1,000,000 | A very large consumer platform's API front door — hyperscaler stores run 100× beyond this (S3 serves 200M+ req/s, 2026; DynamoDB peaked at 151M req/s, Prime Day 2025) | ~86B |
 
 Two caveats that interviewers love: these are *sustained* numbers — peaks run 2–10× the average ([[Capacity Planning]]) — and 1M RPS of cache reads is a different universe from 1M RPS of money-moving writes. Always state the read/write mix before designing.
 

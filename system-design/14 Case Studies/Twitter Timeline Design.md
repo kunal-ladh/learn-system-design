@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: The canonical fan-out case study — pull vs push vs hybrid timelines, Redis timeline caches, and how celebrity skew forced Twitter's design.
 related: ["[[Design a News Feed]]", "[[Hot Key Problem]]", "[[Hot Partition Problem]]", "[[Scalability]]"]
 ---
@@ -132,7 +132,7 @@ Twitter's **Earlybird** (a modified Lucene real-time index) does the opposite tr
 
 Twitter did not publish an incident write-up for this, so take it as the mechanism — but every asynchronous fan-out pipeline fails in exactly this shape, and the first thing to internalise is that **nothing returns an error**.
 
-The trigger is an event spike. The documented extreme: **143,199 tweets/sec** during the August 2013 "Castle in the Sky" airing — roughly **31 times** the era's ~4,600/sec average. Multiply that by fan-out and the write-side work rises by the same factor within seconds.
+The trigger is an event spike. The documented extreme: **143,199 tweets/sec** during the August 2013 "Castle in the Sky" airing — roughly **25 times** the ~5,700/sec average (500M+ tweets/day) Twitter cited in the same 2013 post, and about 31 times the 2012 talk's ~4,600/sec. Multiply that by fan-out and the write-side work rises by the same factor within seconds.
 
 - **The symptom is a product complaint, not an alert.** Users say "my timeline is stale" or "I saw the reply before the original." Tweet writes are succeeding. Timeline reads are succeeding. Availability is 100% and the product is broken — which is precisely why this needs its own instrumentation ([[SLA SLO SLI and Error Budgets]]: the SLI here is freshness, not success rate).
 - **On the dashboards**: write rate elevated and healthy; fan-out queue depth climbing monotonically rather than oscillating; and the metric that matters most, **age of the oldest unprocessed fan-out job**, walking from seconds into minutes. Queue *depth* alone lies to you — a deep queue draining fast is fine, a shallow queue that has stopped draining is not. Age is the honest signal.

@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: How a 2008 database corruption pushed Netflix through a seven-year cloud migration into microservices, its own CDN inside ISPs, and the chaos-engineering culture that made it the reference for resilience.
 related: ["[[Chaos Engineering]]", "[[Circuit Breakers]]", "[[CDN]]", "[[Anatomy of 1M RPS]]"]
 ---
@@ -17,8 +17,8 @@ Netflix is the case study every resilience idea in Module 12 traces back to. The
 
 - **August 2008**: a major database corruption in Netflix's own datacenter halted DVD shipping for **three days**. The post-incident conclusion was architectural, not operational: relying on vertically scaled, single-point-of-failure systems (big Oracle boxes, big storage arrays) could not be fixed by trying harder — the company needed horizontally scalable, redundant-by-design infrastructure ([[Vertical vs Horizontal Scaling]]).
 - The cloud migration began in earnest around 2009 and was declared complete in **January 2016** — **seven years** — by which time Netflix had also rewritten essentially every system rather than lift-and-shift. The announcement post's argument for taking the slow route: a forklift migration would have carried the old architecture's limitations and failure modes into the cloud along with the workloads, just at a higher bill.
-- Scale markers along the way: streaming grew from launch (2007) to well over 200 million global subscribers by the early 2020s; Netflix was repeatedly measured (Sandvine reports, late 2010s) around **~15% of global downstream internet traffic** — video bytes utterly dominate its traffic profile.
-- The operational scale is hundreds of microservices (public talks around 2017 cited 700+), multi-region active-active since 2013, and internal caches (EVCache) serving tens of millions of operations per second (per ~2016 TechBlog posts).
+- Scale markers along the way: streaming grew from launch (2007) to well over 200 million global subscribers by the early 2020s and 301.6 million paid memberships at the end of 2024 — the last quarterly figure, since Netflix stopped reporting membership counts in 2025; Netflix was repeatedly measured (Sandvine reports, late 2010s) around **~15% of global downstream internet traffic** — video bytes utterly dominate its traffic profile.
+- The operational scale is hundreds of microservices (secondary accounts of ~2017 talks put it near 700 — an approximation, not a Netflix-published count), multi-region active-active since 2013, and internal caches (EVCache) serving tens of millions of operations per second (per ~2016 TechBlog posts).
 - A second, quieter scale axis: **telemetry and events**. Netflix's Kafka-based **Keystone** pipeline was described in ~2016 TechBlog posts as carrying hundreds of billions of events per day — playback starts, UI interactions, service metrics — feeding both real-time operations and the recommendation models. In an architecture this distributed, the observability and analytics stream becomes a large distributed system in its own right, with its own capacity planning ([[Kafka Architecture]]).
 
 ## The architecture
@@ -73,7 +73,7 @@ Netflix open-sourced its microservices machinery, which became the de-facto stan
 
 - **Zuul** — the edge [[API Gateway]]: routing, authn, load shedding at the front door (Zuul 2, 2018, rewrote it async/non-blocking).
 - **Eureka** — [[Health Checks and Service Discovery|service discovery]] registry; clients discover instances and load-balance client-side (Ribbon).
-- **Hystrix** — the library that mainstreamed [[Circuit Breakers]] and [[Bulkheads and Isolation|bulkheads]]: wrap every remote call, fail fast, fall back. **Hystrix went into maintenance mode in late 2018**; Netflix moved toward **adaptive concurrency limits** (dynamically inferring how much parallelism a dependency can take, rather than static thresholds), and the community successor for new Java work is **Resilience4j** (also the Spring Cloud default today). The lineage matters in interviews: static circuit breakers → adaptive, signal-driven limits.
+- **Hystrix** — the library that mainstreamed [[Circuit Breakers]] and [[Bulkheads and Isolation|bulkheads]]: wrap every remote call, fail fast, fall back. **Hystrix went into maintenance mode in late 2018**; Netflix moved toward **adaptive concurrency limits** (dynamically inferring how much parallelism a dependency can take, rather than static thresholds), and the community successor for new Java work is **Resilience4j** (one of the two implementations Spring Cloud Circuit Breaker supports, alongside Spring Retry, as of 2026). The lineage matters in interviews: static circuit breakers → adaptive, signal-driven limits.
 - **EVCache** — memcached-based distributed cache, sharded and **replicated across AZs** so a zone loss doesn't cold-start the cache ([[Cache Stampede and Thundering Herd]] at Netflix scale is an outage, not a slowdown).
 - **Cassandra** as the workhorse datastore for most online data (multi-region, write-heavy, AP-leaning — [[Cassandra and Wide-Column Stores]]).
 

@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-02
+updated: 2026-10-14
 summary: Discord's three-act migration — MongoDB to Cassandra to ScyllaDB plus Rust data services — and what it teaches about hot partitions, tombstones, and request coalescing.
 related: ["[[Hot Partition Problem]]", "[[Cassandra and Wide-Column Stores]]", "[[Cache Stampede and Thundering Herd]]", "[[MongoDB Architecture]]"]
 ---
@@ -165,7 +165,7 @@ Discord's 2023 post gives the trigger in a sentence: a large server posts an ann
 
 - MongoDB is your primary datastore; Discord's Act 1 is your early-warning playbook. Watch **working set vs RAM** (cache eviction and page-fault metrics on your clusters) — the cliff is quiet until it isn't.
 - Your transaction-history-style collections share Discord's shape: per-account, time-ordered, read-recent-first. The `(entity_id, time_bucket)` compound-key idea translates directly to MongoDB shard keys and to time-bucketed collections.
-- MongoDB has its own hard version of the partition-size ceiling: the **16 MB BSON document limit**. A "one document per account holding an array of transactions" schema fails exactly the way `channel_id`-only partitioning failed Cassandra — unbounded growth on the busiest key — which is why MongoDB's own guidance names the fix the *bucket pattern*: one document per `(entity, time window)` with a bounded array inside. Same disease, same cure, a different and much lower ceiling. Pick the window by doing the Act-2 arithmetic above against your busiest corporate account, not your median retail user.
+- MongoDB has its own hard version of the partition-size ceiling: the **16 MB BSON document limit** (as of 2026). A "one document per account holding an array of transactions" schema fails exactly the way `channel_id`-only partitioning failed Cassandra — unbounded growth on the busiest key — which is why MongoDB's own guidance names the fix the *bucket pattern*: one document per `(entity, time window)` with a bounded array inside. Same disease, same cure, a different and much lower ceiling. Pick the window by doing the Act-2 arithmetic above against your busiest corporate account, not your median retail user.
 - Request coalescing has a direct Redis-era analogue you can apply today: single-flight locks or short-TTL caching in front of a hot Mongo query ([[Cache Stampede and Thundering Herd]]), especially with services pinned at 1 replica, where one instance conveniently coalesces its own traffic — honest caveat: that same pinning means no failover for the coalescing layer.
 - Fintech twist on store-everything: you *must* store everything (RBI audit trails), so Discord's trajectory — bounded partitions, delete-aware engine choice, cold archive tiers in object storage ([[S3 Deep Dive]]) — is your long-term reality, not an optional pattern.
 

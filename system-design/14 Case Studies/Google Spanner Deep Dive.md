@@ -4,7 +4,7 @@ tags: [system-design, case-study]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: How Spanner delivers globally distributed SQL with external consistency using TrueTime, Paxos-per-split, and commit-wait — and what that costs.
 related: ["[[Bigtable and Spanner]]", "[[Consensus and Raft]]", "[[Two-Phase Commit and Distributed Transactions]]", "[[How Facebook Scales MySQL]]"]
 ---
@@ -78,7 +78,7 @@ The 2012 paper's unit of placement is the **directory**: a set of contiguous key
 
 ### The alternative: hybrid logical clocks, for people without atomic clocks
 
-Spanner's design raises an obvious objection — most of us cannot install GPS receivers in a datacenter we do not own. (That objection has softened: since late 2023 AWS's Amazon Time Sync Service gives supported EC2 instances microsecond-accurate time from hardware reference clocks, and its open-source ClockBound daemon returns a bounded-error interval much like `TT.now()`; Aurora DSQL, announced December 2024, builds its ordering on it.) The open-source answer, taken by **CockroachDB** and **YugabyteDB**, is the **hybrid logical clock**: combine a physical timestamp with a logical counter ([[Logical Clocks and Ordering]]) so causally related events are always correctly ordered even when physical clocks disagree, and configure a **maximum clock offset** that nodes are assumed to stay within. CockroachDB's documentation describes a default maximum offset of 500 milliseconds, with nodes that detect themselves drifting beyond it shutting down rather than risking incorrect ordering.
+Spanner's design raises an obvious objection — most of us cannot install GPS receivers in a datacenter we do not own. (That objection has softened: since November 2023 AWS's Amazon Time Sync Service gives supported EC2 instances microsecond-accurate time from hardware reference clocks, and its open-source ClockBound daemon returns a bounded-error interval much like `TT.now()`; Aurora DSQL, announced December 2024 and generally available since May 2025, builds its ordering on it.) The open-source answer, taken by **CockroachDB** and **YugabyteDB**, is the **hybrid logical clock**: combine a physical timestamp with a logical counter ([[Logical Clocks and Ordering]]) so causally related events are always correctly ordered even when physical clocks disagree, and configure a **maximum clock offset** that nodes are assumed to stay within. CockroachDB's documentation describes a default maximum offset of 500 milliseconds (as of 2026), with nodes that detect themselves drifting beyond it shutting down rather than risking incorrect ordering.
 
 The consequence is a different place to pay. Spanner pays on the **write** path with commit-wait. CockroachDB does not commit-wait by default; instead a read that encounters a value written within its uncertainty window cannot tell whether that write happened before it, so the transaction restarts at a later timestamp. So the cost moves to the **read** path as occasional retries, and the guarantee is slightly weaker than Spanner's external consistency. Which is the better trade depends on your read/write mix — but the structural point is that nobody escapes clock uncertainty, they only choose where to put it.
 
@@ -173,6 +173,6 @@ The trap in this question is over-claiming. Spanner is frequently described as "
 - Corbett et al., **"Spanner: Google's Globally-Distributed Database"**, OSDI 2012 — TrueTime, commit-wait, architecture.
 - Shute et al., **"F1: A Distributed SQL Database That Scales"**, VLDB 2013 — the AdWords migration and the resharding anecdote.
 - Chang et al., **"Bigtable: A Distributed Storage System for Structured Data"**, OSDI 2006 — the predecessor's limits.
-- Google Cloud Spanner documentation — TrueTime and external consistency pages; multi-region configurations and SLAs (Cloud Spanner GA 2017, PostgreSQL interface added 2022); the **schema design and hotspot-avoidance** guide, which is the primary source for the monotonic-key warning and for interleaved tables.
+- Google Cloud Spanner documentation (the product is now branded simply "Spanner") — TrueTime and external consistency pages; multi-region configurations and SLAs (Cloud Spanner GA 2017, PostgreSQL interface added 2022); the **schema design and hotspot-avoidance** guide, which is the primary source for the monotonic-key warning and for interleaved tables.
 - CockroachDB documentation — clock synchronization, maximum clock offset, and the read-uncertainty/restart behaviour, as the contrasting no-special-hardware design.
 - *Designing Data-Intensive Applications*, Kleppmann — Ch. 8 (clocks and time), Ch. 9 (consistency and consensus) for the theory this instantiates.
