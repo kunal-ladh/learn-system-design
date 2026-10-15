@@ -5,7 +5,7 @@ tags: [system-design, aws]
 type: note
 status: evergreen
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-14
 summary: AWS's managed Redis and Valkey — node-based clusters vs Serverless, cluster mode disabled vs enabled endpoints, what Multi-AZ failover guarantees and still loses, parameter groups and maintenance, the Valkey and licensing context, and an honest managed-vs-self-hosted comparison with its cost shape.
 related: ["[[Redis Internals]]", "[[Redis Cluster and Sentinel]]", "[[Replication]]", "[[Failover]]", "[[Cache Eviction Policies]]", "[[AWS Cost Shape]]", "[[VPC and Networking]]", "[[IAM]]"]
 ---

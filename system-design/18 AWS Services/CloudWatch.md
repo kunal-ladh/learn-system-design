@@ -5,7 +5,7 @@ tags: [system-design, aws]
 type: note
 status: evergreen
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-14
 summary: AWS's built-in telemetry store and alarm engine — metrics and the dimension-cardinality trap, log groups and the never-expire default, alarms and why they land in INSUFFICIENT_DATA, Container Insights on EKS, X-Ray and CloudTrail, and a cost shape dominated by log ingestion.
 related: ["[[Logs Metrics and Traces]]", "[[Alerting and On-Call Design]]", "[[Distributed Tracing]]", "[[SQS and SNS]]", "[[AWS Cost Shape]]", "[[ElastiCache for Redis]]", "[[IAM]]", "[[ALB and NLB]]"]
 ---
@@ -51,7 +51,7 @@ A metric is a time series identified by a **namespace**, a **name** and a set of
 - **Cardinality is the bill.** Tag a latency timer with `merchantId` and you have not added a label to one metric; you have created one billable metric per merchant. Custom metrics are charged per metric per month, so a high-cardinality dimension — user id, request id, a pod name that churns — is the classic CloudWatch trap. Per-request identifiers belong in logs and traces (the vendor-neutral cardinality model is in [[Logs Metrics and Traces]]).
 - **No automatic roll-up for custom metrics.** CloudWatch does not aggregate across dimensions for your own metrics: you can only query combinations you published. A "total across all services" series must be published as its own series — more cardinality.
 
-**Resolution and retention.** Standard metrics have one-minute granularity; high-resolution custom metrics are stored at one second, and alarms on them can use a 10- or 30-second period at a higher alarm price (as of 2026). Data is rolled up as it ages: sub-minute points live 3 hours, one-minute points 15 days, five-minute points 63 days, hourly points 455 days (15 months), as of 2026. A graph of last quarter is therefore hourly averages and a short spike is simply gone. Metrics are per Region.
+**Resolution and retention.** Standard metrics have one-minute granularity; high-resolution custom metrics are stored at one second, and alarms on them can use a 10-, 20- or 30-second period at a higher alarm price (PutMetricAlarm API valid values, as of 2026). Data is rolled up as it ages: sub-minute points live 3 hours, one-minute points 15 days, five-minute points 63 days, hourly points 455 days (15 months), as of 2026. A graph of last quarter is therefore hourly averages and a short spike is simply gone. Metrics are per Region.
 
 **Percentiles.** Some AWS metrics support them (ALB `TargetResponseTime` accepts `pNN.NN`); for custom metrics you get percentiles only if you publish raw data points. Pre-aggregated statistic sets (min, max, sum, count) cannot produce a p99, so a team that pre-aggregates to save API calls has quietly deleted its tail.
 
@@ -92,7 +92,7 @@ stateDiagram-v2
 
 **Actions fire on sustained state changes, not on a state.** Entering `ALARM` notifies once; staying there does not re-notify — Auto Scaling actions are the exception and keep firing while the state holds. Targets include an SNS topic (fan-out to email, chat, incident tooling or an SQS queue — [[SQS and SNS]]), Auto Scaling policies, Lambda and Systems Manager. **Composite alarms** combine other alarms with `AND`, `OR`, `NOT` — `ALARM("HighErrorRate") AND ALARM("HighP99")` — so you page on the combination, not on each ingredient; that is CloudWatch's noise-reduction tool. Anomaly-detection alarms compare a metric to a learned band instead of a fixed threshold.
 
-**Missing data is the part that surprises people.** Each point is breaching, not breaching, or missing, and *treat missing data* decides how missing ones count: `missing` (the default — if every point in the range is missing the alarm goes to `INSUFFICIENT_DATA`; `AWS/DynamoDB` alarms are the exception and default to `ignore`), `notBreaching`, `breaching`, or `ignore` (hold the current state). Choose by what the metric means: a heartbeat or request counter that should always flow wants `breaching`; a counter published only when errors occur wants `notBreaching`.
+**Missing data is the part that surprises people.** Each point is breaching, not breaching, or missing, and *treat missing data* decides how missing ones count: `missing` (the default — if every point in the range is missing the alarm goes to `INSUFFICIENT_DATA`; `AWS/DynamoDB` alarms are the exception and always `ignore` missing data whatever you set), `notBreaching`, `breaching`, or `ignore` (hold the current state). Choose by what the metric means: a heartbeat or request counter that should always flow wants `breaching`; a counter published only when errors occur wants `notBreaching`.
 
 ### On EKS: Container Insights and log shipping
 

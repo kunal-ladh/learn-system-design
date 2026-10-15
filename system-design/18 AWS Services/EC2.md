@@ -5,7 +5,7 @@ tags: [system-design, aws]
 type: note
 status: evergreen
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-14
 summary: AWS's raw virtual machine and the layer under EKS nodes — reading instance types, burstable credits, EBS volume behaviour, ENI-capped pod density, Auto Scaling Groups, Spot vs commitments, and the silent failure modes of each.
 related: ["[[Kubernetes Architecture]]", "[[EKS vs ECS]]", "[[Autoscaling]]", "[[Vertical vs Horizontal Scaling]]", "[[VPC and Networking]]", "[[AWS Cost Shape]]"]
 ---
@@ -41,7 +41,7 @@ Before 2006, capacity meant a purchase order: buy servers, wait weeks for delive
 | I, D (storage) | local NVMe / dense HDD | self-run databases, Kafka, search needing local IOPS |
 | G, P (GPU) | accelerators | inference, training |
 
-Newer generations of a family are usually cheaper or faster at the same size — check what ap-south-1 offers before standardising. As of 2026, Graviton4 powers the 8th-generation `g` families (`m8g`, `c8g`, `r8g`), and Graviton5 arrived in 2026 as `m9g`/`m9gd` and `c9g`/`c9gd` (June) and `r9g`/`r9gd` (September), in a handful of US, EU and Asia Pacific Regions — not Mumbai as of October 2026. A **vCPU** on Intel and older AMD instances (`m6a` and before) is one hardware thread of a two-thread core; on Graviton and on AMD from the 7th generation (`m7a` onward) every vCPU is a full physical core, so equal vCPU counts are not equal compute.
+Newer generations of a family are usually cheaper or faster at the same size — check what ap-south-1 offers before standardising. As of 2026, Graviton4 powers the 8th-generation `g` families (`m8g`, `c8g`, `r8g`), and Graviton5 arrived in 2026 as `m9g`/`m9gd` and `c9g`/`c9gd` (June) and `r9g`/`r9gd` (31 August), in a handful of US, EU and Asia Pacific Regions — not Mumbai as of October 2026. A **vCPU** on Intel and older AMD instances (`m6a` and before) is one hardware thread of a two-thread core; on Graviton and on AMD from the 7th generation (`m7a` onward) every vCPU is a full physical core, so equal vCPU counts are not equal compute.
 
 **Graviton (ARM) and Java.** The JVM runs portable bytecode, so a Spring Boot jar runs unchanged on ARM, usually at lower cost per unit of work. What breaks is native code: a JNI library, or a container image published only for amd64. Verify the image is **multi-arch** (an ECR manifest list with both `linux/amd64` and `linux/arm64`); a single-arch image on an ARM node dies at start with `exec format error`, and a mixed-architecture cluster needs node selectors so pods land on the right kind of node.
 

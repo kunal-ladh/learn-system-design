@@ -46,7 +46,7 @@ graph TD
 
 **AZ names are not physical.** `ap-south-1a` in your uat account and `ap-south-1a` in your prod account may be different buildings: AWS maps names to physical zones randomly per account, to spread load instead of piling everyone into "a". The stable identifier is the **AZ ID** (`aps1-az1`), the same physical zone in every account. Anything that must agree on physical placement across accounts — shared subnets, cross-account private connectivity, traffic you want to keep inside one AZ — has to use AZ IDs.
 
-**Edge locations** are a separate fleet of points of presence, far more numerous than Regions, that serve CloudFront caches and Route 53 DNS answers close to users ([[CDN]], [[CloudFront]], [[Route 53]]). They are not places you run your services; they are why "the data lives in the Region" carries a footnote — a cached response can sit at an edge location outside India.
+**Edge locations** are a separate fleet of points of presence, far more numerous than Regions (750+ CloudFront PoPs and 15 regional edge caches on AWS's infrastructure page, October 2026), that serve CloudFront caches and Route 53 DNS answers close to users ([[CDN]], [[CloudFront]], [[Route 53]]). They are not places you run your services; they are why "the data lives in the Region" carries a footnote — a cached response can sit at an edge location outside India.
 
 What you must place yourself depends on a service's **scope**:
 
