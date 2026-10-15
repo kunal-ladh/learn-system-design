@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing a distributed rate limiter — algorithm choice, atomic Redis counters with Lua, the race conditions, local token caches, fail-open vs fail-closed, and the multi-datacenter wrinkle.
 related: ["[[Rate Limiting]]", "[[API Gateway]]", "[[Redis Internals]]"]
 ---
@@ -37,7 +37,7 @@ Assume a mid-size API platform: **10M daily active clients**, averaging 50 reque
 
 - **Throughput**: 10M × 50 = 500M requests/day ÷ 86,400 ≈ **5,800 checks/sec** average; × 3 peak ≈ **17,000 checks/sec**. Every one of these is a read-modify-write on a counter.
 - **State size**: one counter per active client per rule. 10M clients × ~2 active rules × ~100 bytes (key + counter + timestamps + Redis overhead) ≈ **2 GB** — fits comfortably in one Redis node's RAM; a small [[Redis Cluster and Sentinel|cluster]] gives headroom and failover.
-- **Latency budget**: an intra-VPC Redis round trip is ~0.5–1 ms ([[Latency Numbers Every Engineer Should Know]]) — one round trip per check fits the 1–2 ms budget; two or three round trips do not. Conclusion: the check must be **one atomic Redis call**, which is exactly why Lua enters the design.
+- **Latency budget**: an intra-VPC Redis round trip is ~0.2–1 ms ([[Latency Numbers Every Engineer Should Know]]) — one round trip per check fits the 1–2 ms budget; two or three round trips do not. Conclusion: the check must be **one atomic Redis call**, which is exactly why Lua enters the design.
 
 ## High-level design
 
@@ -135,7 +135,7 @@ The honest summary: **exact global rate limiting across datacenters is not worth
 > Fixed windows allow ~2x bursts at boundaries; sliding window log is exact but costs memory per request; token bucket is equally O(1) but expresses rate-plus-burst rather than the "N per window" rule as written. Sliding window counter keeps just two integers per key — current and previous window counts — and estimates the rolling rate by weighting the previous window by its overlap fraction. O(1) memory, one-command-friendly, removes the 2x boundary burst, and Cloudflare measured its real-world error as tiny. It trades exactness for constant cost, which is the right trade for abuse protection.
 
 > [!question]- Q: What exactly goes wrong with GET-then-INCR, and how does Lua fix it — including why it also fixes the latency budget?
-> Two nodes at count 99/100 both GET 99, both decide "allowed", both INCR → 101 admitted: a check-then-act race on shared state, leaking worse as concurrency grows. A Lua script runs atomically inside Redis's single-threaded loop — read counters, compute the window estimate, conditionally increment, set TTLs — with no interleaving possible. And because all steps execute server-side in one EVALSHA call, the whole decision costs one network round trip (~0.5–1 ms), fitting the 1–2 ms budget that three separate commands would blow.
+> Two nodes at count 99/100 both GET 99, both decide "allowed", both INCR → 101 admitted: a check-then-act race on shared state, leaking worse as concurrency grows. A Lua script runs atomically inside Redis's single-threaded loop — read counters, compute the window estimate, conditionally increment, set TTLs — with no interleaving possible. And because all steps execute server-side in one EVALSHA call, the whole decision costs one network round trip (~0.2–1 ms), fitting the 1–2 ms budget that three separate commands would blow.
 
 > [!question]- Q: Scenario — Redis becomes unreachable for 90 seconds at peak. Walk through what your design does for (a) a general read API and (b) the login endpoint.
 > (a) Fail-open: the circuit breaker on the Redis client trips, the gateway admits traffic unlimited (optionally falling back to node-local limiting at limit/N), and an alert fires. Rationale: the limiter guards quality of service; rejecting all reads because the guard is sick is worse than 90 seconds of unprotected traffic. (b) Fail-closed (or heavily degraded local limits): login limiting is brute-force protection — a security boundary — so unprotected admission is the worse failure. Same outage, opposite policies, decided per rule in advance.
@@ -152,4 +152,4 @@ The honest summary: **exact global rate limiting across datacenters is not worth
 - Cloudflare blog — "How we built rate limiting capable of scaling to millions of domains" (the sliding window counter approximation and its measured accuracy).
 - Stripe engineering blog — "Scaling your API with rate limiters" (token bucket in Redis, limiter taxonomy in production).
 - Redis documentation — `EVAL`/`EVALSHA` atomicity guarantees and Lua scripting.
-- IETF Internet-Draft `draft-ietf-httpapi-ratelimit-headers`, "RateLimit header fields for HTTP" — still a draft as of 2026; current revisions define the `RateLimit` and `RateLimit-Policy` fields.
+- IETF Internet-Draft `draft-ietf-httpapi-ratelimit-headers`, "RateLimit header fields for HTTP" — still a draft as of 2026 (revision 11, May 2026); current revisions define the `RateLimit` and `RateLimit-Policy` fields.

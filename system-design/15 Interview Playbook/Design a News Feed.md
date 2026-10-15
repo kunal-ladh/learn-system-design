@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: A Twitter/Instagram-style feed — the push vs pull vs hybrid fan-out decision, Redis timeline storage with cursor pagination, a simple ranking stage, CDN-served media, and sharded like-counters.
 related: ["[[Twitter Timeline Design]]", "[[Hot Key Problem]]", "[[Design a Chat System]]"]
 ---
@@ -180,7 +180,7 @@ graph TD
 ## Sources
 
 - *System Design Interview Vol. 1* (Alex Xu) — chapter "Design a News Feed System"; the push/pull framing follows it.
-- Raffi Krikorian, "Timelines at Scale" (QCon talk, late 2012) — Twitter's hybrid fan-out, and the ~300K timeline reads/sec against ~4.6K tweets/sec average that forced it; the basis of [[Twitter Timeline Design]], which carries the full figures.
+- Raffi Krikorian, "Timelines at Scale" (QCon talk, late 2012) — Twitter's hybrid fan-out, and the ~300K timeline reads/sec against ~4.6K tweets/sec average (≈400M tweets/day, 2012) that forced it; the basis of [[Twitter Timeline Design]], which carries the full figures.
 - *Designing Data-Intensive Applications* (Kleppmann), ch. 1 and 12 — the Twitter fan-out worked example and materialized-view framing of timelines.
 - Instagram/Meta engineering — the Explore recommender write-ups ("Powered by AI: Instagram's Explore recommender system", and the 2023 scaling follow-up): candidate generation sampling ~500 posts, then ranking — the clearest public description of the two-phase split, and of how the ranking phase itself subdivides into cheap and expensive passes at scale.
 - Facebook engineering — "TAO: Facebook's Distributed Data Store for the Social Graph" (the graph-service shape behind follower lists).

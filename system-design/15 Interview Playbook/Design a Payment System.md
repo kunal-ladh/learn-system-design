@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing a payment system — payment intents, PSP abstraction, end-to-end idempotency, double-entry ledgers, webhook discipline, and reconciliation as the daily fintech reality.
 related: ["[[The System Design Interview Framework]]", "[[Stripe and Payment System Design]]", "[[Idempotency]]", "[[Exactly-Once Delivery Is a Lie]]"]
 ---
@@ -95,7 +95,7 @@ The load-bearing rule: **never auto-fail an ambiguous money movement.** A timeou
 
 Every hop can retry, so every hop needs [[Idempotency]] — a chain, not a feature:
 
-- **Client → API**: the client generates an idempotency key per payment attempt (UUID minted when the pay button renders, not when clicked). A double-click or network retry sends the same key; the API returns the original result instead of creating a second intent. Keys + responses stored with a TTL (~24 h) — Stripe's exact model.
+- **Client → API**: the client generates an idempotency key per payment attempt (UUID minted when the pay button renders, not when clicked). A double-click or network retry sends the same key; the API returns the original result instead of creating a second intent. Keys + responses stored with a TTL (~24 h) — Stripe's API v1 model (its v2 namespace treats a repeat within 30 days as a replay, as of 2026).
 - **API → PSP**: the abstraction layer sends a per-PSP idempotency key *derived from the intent ID* (e.g., `{intent_id}:attempt:{n}`). If our call times out and we retry, the PSP sees the same key and does not charge twice. Every serious PSP supports this; a design that omits it is wrong, not simplified.
 - **Webhook → internal**: PSP event IDs dedup inbound events (below).
 - **Intent state → ledger and downstream events**: committing a state transition and announcing it is a dual write — write the event in the same local transaction via [[The Outbox Pattern]], never publish-after-commit.

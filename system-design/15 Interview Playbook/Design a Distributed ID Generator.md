@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Generating unique, roughly time-sorted 64-bit IDs across many nodes — why auto-increment and UUIDv4 fail, the Snowflake bit layout, the clock-backwards problem, and the alternatives.
 related: ["[[Design a URL Shortener]]", "[[Database Indexes]]", "[[Logical Clocks and Ordering]]"]
 ---
@@ -60,7 +60,7 @@ So the requirement set — unique, coordination-free, 64-bit, time-sorted — po
 
 - **Sign bit** stays 0 (keeps the ID positive in signed `BIGINT`s).
 - **41-bit timestamp**: milliseconds since a **custom epoch** (e.g. the service's launch date — not 1970, which would waste decades of range).
-- **5 + 5 bits** of datacenter and worker ID: 32 × 32 = **1,024 distinct generators** — uniqueness across space.
+- **5 + 5 bits** of datacenter and worker ID: 32 × 32 = **1,024 distinct generators** — uniqueness across space. (Twitter's 2010 README specifies one 10-bit machine ID; the 5 + 5 split is the common implementation of it.)
 - **12-bit sequence**: a counter reset every millisecond — uniqueness within one worker-millisecond; if it overflows (4,096 in one ms), spin-wait for the next millisecond.
 
 Because the timestamp occupies the high bits, **numeric order ≈ time order** (k-sorted: ordering is exact across milliseconds, arbitrary within one). Generation is pure local arithmetic: read clock, compare, increment, bit-shift, OR — no I/O, nanoseconds of work.
@@ -124,7 +124,7 @@ Also name the limit honestly: k-sorted means IDs within the same millisecond car
 - **No clock-backwards answer.** This is *the* follow-up. "Clocks are monotonic" is false; `System.currentTimeMillis()` is not monotonic even when the JVM's `nanoTime` is.
 - **Putting a network call on the per-ID path** — a central "ID API" called per write re-creates the single bottleneck the design exists to remove; batching is the minimum fix.
 - **Claiming strict global ordering** from Snowflake IDs — they are k-sorted; same-millisecond and cross-worker order is approximate.
-- **Not knowing UUIDv7 exists** — as of ~2024 it's standardized and widely supported; proposing hand-rolled Snowflake where UUIDv7 suffices is yesterday's answer.
+- **Not knowing UUIDv7 exists** — standardized in May 2024 (RFC 9562) and native in PostgreSQL 18, the current major as of 2026; proposing hand-rolled Snowflake where UUIDv7 suffices is yesterday's answer.
 
 ## Check yourself
 

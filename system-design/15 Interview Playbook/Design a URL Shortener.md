@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The hello-world design problem — key generation strategies compared, 301 vs 302 and the analytics trade-off, caching the hot redirect path, and the database reasoning.
 related: ["[[The System Design Interview Framework]]", "[[Design a Distributed ID Generator]]", "[[Hot Key Problem]]"]
 ---
@@ -100,7 +100,7 @@ Recommended answer: **KGS or counter-with-scrambling**, and explicitly link the 
 - **301 Moved Permanently**: absent explicit cache headers, the browser **caches the mapping** (heuristically, often indefinitely) and on future clicks goes straight to the long URL without touching your servers. Lowest latency and server load — but you are now **blind**: no request means no click counted, so per-link analytics are impossible, and you cannot later change or expire the mapping for that browser.
 - **302 Found** (temporary): the browser comes back to you **every click**. Every click is countable, expiry and link-editing work — at the cost of serving every redirect yourself.
 
-The business of real shorteners *is* the click data, so the textbook answer is **302 (or 307)**. Production shorteners often reach the same goal with a 301 whose caching is bounded explicitly: observed 2026-10, bit.ly answers `301` with `Cache-Control: private, max-age=90` and TinyURL `301` with `Cache-Control: no-store`, so browsers keep coming back. Say the trade-off aloud: "a browser-cached 301 offloads traffic but forfeits analytics and control; if analytics are in scope, use 302, or a 301 with a short or zero `Cache-Control` max-age." This tiny question is the most reliable differentiator in this interview.
+The business of real shorteners *is* the click data, so the textbook answer is **302 (or 307)**. Production shorteners often reach the same goal with a 301 whose caching is bounded explicitly: observed 2026-10, bit.ly answers `301` with `Cache-Control: private, max-age=90` and TinyURL `301` with `Cache-Control: no-store, no-cache, must-revalidate`, so browsers keep coming back. Say the trade-off aloud: "a browser-cached 301 offloads traffic but forfeits analytics and control; if analytics are in scope, use 302, or a 301 with a short or zero `Cache-Control` max-age." This tiny question is the most reliable differentiator in this interview.
 
 ### 3. Caching the redirect path — and the viral link
 

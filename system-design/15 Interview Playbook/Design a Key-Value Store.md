@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: The capstone — building a mini-Dynamo from first principles with consistent hashing, N equals 3 replication, tunable quorums, conflict resolution, hinted handoff, Merkle anti-entropy, gossip membership, and an LSM engine.
 related: ["[[The Dynamo Paper]]", "[[Quorum Reads and Writes]]", "[[Consistent Hashing]]", "[[Design a Distributed Cache]]"]
 ---
@@ -70,7 +70,7 @@ graph TD
 Hash the key space onto a fixed circular range; hash each node into the same range; a key belongs to the first node clockwise. This is [[Consistent Hashing]] exactly as that note describes it, and the reason it is not `hash(key) mod N` is that going from N to N+1 servers remaps about N/(N+1) of the keyspace — in a cache that is a wipe ([[Design a Distributed Cache]]), in a *database* it is a full-cluster data migration triggered by adding one machine.
 
 **Virtual nodes** — each physical node claiming many ring positions ("tokens") rather than one — buy three distinct things, and interviewers want all three:
-1. **Load smoothing.** With 16 nodes at one position each, random placement produces wildly unequal arcs; with many positions each, the law of large numbers flattens them. Don't quote a fashionable number as if it were a law: Cassandra shipped 256 tokens per node for years and dropped its default to 16 in 4.0, because a smarter token-allocation algorithm reaches the same balance with far fewer ranges to repair and stream. The count is a tuning knob traded against the bookkeeping below, not a constant.
+1. **Load smoothing.** With 16 nodes at one position each, random placement produces wildly unequal arcs; with many positions each, the law of large numbers flattens them. Don't quote a fashionable number as if it were a law: Cassandra shipped 256 tokens per node for years and dropped its default to 16 in 4.0 (still 16 in 5.0, the current series as of 2026), because a smarter token-allocation algorithm reaches the same balance with far fewer ranges to repair and stream. The count is a tuning knob traded against the bookkeeping below, not a constant.
 2. **Spread recovery.** When a node dies, its many small arcs are inherited by *many* different survivors, so the dead node's traffic and its rebuild I/O are shared instead of dumped on one clockwise neighbour — the difference between a degraded cluster and a cascading one ([[Failure Modes in Distributed Systems]]).
 3. **Heterogeneity.** A node with twice the disk takes twice the tokens.
 
@@ -134,7 +134,7 @@ Three mechanisms, each covering a different duration of failure. Say all three; 
 - **Read repair — opportunistic, free.** The coordinator already fanned out to all N and compared digests. When replicas disagree, it resolves the conflict (dive 4), returns the answer, and asynchronously writes the winning version back to the stale replicas. Frequently-read keys therefore heal themselves at no extra I/O. Rarely-read keys do not heal at all — which is precisely the hole the third mechanism fills.
 - **Merkle-tree anti-entropy — the backstop.** Each node builds a hash tree per key range it owns: leaves hash individual keys' values, each parent hashes its children. Two replicas compare root hashes; equal roots mean the ranges are identical and **zero further data moves**. Unequal roots means descending only into subtrees that differ, so traffic scales with the number of *differences*, not the size of the range. The costs: trees must be rebuilt when ranges change (every join, departure, and rebalance invalidates them), and the comparison itself is scheduled background work competing with live traffic — repair that is never scheduled is repair that does not exist, which is an operations failure, not a design one. The word "anti-entropy" comes from the 1987 epidemic-algorithms literature, which is the same family as the gossip in dive 6.
 
-**The delete problem these create.** If `delete` removed the row, any replica that missed the delete would re-propagate the value during repair and resurrect it. So deletes write a **tombstone** — a marker that is itself replicated and that wins by the normal version rules. Tombstones may only be garbage-collected after every replica has certainly seen them; Cassandra exposes this as a grace period, defaulting to 10 days. Reclaim early and deleted data comes back; never reclaim and tombstones accumulate until reads slow down. There is no third option, and knowing that is a senior signal.
+**The delete problem these create.** If `delete` removed the row, any replica that missed the delete would re-propagate the value during repair and resurrect it. So deletes write a **tombstone** — a marker that is itself replicated and that wins by the normal version rules. Tombstones may only be garbage-collected after every replica has certainly seen them; Cassandra exposes this as a grace period (`gc_grace_seconds`), defaulting to 10 days (864,000 s, unchanged as of Cassandra 5.0, 2026). Reclaim early and deleted data comes back; never reclaim and tombstones accumulate until reads slow down. There is no third option, and knowing that is a senior signal.
 
 ### 6. Membership and failure detection by gossip
 

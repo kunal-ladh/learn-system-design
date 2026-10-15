@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing a YouTube-class video service — resumable uploads, an async transcoding pipeline, adaptive bitrate over CDN, and why egress dominates the cost structure.
 related: ["[[The System Design Interview Framework]]", "[[CDN]]", "[[Netflix Architecture]]", "[[Why Async Messaging Exists]]"]
 ---
@@ -23,7 +23,7 @@ related: ["[[The System Design Interview Framework]]", "[[CDN]]", "[[Netflix Arc
 - Clarify live streaming out of scope — it changes the transcoding and delivery design substantially.
 
 **Non-functional**
-- Scale anchor: roughly YouTube-class — **~500 hours of video uploaded per minute** (YouTube's publicly cited figure, roughly, as of ~2020s) and hundreds of millions of DAU watching.
+- Scale anchor: roughly YouTube-class — **~500 hours of video uploaded per minute** (YouTube's figure announced May 2019; its 2026 press page instead cites 20M+ videos uploaded daily) and hundreds of millions of DAU watching.
 - Playback must start fast (< ~2 s to first frame) and never rebuffer on a stable connection — smoothness beats fidelity.
 - Durability of uploaded masters: a creator's original must never be lost.
 - Cost-awareness is a stated requirement at this scale: delivery egress and transcoding compute dominate; the design should name and attack both.
@@ -44,7 +44,7 @@ related: ["[[The System Design Interview Framework]]", "[[CDN]]", "[[Netflix Arc
 
 **Egress — the number that dominates**
 
-- Assume 1 billion watch-hours/day (YouTube's own figure as of 2017, higher since; keep it round) at an average delivered bitrate of ~3 Mbps:
+- Assume 1 billion watch-hours/day (YouTube's own figure, announced February 2017; keep it round) at an average delivered bitrate of ~3 Mbps:
 - 10⁹ h × 3,600 s/h × 3 Mbps = 1.08 × 10¹³ Mb. Convert: ÷ 8 = 1.35 × 10¹² MB = 1.35 × 10⁶ TB = **1.35 EB/day delivered**. Average egress rate = 1.35 × 10¹⁸ B ÷ 86,400 s ≈ **~15.6 TB/s ≈ 125 Tbps**.
 - **The cost shape**: egress scales with *watch time × bitrate* — linearly with success. Transcode cost scales with *upload volume*; storage with *upload volume × retention*. Egress at commodity CDN pricing (even fractions of a cent per GB) on exabytes/day is why Netflix built Open Connect and YouTube peers directly with ISPs ([[Netflix Architecture]]): at this scale you build or barter your own delivery, because egress is the dominant line item and the only one that grows every time the product succeeds.
 
@@ -97,7 +97,7 @@ Transcoding is not one job but a **DAG**: probe/validate → split source into s
 - Each rendition is cut into **segments** of ~2–10 seconds (HLS or DASH). A **manifest** lists renditions and their segment URLs.
 - The *player*, not the server, picks quality: it measures recent download throughput and buffer level, and requests the next segment from whichever rendition fits — shifting quality mid-stream with no server coordination.
 - Design consequences: every segment is an **immutable, independently cacheable HTTP object** — exactly what a [[CDN]] wants; "streaming" is really sequential HTTP GETs, so no stateful streaming servers exist in the serving path; and seek is just "fetch segments from offset t".
-- Mention codecs as a cost lever without drowning in them: H.264 baseline for compatibility, VP9/AV1 cut bitrate ~30–50% for the same quality — at 125 Tbps of egress, a 30% bitrate saving is the single largest cost action available, which is why YouTube transcodes popular videos into AV1 (compute spent once to save egress forever — the compute/egress trade follows directly from the cost shape above).
+- Mention codecs as a cost lever without drowning in them: H.264 baseline for compatibility, VP9/AV1 cut bitrate very roughly 15–50% for the same quality (VP9 at the low end, AV1 near ~45% vs H.264 — third-party measurements, approximate) — at 125 Tbps of egress, a 30% bitrate saving is the single largest cost action available, which is why YouTube reportedly serves AV1 for its most-watched videos (compute spent once to save egress forever — the compute/egress trade follows directly from the cost shape above).
 
 ### 4. CDN as the real delivery system
 

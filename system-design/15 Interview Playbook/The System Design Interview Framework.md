@@ -38,7 +38,7 @@ Never start drawing. The prompt ("design WhatsApp") is deliberately underspecifi
 2. **Non-functional requirements** — the qualities: scale (users, traffic), latency targets, availability vs consistency preference, durability. These are the requirements that actually shape the architecture; two systems with identical features and 1000x different traffic are different designs ([[Scalability]]).
 3. **Explicitly out of scope** — say it out loud and write it in a corner: "Out of scope: registration, spam detection, analytics." This is the highest-leverage sentence in the interview: it protects your time and signals senior judgment. Interviewers almost never object; they usually look relieved.
 
-Ask for numbers directly: "How many daily active users? Read-heavy or write-heavy?" If the interviewer says "you tell me," they are testing [[Back of the Envelope Estimation]] — pick defensible numbers ("assume 100M DAU, roughly Twitter-scale") and move on.
+Ask for numbers directly: "How many daily active users? Read-heavy or write-heavy?" If the interviewer says "you tell me," they are testing [[Back of the Envelope Estimation]] — pick defensible numbers ("assume 100M DAU, Twitter's order of magnitude" — it last reported ~238M mDAU, mid-2022) and move on.
 
 ### Phase 2 — Estimation (~5 min)
 

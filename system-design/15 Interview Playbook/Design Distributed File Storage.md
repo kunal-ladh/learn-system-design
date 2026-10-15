@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing a Dropbox or Google Drive class file-sync service — chunking, content-addressed dedup, delta sync, and the metadata service as the consistency-critical core.
 related: ["[[The System Design Interview Framework]]", "[[How S3 Works]]", "[[Consistency Models]]", "[[Idempotency]]"]
 ---
@@ -23,7 +23,7 @@ related: ["[[The System Design Interview Framework]]", "[[How S3 Works]]", "[[Co
 - Clarify file-size bounds: support up to, say, 10 GB files — rules out "just POST the file".
 
 **Non-functional**
-- Scale target: **500 million registered users**, ~100M daily active.
+- Scale target: **500 million registered users**, ~100M daily active (an assumption; Dropbox's FY2025 10-K reports 700M+ registered and ~18M paying users).
 - Durability is paramount — losing a user's file is the unforgivable failure. Availability target high but secondary to durability ([[Availability Reliability Durability]]).
 - Sync latency: edits visible on other devices within seconds, not minutes.
 - Bandwidth efficiency: re-uploading a 2 GB file for a 1-line edit is unacceptable — this requirement *forces* chunking and delta sync into the design.
@@ -69,7 +69,7 @@ graph TD
 
 ### 1. Chunking and content-addressed storage
 
-Files are split into **~4 MB chunks** (Dropbox's historical choice). Each chunk is identified by its **SHA-256 hash** — content addressing. Consequences, all load-bearing:
+Files are split into **~4 MB chunks** (Dropbox's choice, per its 2014 sync write-up: 4 MB blocks named by SHA-256). Each chunk is identified by its **SHA-256 hash** — content addressing. Consequences, all load-bearing:
 
 - **Dedup falls out for free**: before uploading, the client sends the chunk hash list; the server replies with which hashes it already has (from *any* user); the client uploads only missing chunks. The installer already uploaded by a million users costs the million-and-first user one metadata write.
 - **Integrity falls out for free**: the hash *is* the name; corruption is detectable on every read.

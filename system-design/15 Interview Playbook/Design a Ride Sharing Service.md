@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing an Uber-class ride-sharing backend — high-rate location ingestion, geo-indexing with H3/geohash cells, race-free matching, the trip state machine, and surge pricing.
 related: ["[[The System Design Interview Framework]]", "[[Uber Architecture]]", "[[WebSockets Server-Sent Events and Long Polling]]", "[[Cassandra and Wide-Column Stores]]"]
 ---
@@ -23,7 +23,7 @@ related: ["[[The System Design Interview Framework]]", "[[Uber Architecture]]", 
 - Driver and rider apps are both first-class clients.
 
 **Non-functional**
-- Scale anchors to agree: **1M concurrent online drivers**, ~10M ride requests/day.
+- Scale anchors to agree: **1M concurrent online drivers**, ~10M ride requests/day (assumptions to state, not Uber's published figures).
 - Matching latency: a rider should see a driver assigned within a few seconds.
 - Location freshness: displayed driver positions at most a few seconds stale.
 - Trip state and money events must be durable and auditable; location pings may be lossy — **stating that asymmetry is the design insight interviewers look for**.

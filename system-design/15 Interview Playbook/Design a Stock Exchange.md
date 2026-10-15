@@ -4,7 +4,7 @@ tags: [system-design, interview]
 type: note
 status: evergreen
 created: 2026-10-01
-updated: 2026-10-05
+updated: 2026-10-14
 summary: Designing an exchange — in-memory price-time priority matching engines, single-threaded determinism, event-sourced audit logs, market-data fan-out, and microsecond physics.
 related: ["[[The System Design Interview Framework]]", "[[Event Sourcing]]", "[[Latency Numbers Every Engineer Should Know]]", "[[Design a Payment System]]"]
 ---
@@ -36,7 +36,7 @@ Latency budget — this is where the "different physics" claim becomes arithmeti
 
 - Target: ~100 µs order-to-ack. Now price the usual suspects:
 - One round trip within a datacenter ≈ 100–500 µs through an ordinary kernel TCP stack (the latency table's figure) — **one ordinary hop can blow the entire budget**, which is why exchanges use kernel-bypass networking and brokers colocate.
-- A single SSD write ≈ 50–100 µs; a replicated DB commit (network + fsync + ack) ≈ **1–10 ms = 10–100× the whole budget**. Any design with "write order to database, then match" is dead on arrival.
+- A durable SSD write ≈ ~10–100 µs (roughly — enterprise NVMe with power-loss-protected cache sits at the low end); a replicated DB commit (network + fsync + ack) ≈ **1–10 ms = 10–100× the whole budget**. Any design with "write order to database, then match" is dead on arrival.
 - Main-memory access ≈ 100 ns; an L2 hit ≈ 5 ns. Matching against an in-memory book costs **hundreds of nanoseconds to single-digit µs** — 100 µs is *generous* if and only if everything stays in memory and in one thread (no lock acquisition, no context switches — a contended lock or scheduler preemption costs 1–10+ µs each, i.e., several percent of budget per incident).
 
 Throughput sanity:
