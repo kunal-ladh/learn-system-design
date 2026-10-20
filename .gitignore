@@ -1,2 +1,25 @@
 .DS_Store
 .remember/
+# Niyo-specific (employer-confidential) - keep local only
+career-prep-docs/services/
+career-prep-docs/01_complete_contributions_detail.txt
+career-prep-docs/02_linkedin_content-refined.md
+career-prep-docs/02_linkedin_content.txt
+career-prep-docs/03_resume_content-refined.md
+career-prep-docs/03_resume_content.txt
+career-prep-docs/advice-refined.md
+career-prep-docs/advice.txt
+career-prep-docs/daily-action-plan.md
+career-prep-docs/hld-prep-plan.md
+career-prep-docs/learning docs/api-design-101.md
+career-prep-docs/learning docs/golang-101.md
+career-prep-docs/learning docs/lld-101.md
+career-prep-docs/learning docs/observability-101.md
+career-prep-docs/learning docs/observability-guide.md
+career-prep-docs/learning docs/sde2_contributions_master.txt
+career-prep-docs/learning docs/sde2_linkedin_content.txt
+career-prep-docs/learning docs/sde2_resume_content.txt
+career-prep-docs/learning docs/spring-boot-101.md
+career-prep-docs/learning docs/spring-boot-4-migration-guide.md
+career-prep-docs/learning docs/system-design-101.md
+career-prep-docs/linkedin-cheatsheet.md
