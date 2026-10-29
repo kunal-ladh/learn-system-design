@@ -1,0 +1,102 @@
+filters:
+  and:
+    - file.hasTag("problem")
+formulas:
+  rank: 'if(priority == "high", 1, if(priority == "medium", 2, 3))'
+properties:
+  file.name:
+    displayName: Problem
+  formula.rank:
+    displayName: "#"
+  last_worked:
+    displayName: Last worked
+  next_review:
+    displayName: Next review
+views:
+  - type: table
+    name: All
+    groupBy:
+      property: category
+      direction: ASC
+    order:
+      - file.name
+      - priority
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Not started
+    filters:
+      and:
+        - 'status == "not-started"'
+    order:
+      - file.name
+      - category
+      - priority
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: In progress
+    filters:
+      and:
+        - 'status == "exploring" || status == "designing" || status == "implementing"'
+    order:
+      - file.name
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: last_worked
+        direction: DESC
+  - type: table
+    name: Completed
+    filters:
+      and:
+        - 'status == "reviewed"'
+    order:
+      - file.name
+      - category
+      - confidence
+      - last_worked
+    sort:
+      - property: last_worked
+        direction: DESC
+  - type: table
+    name: Needs revision
+    filters:
+      and:
+        - or:
+            - 'status == "needs-revision"'
+            - 'next_review <= today()'
+    order:
+      - file.name
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC
+  - type: table
+    name: Worked this week
+    filters:
+      and:
+        - 'last_worked >= today() - "7 days"'
+    order:
+      - file.name
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: last_worked
+        direction: DESC

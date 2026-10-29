@@ -1,0 +1,99 @@
+filters:
+  and:
+    - file.hasTag("project")
+formulas:
+  rank: 'if(priority == "high", 1, if(priority == "medium", 2, 3))'
+properties:
+  file.name:
+    displayName: Project
+  formula.rank:
+    displayName: "#"
+  current_milestone:
+    displayName: Milestone
+  next_task:
+    displayName: Next task
+views:
+  - type: table
+    name: Active
+    filters:
+      and:
+        - 'status == "active"'
+    order:
+      - file.name
+      - category
+      - current_milestone
+      - next_task
+      - blocker
+      - updated
+    sort:
+      - property: updated
+        direction: DESC
+  - type: table
+    name: Backlog
+    filters:
+      and:
+        - 'status == "idea" || status == "planned"'
+    order:
+      - file.name
+      - category
+      - priority
+      - status
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Paused
+    filters:
+      and:
+        - 'status == "paused"'
+    order:
+      - file.name
+      - category
+      - current_milestone
+      - blocker
+  - type: table
+    name: Shipped
+    filters:
+      and:
+        - 'status == "shipped" || status == "archived"'
+    order:
+      - file.name
+      - category
+      - repo
+      - demo
+      - updated
+    sort:
+      - property: updated
+        direction: DESC
+  - type: table
+    name: Updated this week
+    filters:
+      and:
+        - 'updated >= today() - "7 days"'
+    order:
+      - file.name
+      - status
+      - current_milestone
+      - next_task
+      - updated
+    sort:
+      - property: updated
+        direction: DESC
+  - type: table
+    name: All
+    groupBy:
+      property: category
+      direction: ASC
+    order:
+      - file.name
+      - priority
+      - status
+      - current_milestone
+      - repo
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC

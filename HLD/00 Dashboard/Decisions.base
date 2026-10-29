@@ -1,0 +1,31 @@
+filters:
+  and:
+    - file.hasTag("decision")
+properties:
+  file.name:
+    displayName: Decision
+views:
+  - type: table
+    name: All
+    order:
+      - file.name
+      - project
+      - status
+      - related_concepts
+      - updated
+    sort:
+      - property: updated
+        direction: DESC
+  - type: table
+    name: Accepted
+    filters:
+      and:
+        - 'status == "accepted"'
+    order:
+      - file.name
+      - project
+      - related_concepts
+      - updated
+    sort:
+      - property: updated
+        direction: DESC

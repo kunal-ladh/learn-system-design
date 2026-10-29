@@ -1,0 +1,171 @@
+filters:
+  and:
+    - file.hasTag("concept")
+formulas:
+  rank: 'if(priority == "high", 1, if(priority == "medium", 2, 3))'
+  due: 'if(next_review, if(next_review <= today(), "due", "scheduled"), "unscheduled")'
+properties:
+  file.name:
+    displayName: Concept
+  formula.rank:
+    displayName: "#"
+  formula.due:
+    displayName: Review
+  last_reviewed:
+    displayName: Last reviewed
+  next_review:
+    displayName: Next review
+views:
+  - type: table
+    name: All
+    order:
+      - file.name
+      - category
+      - priority
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: category
+        direction: ASC
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: By category
+    groupBy:
+      property: category
+      direction: ASC
+    order:
+      - file.name
+      - priority
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Studying
+    filters:
+      and:
+        - 'status == "reading" || status == "understood"'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: last_reviewed
+        direction: DESC
+  - type: table
+    name: High priority not started
+    filters:
+      and:
+        - 'status == "not-started"'
+        - 'priority == "high"'
+    order:
+      - file.name
+      - category
+    sort:
+      - property: category
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Needs revision
+    filters:
+      and:
+        - or:
+            - 'status == "needs-revision"'
+            - 'next_review <= today()'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC
+  - type: table
+    name: Low confidence
+    filters:
+      and:
+        - 'status != "not-started"'
+        - 'confidence <= 2'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: confidence
+        direction: ASC
+      - property: last_reviewed
+        direction: ASC
+  - type: table
+    name: Stale
+    filters:
+      and:
+        - 'status != "not-started"'
+        - 'last_reviewed < today() - "30 days"'
+    order:
+      - file.name
+      - category
+      - confidence
+      - last_reviewed
+    sort:
+      - property: last_reviewed
+        direction: ASC
+  - type: table
+    name: Gaps
+    filters:
+      and:
+        - file.hasTag("gap")
+    order:
+      - file.name
+      - category
+      - file.tags
+      - confidence
+    sort:
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Reviewed this week
+    filters:
+      and:
+        - 'last_reviewed >= today() - "7 days"'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: last_reviewed
+        direction: DESC
+  - type: table
+    name: Applied
+    filters:
+      and:
+        - 'status == "applied"'
+    order:
+      - file.name
+      - category
+      - confidence
+      - last_reviewed
+    sort:
+      - property: file.name
+        direction: ASC

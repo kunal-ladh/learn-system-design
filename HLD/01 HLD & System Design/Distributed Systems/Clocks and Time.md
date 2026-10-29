@@ -69,7 +69,7 @@ sequenceDiagram
     B->>B: receive, L=max(2,5)+1=6
     B->>A: msg carries L=6
     A->>A: receive, L=max(1,6)+1=7
-    Note over A,C: A's events 1 and 7 are ordered; B's 2 and C's 5 are concurrent
+    Note over A,C: A's events 1 and 7 are ordered. B's 2 and C's 5 are concurrent
 ```
 
 ## Use cases

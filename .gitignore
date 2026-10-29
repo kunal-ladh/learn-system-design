@@ -23,3 +23,7 @@ career-prep-docs/learning docs/spring-boot-101.md
 career-prep-docs/learning docs/spring-boot-4-migration-guide.md
 career-prep-docs/learning docs/system-design-101.md
 career-prep-docs/linkedin-cheatsheet.md
+
+# Obsidian per-machine state (HLD vault)
+HLD/.obsidian/workspace.json
+HLD/.obsidian/workspace-mobile.json

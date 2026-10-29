@@ -1,0 +1,82 @@
+filters:
+  and:
+    - or:
+        - file.hasTag("concept")
+        - file.hasTag("problem")
+    - 'status != "not-started"'
+formulas:
+  reason: 'if(status == "needs-revision", "flagged", if(next_review <= today(), "review due", if(confidence <= 2, "low confidence", if(last_reviewed < today() - "30 days", "stale", ""))))'
+  rank: 'if(status == "needs-revision", 1, if(next_review <= today(), 2, if(confidence <= 2, 3, 4)))'
+properties:
+  file.name:
+    displayName: Note
+  formula.reason:
+    displayName: Why
+  formula.rank:
+    displayName: "#"
+  last_reviewed:
+    displayName: Last reviewed
+  next_review:
+    displayName: Next review
+views:
+  - type: table
+    name: Due now
+    filters:
+      and:
+        - or:
+            - 'status == "needs-revision"'
+            - 'next_review <= today()'
+            - 'confidence <= 2'
+            - 'last_reviewed < today() - "30 days"'
+    order:
+      - file.name
+      - formula.reason
+      - note.type
+      - confidence
+      - last_reviewed
+      - next_review
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: next_review
+        direction: ASC
+      - property: last_reviewed
+        direction: ASC
+    limit: 15
+  - type: table
+    name: Flagged
+    filters:
+      and:
+        - 'status == "needs-revision"'
+    order:
+      - file.name
+      - note.type
+      - confidence
+      - last_reviewed
+  - type: table
+    name: Low confidence
+    filters:
+      and:
+        - 'confidence <= 2'
+    order:
+      - file.name
+      - note.type
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: confidence
+        direction: ASC
+  - type: table
+    name: Scheduled
+    filters:
+      and:
+        - 'next_review > today()'
+    order:
+      - file.name
+      - note.type
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC

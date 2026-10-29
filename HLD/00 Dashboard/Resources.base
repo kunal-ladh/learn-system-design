@@ -1,0 +1,83 @@
+filters:
+  and:
+    - file.hasTag("resource")
+formulas:
+  rank: 'if(priority == "high", 1, if(priority == "medium", 2, 3))'
+properties:
+  file.name:
+    displayName: Resource
+  formula.rank:
+    displayName: "#"
+  resource_type:
+    displayName: Type
+  related_concepts:
+    displayName: Concepts
+views:
+  - type: table
+    name: Unread by priority
+    filters:
+      and:
+        - 'status == "unread"'
+    order:
+      - file.name
+      - resource_type
+      - priority
+      - related_concepts
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: By type
+    groupBy:
+      property: resource_type
+      direction: ASC
+    order:
+      - file.name
+      - priority
+      - status
+      - related_concepts
+    sort:
+      - property: formula.rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Reading
+    filters:
+      and:
+        - 'status == "reading"'
+    order:
+      - file.name
+      - resource_type
+      - related_concepts
+      - updated
+  - type: table
+    name: Reviewed
+    filters:
+      and:
+        - 'status == "reviewed"'
+    order:
+      - file.name
+      - resource_type
+      - related_concepts
+      - updated
+    sort:
+      - property: updated
+        direction: DESC
+  - type: table
+    name: All
+    order:
+      - file.name
+      - resource_type
+      - priority
+      - status
+      - url
+    sort:
+      - property: resource_type
+        direction: ASC
+      - property: formula.rank
+        direction: ASC
+    summaries:
+      file.name: Filled
