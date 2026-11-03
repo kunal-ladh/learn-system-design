@@ -57,7 +57,7 @@ Service dashboards: all green.  User: 4 s.
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     U["Client: RUM SDK, trace id"] --> E["Edge: CDN and gateway histograms"]
     E --> S["Services: handler latency, traces"]
     Y["Synthetic journeys from regions"] --> E

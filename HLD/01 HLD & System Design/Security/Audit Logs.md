@@ -70,7 +70,7 @@ REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM PUBLIC, payments_rw, iam_rw
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     S[Service action in a transaction] -- "audit row in the same commit" --> DB[("Service database, append-only audit table")]
     DB -- "outbox or CDC, no loss" --> P[Audit pipeline]
     P --> H[("Hot audit store, indexed by actor and target")]

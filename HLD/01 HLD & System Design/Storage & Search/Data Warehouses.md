@@ -58,7 +58,7 @@ ORDER BY 1, 3 DESC;
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     OLTP[("OLTP: PostgreSQL, MongoDB")] -- "CDC via Debezium, or nightly extract" --> K["Kafka or staging bucket"]
     APP["Services"] -- "events via outbox" --> K
     K --> RAW["Raw layer: as-loaded tables"]

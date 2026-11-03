@@ -3,9 +3,10 @@ title: HLD MOC
 aliases: [HLD Map, Curriculum, System Design Curriculum]
 type: moc
 tags: [moc, hld]
+cssclasses: [wide]
 summary: "Master map of the HLD and system design curriculum — eleven categories, 166 concept notes, the problem bank, projects and resources."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # HLD & System Design — Map of Content
@@ -23,6 +24,33 @@ updated: 2026-10-29
 - **SDE-2 interview track (12 weeks)** — the ordered plan lives in [[Start Here]]: Fundamentals → Networking essentials → Databases → Caching → Messaging → the resilience patterns → 8 design problems drilled twice. Distributed Systems, Storage & Search and Security are vocabulary at this level; Product Engineering is what makes you sound like you have shipped.
 - **Work track (event-driven fintech backend)** — [[Messaging & Event-Driven Systems MOC]] → [[Databases MOC]] (transactions, locking, schema evolution) → [[Caching MOC]] → [[Security MOC]] → [[Observability & Reliability MOC]].
 - **Product-engineering track (SDE-3 judgement)** — [[Product Engineering MOC]] end to end, then [[Architecture Patterns MOC]], then one project from [[Projects MOC]] taken through build → measure → improve → document.
+
+## The map
+
+*Click any category to open its map of content. Solid arrows are the recommended reading order; dotted lines show where the concepts get applied.*
+
+```mermaid
+flowchart TB
+    A[Fundamentals MOC] --> B[Networking MOC]
+    A --> C[Databases MOC]
+    C --> D[Caching MOC]
+    D --> E["Messaging & Event-Driven Systems MOC"]
+    E --> F[Distributed Systems MOC]
+    B --> G[Architecture Patterns MOC]
+    E --> G
+    C --> H["Storage & Search MOC"]
+    F --> I["Observability & Reliability MOC"]
+    G --> I
+    B --> J[Security MOC]
+    I --> K[Product Engineering MOC]
+    J --> K
+    KG[Knowledge Graph] -.- E
+    KG -.- D
+    K -.-> PB[Problem Bank MOC]
+    PB -.-> PJ[Projects MOC]
+    PB -.-> IP[Interview Prep MOC]
+    class A,B,C,D,E,F,G,H,I,IP,J,K,KG,PB,PJ internal-link;
+```
 
 ## The eleven categories
 

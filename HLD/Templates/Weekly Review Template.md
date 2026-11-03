@@ -80,3 +80,11 @@ created: {{date:YYYY-MM-DD}}
 > FROM "04 Projects/Decisions"
 > WHERE type = "decision" AND created >= this.period_start AND created <= this.period_end
 > ```
+
+> [!info]- Mock interviews this period
+> ```dataview
+> TABLE problem, format, overall, score_tradeoffs, score_communication
+> FROM "06 Interview Prep/Mocks"
+> WHERE type = "mock" AND date >= this.period_start AND date <= this.period_end
+> SORT date DESC
+> ```

@@ -79,7 +79,7 @@ URL shortener, worked:
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     U["Users: DAU, actions per day"] --> R["Requests per second: avg and peak"]
     R --> S["Split: reads vs writes"]
     S --> B["Bytes: per record, per response"]

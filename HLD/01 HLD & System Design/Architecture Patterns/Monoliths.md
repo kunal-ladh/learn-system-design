@@ -63,6 +63,7 @@ flowchart LR
     A2 --> DB
     A3 --> DB
     A1 -. "sessions, cache" .-> R[("Redis")]
+    class R internal-link;
 ```
 
 ## Use cases

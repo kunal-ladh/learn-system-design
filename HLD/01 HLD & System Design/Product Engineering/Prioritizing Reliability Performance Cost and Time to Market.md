@@ -13,7 +13,7 @@ next_review:
 related: ["[[Functional vs Non-Functional Requirements]]", "[[SLI SLO and SLA]]", "[[Error Budgets]]", "[[Performance vs Cost Trade-offs]]", "[[Operational Simplicity]]", "[[Technical Debt]]"]
 summary: "Every engineering decision sits in a four-way tension between reliability, performance, cost and time to market; good teams pick the one or two to optimise for the product's current stage, make the trade explicit in writing, and revisit it as the product matures."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Prioritizing Reliability Performance Cost and Time to Market
@@ -47,6 +47,15 @@ reporting     mature       cost > reliability > perf > TTM             finance a
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    S{"Stage and component"} --> O["Explicit order, e.g.<br/>reliability > time to market > cost > performance"]
+    O --> E["Encoded as an SLO or a budget per component"]
+    E --> R["Revisit trigger: an incident, a bill, a lost deal"]
+    R --> S
+    E -.-> DR["Referenced from every design review"]
+```
 
 No runtime shape; the structure is a decision table keyed by component and stage, kept with the architecture docs and referenced from design reviews. Each row carries the order, the SLO or budget that encodes it, and the revisit trigger. More than a dozen rows means the components are too fine-grained.
 

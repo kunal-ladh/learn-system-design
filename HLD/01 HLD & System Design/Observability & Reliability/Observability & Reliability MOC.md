@@ -4,7 +4,7 @@ type: moc
 tags: [moc, observability]
 summary: "You cannot fix what you cannot see — and you cannot promise what you do not measure."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Observability & Reliability
@@ -20,6 +20,8 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Logging] --> D[Monitoring]
@@ -28,10 +30,15 @@ flowchart LR
     E --> D
     D --> F[Alerting]
     F --> G[Error Budgets]
+    F --> N[Production Incident Analysis]
+    D --> M[Capacity Planning]
     D --> H[Health Checks]
     H --> I[Graceful Degradation]
-    J[Backups and Restoration] --> K[RTO and RPO]
-    K --> L[Disaster Recovery]
+    J[Backups and Restoration] --> K1[Recovery Time Objective]
+    J --> K2[Recovery Point Objective]
+    K1 --> L[Disaster Recovery]
+    K2 --> L
+    class A,B,C,D,E,F,G,H,I,J,K1,K2,L,M,N internal-link;
 ```
 
 ## Concepts

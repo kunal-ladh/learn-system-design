@@ -1,0 +1,153 @@
+filters:
+  or:
+    - file.hasTag("problem")
+    - file.hasTag("concept")
+formulas:
+  tier_rank: 'if(interview_tier == "core", 1, if(interview_tier == "likely", 2, if(interview_tier == "stretch", 3, 4)))'
+  ready: 'if(status == "reviewed" && confidence >= 4, "ready", if(status == "reviewed" || confidence >= 3, "nearly", "not yet"))'
+properties:
+  file.name:
+    displayName: Note
+  interview_tier:
+    displayName: Tier
+  formula.tier_rank:
+    displayName: "#"
+  formula.ready:
+    displayName: Readiness
+  last_worked:
+    displayName: Last worked
+  next_review:
+    displayName: Next review
+  last_reviewed:
+    displayName: Last reviewed
+views:
+  - type: table
+    name: Core problems
+    filters:
+      and:
+        - file.hasTag("problem")
+        - 'interview_tier == "core"'
+    order:
+      - file.name
+      - formula.ready
+      - status
+      - confidence
+      - last_worked
+      - next_review
+    sort:
+      - property: formula.ready
+        direction: DESC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Core not yet reviewed
+    filters:
+      and:
+        - file.hasTag("problem")
+        - 'interview_tier == "core"'
+        - 'status != "reviewed"'
+    order:
+      - file.name
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: last_worked
+        direction: ASC
+  - type: table
+    name: Likely problems
+    filters:
+      and:
+        - file.hasTag("problem")
+        - 'interview_tier == "likely"'
+    order:
+      - file.name
+      - formula.ready
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Stretch problems
+    filters:
+      and:
+        - file.hasTag("problem")
+        - 'interview_tier == "stretch"'
+    order:
+      - file.name
+      - formula.ready
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: All problems by tier
+    filters:
+      and:
+        - file.hasTag("problem")
+    groupBy:
+      property: interview_tier
+      direction: ASC
+    order:
+      - file.name
+      - formula.ready
+      - status
+      - confidence
+      - last_worked
+    sort:
+      - property: formula.tier_rank
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Must-know concepts below 3
+    filters:
+      and:
+        - file.hasTag("concept")
+        - 'priority == "high"'
+        - 'confidence < 3'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: confidence
+        direction: ASC
+      - property: category
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      file.name: Filled
+  - type: table
+    name: Must-know concepts ready
+    filters:
+      and:
+        - file.hasTag("concept")
+        - 'priority == "high"'
+        - 'confidence >= 3'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: category
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      file.name: Filled

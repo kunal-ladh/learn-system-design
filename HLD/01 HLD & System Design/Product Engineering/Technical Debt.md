@@ -13,7 +13,7 @@ next_review:
 related: ["[[Designing for Maintainability]]", "[[Evaluating Architectural Complexity]]", "[[Production Incident Analysis]]", "[[Feature Flags]]", "[[Incremental Delivery]]", "[[Operational Simplicity]]"]
 summary: "Technical debt is the future cost of a shortcut taken today, deliberate or accidental, prudent or reckless; it is manageable when you can name it, measure its interest in incidents and lead time, and pay it down in small increments alongside feature work rather than in a rewrite."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Technical Debt
@@ -53,6 +53,20 @@ Owner:      payments team
 ```
 
 ## Architecture
+
+```mermaid
+quadrantChart
+    title Technical debt quadrant (after Fowler)
+    x-axis Inadvertent --> Deliberate
+    y-axis Reckless --> Prudent
+    quadrant-1 Ship now, pay later
+    quadrant-2 Now we know better
+    quadrant-3 What is layering?
+    quadrant-4 No time for design
+    Shortcut in a cold module: [0.72, 0.78]
+    Copy-paste under deadline: [0.70, 0.22]
+    Right model learned late: [0.28, 0.80]
+```
 
 Debt has no runtime shape; structurally it is the register above, linked from the architecture docs and reviewed monthly, plus the metrics that show its interest: per-module lead time, change failure rate and incident attribution. Architectural debt also appears on the system diagram as the annotated edge or component that "should not be there".
 

@@ -4,7 +4,7 @@ type: moc
 tags: [moc, fundamentals]
 summary: "The vocabulary and the physics everything else is built on."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Fundamentals
@@ -20,15 +20,27 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
-    A[Scalability] --> B[Latency and Throughput]
-    B --> C[Back-of-the-Envelope Estimation]
-    A --> D[Availability and Reliability]
-    D --> E[SLI SLO and SLA]
+    A[Scalability] --> HV[Horizontal vs Vertical Scaling]
+    A --> B1[Latency]
+    A --> B2[Throughput]
+    B1 --> C[Back-of-the-Envelope Estimation]
+    B2 --> C
     C --> F[Bottleneck Analysis]
-    D --> G[CAP and PACELC]
-    G --> H[Consistency Models]
+    F --> F2[Performance vs Cost Trade-offs]
+    A --> D1[Availability]
+    D1 --> D2[Reliability]
+    D2 --> D3[Fault Tolerance]
+    D1 --> E[SLI SLO and SLA]
+    D1 --> G1[CAP Theorem]
+    G1 --> G2[PACELC]
+    G1 --> H[Consistency Models]
+    H --> H2[ACID]
+    H --> H3[BASE]
+    class A,B1,B2,C,D1,D2,D3,E,F,F2,G1,G2,H,H2,H3,HV internal-link;
 ```
 
 ## Concepts

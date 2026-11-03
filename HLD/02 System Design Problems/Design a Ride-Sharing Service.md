@@ -4,6 +4,7 @@ type: problem
 category: business-critical
 tags: [problem, business-critical]
 priority: medium
+interview_tier: core
 status: not-started
 confidence: 1
 last_worked: 

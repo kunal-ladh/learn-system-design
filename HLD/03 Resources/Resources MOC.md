@@ -3,9 +3,10 @@ title: Resources MOC
 aliases: [Resource Library, Resources]
 type: moc
 tags: [moc, resource]
+cssclasses: [wide]
 summary: "Curated library of primary documentation, papers, engineering write-ups, books, talks, courses and open-source implementations, each linked to the concepts and problems it explains."
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Resource Library
@@ -17,6 +18,43 @@ updated: 2026-10-30
 
 > [!tip] The five that pay for themselves first
 > [[Designing Data-Intensive Applications]] (chapters 5–9 after weeks 4–8 of [[Start Here]]) · [[AWS Builders Library - Timeouts Retries and Backoff]] · [[Stripe - Idempotency]] · [[Google SRE Workbook - Implementing SLOs]] · [[System Design Interview (Alex Xu)]] for the problem format.
+
+## When to read what
+
+*The reading path that matches the roadmap in [[Interview Sprint Plan]]. Every box opens the resource note.*
+
+```mermaid
+flowchart LR
+    subgraph P1 ["Phase 1 — alongside the concept notes"]
+        direction TB
+        R1["Latency Numbers Every Programmer Should Know"]
+        R2["Designing Data-Intensive Applications"]
+        R3["PostgreSQL Transaction Isolation Docs"]
+        R4["Kafka Design Documentation"]
+        R5["Redis Eviction Policies Docs"]
+        R1 ~~~ R2 ~~~ R3 ~~~ R4 ~~~ R5
+    end
+    subgraph P2 ["Phase 2 — before the second pass on problems"]
+        direction TB
+        R6["AWS Builders Library - Timeouts Retries and Backoff"]
+        R7["AWS Builders Library - Caching Challenges"]
+        R8["Stripe - Idempotency"]
+        R9["Scaling Memcache at Facebook"]
+        R10["Discord - How Discord Stores Trillions of Messages"]
+        R11["Please Stop Calling Databases CP or AP"]
+        R6 ~~~ R7 ~~~ R8 ~~~ R9 ~~~ R10 ~~~ R11
+    end
+    subgraph P3 ["Sprint — format and numbers"]
+        direction TB
+        R12["System Design Interview (Alex Xu)"]
+        R13["Google SRE Workbook - Implementing SLOs"]
+        R14["Cloudflare - Rate Limiting at Scale"]
+        R15["System Design Primer (GitHub)"]
+        R12 ~~~ R13 ~~~ R14 ~~~ R15
+    end
+    P1 --> P2 --> P3
+    class R1,R10,R11,R12,R13,R14,R15,R2,R3,R4,R5,R6,R7,R8,R9 internal-link;
+```
 
 ## Books
 

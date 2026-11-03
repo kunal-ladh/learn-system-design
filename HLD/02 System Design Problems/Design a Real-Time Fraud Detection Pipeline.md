@@ -4,6 +4,7 @@ type: problem
 category: additional
 tags: [problem, additional]
 priority: high
+interview_tier: stretch
 status: not-started
 confidence: 1
 last_worked: 
@@ -91,6 +92,7 @@ flowchart LR
     SP --> FS
     SC -- "decisions" --> K
     K --> DL[("Decision log + labels (S3 / warehouse)")]
+    class K,store internal-link;
 ```
 
 ## Component responsibilities

@@ -4,7 +4,7 @@ type: moc
 tags: [moc, storage-search]
 summary: "Where bytes live when they are not rows: objects, files, blocks, warehouses, and search."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Storage & Search
@@ -20,10 +20,13 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Object Storage] --> B[Blob Storage]
-    A --> C[File Systems and Block Storage]
+    A --> C1[File Systems]
+    C1 --> C2[Block Storage]
     A --> D[Data Lakes]
     D --> E[Data Warehouses]
     E --> F[Time-Series Databases]
@@ -31,6 +34,7 @@ flowchart LR
     H --> I[Search Engines]
     I --> J[Search Indexing Pipelines]
     A --> K[Data Retention and Archival]
+    class A,B,C1,C2,D,E,F,G,H,I,J,K internal-link;
 ```
 
 ## Concepts

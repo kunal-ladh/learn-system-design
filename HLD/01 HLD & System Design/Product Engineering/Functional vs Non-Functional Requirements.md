@@ -13,7 +13,7 @@ next_review:
 related: ["[[Translating Product Requirements into Technical Requirements]]", "[[SLI SLO and SLA]]", "[[Latency]]", "[[Availability]]", "[[Prioritizing Reliability Performance Cost and Time to Market]]", "[[Back-of-the-Envelope Estimation]]"]
 summary: "Functional requirements say what the system does; non-functional requirements say how well, and because they are the ones that decide the architecture they must be captured as numbers, ranked when they conflict, and treated as the real design input."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Functional vs Non-Functional Requirements
@@ -53,6 +53,15 @@ cost           < 0.1 INR per transfer at 10x current volume  monthly cost / tran
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    FR["Functional requirements:<br/>what the system does"] --> D["Design decisions"]
+    NFR["NFR matrix: attribute · target ·<br/>condition · measurement · owner"] --> D
+    D --> C1["Component A — traces to NFR 3"]
+    D --> C2["Component B — traces to NFR 1"]
+    D --> C3["Component C — traces to nothing → candidate for removal"]
+```
 
 No runtime component; the structure is a requirements matrix with one row per attribute and columns for target, condition, measurement and owner. The matrix is the input to every later decision: each component in the design should trace to the NFR that justified it, and a component that traces to nothing is a candidate for removal.
 

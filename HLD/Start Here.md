@@ -5,7 +5,7 @@ type: guide
 tags: [guide]
 summary: "How a complete beginner should read this vault for SDE-2: what a concept note is, how to read one in 20 minutes, the 12-week order, and what to skip for now."
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Start here — a reading guide for SDE-2
@@ -13,7 +13,7 @@ updated: 2026-10-30
 > [!abstract] The short version
 > You do not need all 166 notes. You need about 70 of them, in the order below, read the right way: **definition → problem it solves → how it works → trade-offs → failure modes**, then three sentences in your own words. Everything else in this vault exists so that those 70 stick and so you can find the rest when a real design needs it.
 
-**Map:** [[HLD MOC]] (the full curriculum) · [[Engineering Dashboard]] (what to do today) · [[Workspace Guide]] (how the machinery works)
+**Map:** [[HLD MOC]] (the full curriculum) · [[Engineering Dashboard]] (what to do today) · [[Interview Prep MOC]] (the SDE-2 interview layer) · [[Workspace Guide]] (how the machinery works) · [[HLD Vault Status]] (what is in the vault and what changed)
 
 ## What system design is, in one paragraph
 
@@ -37,6 +37,16 @@ Then, before closing the note, write **three sentences under *Personal understan
 
 ## The learning loop the properties track
 
+```mermaid
+flowchart LR
+    D["Discover<br/>status: not-started"] --> L["Learn<br/>reading · confidence 2"]
+    L --> E["Explain<br/>understood · confidence 3"]
+    E --> DS["Design<br/>applied · confidence 4"]
+    DS --> I["Implement and evaluate<br/>confidence 5"]
+    I --> R["Revisit<br/>needs-revision, lower confidence honestly"]
+    R --> L
+```
+
 | Stage | What it looks like | Property |
 |---|---|---|
 | Discover | You have heard the term and know which category it belongs to | `status: not-started` |
@@ -49,6 +59,33 @@ Then, before closing the note, write **three sentences under *Personal understan
 Confidence is not completion. A note can be `applied` with `confidence: 2` if the design made you realise you did not understand it. Lowering a number is progress.
 
 ## The 12-week SDE-2 order
+
+*The shape of the twelve weeks; the problem boxes are links. The table below has the exact notes per week.*
+
+```mermaid
+flowchart TB
+    subgraph F ["Weeks 1–5 · foundations"]
+        direction LR
+        w1["1 · scale, latency, estimation"] --> w2["2 · CAP, consistency, HTTP"] --> w3["3 · load balancing, CDNs, timeouts, WebSockets"] --> w4["4 · database internals, transactions"] --> w5["5 · replication, sharding"]
+    end
+    subgraph M ["Weeks 6–8 · caching and messaging, first problems"]
+        direction LR
+        w6["6 · caching"] --> w7["7 · queues and Kafka"] --> w8["8 · delivery, idempotency, outbox"]
+    end
+    subgraph R ["Weeks 9–12 · resilience, distributed, ops, product"]
+        direction LR
+        w9["9 · breakers, bulkheads, rate limits"] --> w10["10 · partitions, quorums, locks"] --> w11["11 · observability, auth"] --> w12["12 · requirements, APIs, flags, deploys"]
+    end
+    F --> M --> R
+    w6 -.- p1[Design a URL Shortener]
+    w7 -.- p2[Design a Rate Limiter]
+    w8 -.- p3[Design a Notification System]
+    w9 -.- p4[Design a Distributed Cache]
+    w10 -.- p5[Design a Chat System]
+    w11 -.- p6[Design a Social Feed]
+    w12 -.- p7[Design a Payment System]
+    class p1,p2,p3,p4,p5,p6,p7 internal-link;
+```
 
 Roughly six notes a week, one design problem a week from week 6. Each line is a reading order, not just a list — the earlier ones are prerequisites for the later ones.
 
@@ -87,4 +124,4 @@ If you only have six weeks, do weeks 1, 4, 5, 6, 7 and 8 and the first three pro
 
 ## When you sit the interview
 
-Four things get graded, and all four are practised above: clarify requirements before drawing anything (week 12's first note), put numbers on the design (week 1's last note), choose components for reasons you say out loud (every trade-off table), and name what fails and what you do about it (every failure-mode section). The vault cannot do the saying-out-loud for you — that is the part to practise with another person.
+The twelve weeks above are Phase 1 of a 4–6 month plan; [[Interview Sprint Plan]] adds a depth phase and a final six-week sprint, [[SDE-2 Interview Framework]] gives the 45-minute structure, and [[SDE-2 Readiness Checklist]] tells you when you are ready. Four things get graded, and all four are practised above: clarify requirements before drawing anything (week 12's first note), put numbers on the design (week 1's last note), choose components for reasons you say out loud (every trade-off table), and name what fails and what you do about it (every failure-mode section). The vault cannot do the saying-out-loud for you — that is the part to practise with another person.

@@ -4,7 +4,7 @@ type: moc
 tags: [moc, architecture]
 summary: "How services are shaped, split and protected."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Architecture Patterns
@@ -20,17 +20,28 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Monoliths] --> B[Modular Monoliths]
     B --> C[Microservices]
-    C --> D[API Gateways and Service Discovery]
-    C --> E[Circuit Breakers, Bulkheads, Rate Limiting]
+    C --> D1[API Gateways]
+    C --> D2[Service Discovery]
+    C --> E1[Circuit Breakers]
+    E1 --> E2[Bulkheads]
+    E1 --> E3[Rate Limiting]
     C --> F[Event-Driven Architecture]
     F --> G[Saga Pattern]
-    F --> H[CQRS and Event Sourcing]
+    F --> H1[CQRS]
+    H1 --> H2[Event Sourcing]
+    F --> R[Real-Time Systems]
     C --> I[Domain-Driven Design]
+    I --> I2[Hexagonal Architecture]
+    I2 --> S[Separation of Concerns]
+    S --> X[Designing for Extensibility]
     A --> J[Strangler Pattern]
+    class A,B,C,D1,D2,E1,E2,E3,F,G,H1,H2,I,I2,J,R,S,X internal-link;
 ```
 
 ## Concepts

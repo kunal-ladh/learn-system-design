@@ -4,7 +4,7 @@ type: moc
 tags: [moc, product-engineering]
 summary: "The point of all of this: shipping products that work, change safely and stay cheap to run."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Product Engineering
@@ -20,18 +20,28 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
-    A[Translating Product Requirements] --> B[Functional vs Non-Functional Requirements]
+    A[Translating Product Requirements into Technical Requirements] --> B[Functional vs Non-Functional Requirements]
     B --> C[Prioritizing Reliability Performance Cost and Time to Market]
+    B --> DO[Data Ownership and Lifecycle]
     B --> D[Designing APIs and Contracts]
     D --> E[Backward Compatibility]
     E --> F[Versioning and Migrations]
     F --> G[Feature Flags]
+    G --> ID[Incremental Delivery]
     G --> H[Deployment and Rollback Strategies]
     H --> I[Monitoring User-Facing Performance]
+    D --> DM[Designing for Maintainability]
+    DM --> TS[Testing Strategies]
     C --> J[Evaluating Architectural Complexity]
-    J --> K[Technical Debt and Build vs Buy]
+    J --> OS[Operational Simplicity]
+    J --> K1[Technical Debt]
+    J --> K2[Build vs Buy Decisions]
+    J --> CR[Designing Systems for Changing Requirements]
+    class A,B,C,CR,D,DM,DO,E,F,G,H,I,ID,J,K1,K2,OS,TS internal-link;
 ```
 
 ## Concepts

@@ -62,7 +62,7 @@ spec:
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     Dev[Engineer or pipeline] -- "write, versioned, audited" --> SM[("Secret store, KMS encrypted")]
     SM -- "sync with workload identity" --> ESO[External Secrets or CSI driver]
     ESO -- "mounted file, refreshed" --> Pod[Service pod]

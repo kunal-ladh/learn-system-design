@@ -31,6 +31,20 @@
     "author": "text",
     "resource_type": "text",
     "summary": "text",
-    "title": "text"
+    "title": "text",
+    "interview_tier": "text",
+    "year": "text",
+    "problem": "text",
+    "date": "date",
+    "format": "text",
+    "interviewer": "text",
+    "duration_min": "number",
+    "score_requirements": "number",
+    "score_estimation": "number",
+    "score_architecture": "number",
+    "score_deep_dive": "number",
+    "score_tradeoffs": "number",
+    "score_communication": "number",
+    "overall": "number"
   }
 }

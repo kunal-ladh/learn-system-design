@@ -3,9 +3,10 @@ title: Problem Bank MOC
 aliases: [Problem Bank, Design Problems]
 type: moc
 tags: [moc, problem]
+cssclasses: [wide]
 summary: "Index of the 28 system design problems — each a decision sheet with questions to settle, options with trade-offs, and room for your own design."
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # System Design Problem Bank
@@ -13,7 +14,10 @@ updated: 2026-10-30
 > [!abstract] How these notes work
 > Each problem note is a **decision sheet**, not a model answer. Every section lists the questions a strong interviewer asks and the options with their trade-offs; you write *my decision and why* before looking at any reference. Statuses: `not-started` → `exploring` (requirements and estimation done) → `designing` (architecture and trade-offs written) → `implementing` (a project builds it) → `reviewed` (compared with a reference or a person) → `needs-revision`. Track `confidence` separately, and set `last_worked` every time you touch one.
 
-**Map:** [[HLD MOC]] · [[Start Here]] (which problems to do in which week) · [[Engineering Dashboard]]
+**Map:** [[HLD MOC]] · [[Start Here]] (which problems to do in which week) · [[Interview Prep MOC]] (tiers, probes per problem, the sprint) · [[Engineering Dashboard]]
+
+> [!tip] Interview tiers
+> Every problem carries `interview_tier`: **core** (ten problems to design twice and mock), **likely** (second-round material) or **stretch** (depth and fintech rounds). The live tables are in [[Interview Prep MOC]] and the per-problem probes in [[Interview Probe Questions]].
 
 ## How to run a 45-minute design session
 
@@ -21,6 +25,56 @@ updated: 2026-10-30
 2. On paper or in Excalidraw: requirements (5 min) → numbers (5 min) → high-level architecture (15 min) → two deep dives on the riskiest parts (15 min) → failures and trade-offs (5 min).
 3. Reopen the note and fill the *My decision and why* lines from what you drew. Only then open the *Reference solution* pointer, if there is one.
 4. Set `status`, `confidence`, `last_worked`, and a `next_review` 2–4 weeks out.
+
+## The bank at a glance
+
+*Grouped by `interview_tier`; every box opens the problem. Design the core column twice under time before the sprint.*
+
+```mermaid
+flowchart LR
+    subgraph core ["Core — design twice, mock once"]
+        direction TB
+        c1[Design a URL Shortener]
+        c2[Design a Rate Limiter]
+        c3[Design a Notification System]
+        c4[Design a Chat System]
+        c5[Design a Social Feed]
+        c6[Design a Distributed Cache]
+        c7[Design a Ticket Booking System]
+        c8[Design a Payment System]
+        c9[Design a Ride-Sharing Service]
+        c10[Design Search Autocomplete]
+        c1 ~~~ c2 ~~~ c3 ~~~ c4 ~~~ c5 ~~~ c6 ~~~ c7 ~~~ c8 ~~~ c9 ~~~ c10
+    end
+    subgraph likely ["Likely — design once, know the twists"]
+        direction TB
+        l1[Design a Distributed ID Generator]
+        l2[Design a Distributed Job Scheduler]
+        l3[Design a Message Queue]
+        l4[Design an API Gateway]
+        l5[Design File Storage]
+        l6[Design a Video Streaming Service]
+        l7[Design a Digital Wallet and Ledger]
+        l8[Design a Distributed Key-Value Store]
+        l9[Design a Metrics and Monitoring System]
+        l10[Design an Inventory Management System]
+        l1 ~~~ l2 ~~~ l3 ~~~ l4 ~~~ l5 ~~~ l6 ~~~ l7 ~~~ l8 ~~~ l9 ~~~ l10
+    end
+    subgraph stretch ["Stretch — depth and fintech rounds"]
+        direction TB
+        s1[Design a Logging System]
+        s2[Design a Webhook Delivery System]
+        s3[Design a Feature Flag Service]
+        s4[Design an IAM Service]
+        s5[Design a Workflow Orchestrator]
+        s6[Design a RAG Knowledge Assistant]
+        s7[Design a Collaborative Document Editor]
+        s8[Design a Real-Time Fraud Detection Pipeline]
+        s1 ~~~ s2 ~~~ s3 ~~~ s4 ~~~ s5 ~~~ s6 ~~~ s7 ~~~ s8
+    end
+    core ~~~ likely ~~~ stretch
+    class c1,c10,c2,c3,c4,c5,c6,c7,c8,c9,l1,l10,l2,l3,l4,l5,l6,l7,l8,l9,s1,s2,s3,s4,s5,s6,s7,s8 internal-link;
+```
 
 ## Core systems
 

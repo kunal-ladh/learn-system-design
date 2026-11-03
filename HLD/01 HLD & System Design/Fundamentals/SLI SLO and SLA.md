@@ -59,7 +59,7 @@ sum(rate(http_requests_total{job="api", code!~"5.."}[30d]))
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     U[Users] --> S[Service]
     S --> T["Telemetry: LB logs, client RUM, probes"]
     T --> I["SLI: good events / valid events"]

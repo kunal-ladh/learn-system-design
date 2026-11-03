@@ -4,7 +4,7 @@ type: moc
 tags: [moc, security]
 summary: "Who you are, what you may do, and how secrets and data stay protected."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Security
@@ -20,16 +20,20 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Authentication] --> B[JWT]
     B --> C[OAuth]
+    K[API Keys] --> C
     A --> D[Authorization]
     D --> E[Least Privilege]
+    D --> J[Audit Logs]
     F[Encryption at Rest and in Transit] --> G[Secrets Management]
     H[Input Validation] --> I[Threat Modeling]
-    D --> J[Audit Logs]
-    K[API Keys] --> C
+    I --> G
+    class A,B,C,D,E,F,G,H,I,J,K internal-link;
 ```
 
 ## Concepts

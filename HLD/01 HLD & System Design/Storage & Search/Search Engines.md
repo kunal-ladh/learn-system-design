@@ -69,6 +69,7 @@ flowchart LR
     CO -- "fan out, merge top-k" --> P1
     CO --> R2
     AL["Alias products, currently products_v7"] -. "swap on reindex" .-> CO
+    class K internal-link;
 ```
 
 ## Use cases

@@ -67,7 +67,7 @@ DROP TABLE transactions_2024_01;
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     HOT[("Hot: primary DB partitions, search index, cache")] -- "detach partition, export + verify" --> WARM["Warm: compressed partitions, IA object storage"]
     WARM -- "lifecycle transition" --> COLD["Cold: archive tier, object lock, legal hold"]
     COLD -- "restore drill: hours" --> STG["Staging DB for queries and audits"]

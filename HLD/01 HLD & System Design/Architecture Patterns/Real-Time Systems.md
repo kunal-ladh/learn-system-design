@@ -57,7 +57,7 @@ server  -> EVENT    acct:42 seq 1204 BalanceUpdated   (live)
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     P[Producers] --> S[/"Event stream: Kafka or Redis Streams"/]
     S --> C1["Connection server 1"]
     S --> C2["Connection server 2"]

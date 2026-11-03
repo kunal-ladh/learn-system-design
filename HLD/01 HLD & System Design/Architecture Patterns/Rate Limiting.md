@@ -70,6 +70,7 @@ flowchart LR
     L -- "allow" --> S[Service]
     L -- "429 + Retry-After" --> C
     L -. "fail open or closed" .-> L
+    class R internal-link;
 ```
 
 ## Use cases

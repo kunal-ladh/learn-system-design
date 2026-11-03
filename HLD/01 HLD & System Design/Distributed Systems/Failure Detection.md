@@ -56,7 +56,7 @@ max.poll.interval.ms: 300000
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     A["Node A"] -- "heartbeat every I" --> D["Detector on B"]
     D --> W{{"silence greater than T?"}}
     W -- "no" --> OK["A trusted"]

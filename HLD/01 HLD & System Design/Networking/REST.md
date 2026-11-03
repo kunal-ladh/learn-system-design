@@ -61,7 +61,7 @@ ETag: "1"
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     C["Client: browser, mobile, partner"] -- "GET /accounts/42, Accept: json" --> CDN["CDN or edge cache"]
     CDN -- "cache miss or non-GET" --> GW["API gateway: auth, rate limit, routing"]
     GW --> S1["Service replica 1"]

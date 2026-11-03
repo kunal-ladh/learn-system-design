@@ -60,7 +60,7 @@ Impact: 25 min, ~8% of authorisations failed, 31% of monthly budget consumed
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     I["Incident: severity, roles, single channel"] --> M["Mitigate first: rollback, flag, failover, shed"]
     M --> R["Resolve and declare end"]
     R --> T["Timeline from evidence: alerts, logs, traces, deploys, chat"]

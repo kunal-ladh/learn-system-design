@@ -61,7 +61,7 @@ ALTER TABLE entries DROP COLUMN amount;
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     E["1 Expand: add new shape"] --> D["2 Dual-write old + new"]
     D --> B["3 Backfill history"]
     B --> V["4 Verify: diff old vs new"]

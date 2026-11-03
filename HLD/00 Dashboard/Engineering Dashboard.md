@@ -3,8 +3,9 @@ title: Engineering Dashboard
 aliases: [Dashboard, Home]
 type: dashboard
 tags: [dashboard]
+cssclasses: [wide]
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Engineering Dashboard
@@ -12,12 +13,29 @@ updated: 2026-10-30
 > [!abstract] What this page answers
 > **What should I learn next? What needs revision? What am I building, and what is blocking it?** Every table below is a live view over note properties (native Bases — no plugin). Update `status`, `confidence`, `last_reviewed` and `next_review` inside a note and the dashboard follows. New here? Read [[Start Here]].
 
-**Navigation:** [[Start Here]] · [[HLD MOC]] · [[Knowledge Graph]] · [[Problem Bank MOC]] · [[Projects MOC]] · [[Resources MOC]] · [[Reviews MOC]] · [[Workspace Guide]]
+> [!info] Quick navigation
+> **Learn** [[Start Here]] · [[HLD MOC]] · [[Knowledge Graph]] — **Design** [[Problem Bank MOC]] — **Build** [[Projects MOC]] — **Interview** [[Interview Prep MOC]] · [[SDE-2 Interview Framework]] · [[Interview Sprint Plan]] — **Read** [[Resources MOC]] — **Review** [[Reviews MOC]] · [[Workspace Guide]] · [[HLD Vault Status]]
+
+**On this page:** [[#1. Current learning priorities|Learning priorities]] · [[#2. System design practice|Design practice]] · [[#3. Practical engineering|Projects]] · [[#4. Knowledge gaps|Gaps]] · [[#5. Weekly progress|Weekly]] · [[#6. Progress overview|Progress]] · [[#7. Interview readiness|Interview readiness]]
 
 > [!todo] Today's three moves *(edit by hand, keep it to three)*
 > 1. 
 > 2. 
 > 3. 
+
+## Where you are in the plan
+
+*Phase 1 is the twelve-week order in Start Here; the sprint is the last six weeks before the loop. Click a box to open the plan for that phase.*
+
+```mermaid
+flowchart LR
+    P1["Phase 1 · Foundations<br/>weeks 1–12"] --> P2["Phase 2 · Depth<br/>weeks 13–18"] --> P3["Phase 3 · Sprint<br/>final 6 weeks"] --> L["Interview loop"]
+    P1 -.- SH[Start Here]
+    P2 -.- SP[Interview Sprint Plan]
+    P3 -.- IP[Interview Prep MOC]
+    L -.- RC[SDE-2 Readiness Checklist]
+    class IP,RC,SH,SP internal-link;
+```
 
 ---
 
@@ -176,4 +194,46 @@ Tag a note's `tags` property with one of these and it appears below: `gap/explai
 > dv.paragraph(`**Problems:** ${probs.length} total · ${probs.where(p => p.status == "reviewed").length} completed · ${probs.where(p => ["exploring","designing","implementing"].includes(p.status)).length} in progress · ${probs.where(p => p.status == "needs-revision").length} need revision`);
 > dv.paragraph(`**Projects:** ${projs.length} total · ${projs.where(p => p.status == "active").length} active · ${projs.where(p => p.status == "shipped").length} shipped`);
 > dv.paragraph(`**Architecture decisions documented:** ${decisions.length}`);
+> ```
+
+---
+
+## 7. Interview readiness
+
+*The sprint's burndown. Tiers come from each problem's `interview_tier` property; readiness is `reviewed` + confidence 4. Everything here is explained in [[Interview Prep MOC]]; the framework, probes, cheat sheets and sprint plan live in `06 Interview Prep/`.*
+
+### Core problems not yet reviewed
+*Design it timed, compare with the reference, then set `status: reviewed` and `confidence`.*
+
+![[Interview Readiness.base#Core not yet reviewed]]
+
+### Core problems — readiness
+
+![[Interview Readiness.base#Core problems]]
+
+### Must-know concepts still below confidence 3
+*High-priority concepts the sprint cannot start with. Re-explain one a day.*
+
+![[Interview Readiness.base#Must-know concepts below 3]]
+
+### Latest mock interviews
+*Create one from `Templates/Mock Interview Template.md` in `06 Interview Prep/Mocks` after every mock.*
+
+![[Mock Interviews.base#Latest]]
+
+> [!example]- Readiness summary (Dataview)
+> ```dataviewjs
+> const probs = dv.pages('"02 System Design Problems"').where(p => p.type == "problem");
+> const tier = t => probs.where(p => p.interview_tier == t);
+> const ready = ps => ps.where(p => p.status == "reviewed" && (p.confidence ?? 1) >= 4).length;
+> dv.table(["Tier", "Problems", "Reviewed", "Ready (reviewed + confidence ≥ 4)", "Avg confidence"],
+>   ["core", "likely", "stretch"].map(t => { const ps = tier(t); const avg = (ps.map(p => p.confidence ?? 1).array().reduce((a, b) => a + b, 0) / Math.max(ps.length, 1)).toFixed(1);
+>     return [t, ps.length, ps.where(p => p.status == "reviewed").length, ready(ps), avg]; }));
+> const concepts = dv.pages('"01 HLD & System Design"').where(p => p.type == "concept" && p.priority == "high");
+> const below = concepts.where(p => (p.confidence ?? 1) < 3).length;
+> dv.paragraph(`**High-priority concepts below confidence 3:** ${below} / ${concepts.length}`);
+> const mocks = dv.pages('"06 Interview Prep/Mocks"').where(p => p.type == "mock");
+> const last = mocks.sort(p => p.date, "desc").array().slice(0, 2);
+> const ok = last.length == 2 && last.every(m => (m.score_tradeoffs ?? 0) >= 4 && (m.score_communication ?? 0) >= 4);
+> dv.paragraph(`**Mocks logged:** ${mocks.length} · **last two scored 4+ on trade-offs and communication:** ${ok ? "yes" : "not yet"}`);
 > ```

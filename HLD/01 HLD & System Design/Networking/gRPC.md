@@ -64,7 +64,7 @@ message TransferRequest {
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     App["Caller: generated stub, deadline 300 ms"] --> Ch["Channel: one HTTP/2 connection per backend, many streams"]
     Ch -- "client-side round robin over resolved endpoints" --> S1["Ledger pod 1"]
     Ch --> S2["Ledger pod 2"]

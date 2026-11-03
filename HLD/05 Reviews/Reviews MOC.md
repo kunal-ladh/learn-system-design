@@ -5,7 +5,7 @@ type: moc
 tags: [moc, review]
 summary: "Where weekly reviews live, how to run one, and the automatic progress sections that make them cheap."
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Weekly Reviews
@@ -14,6 +14,16 @@ updated: 2026-10-30
 > Every Sunday (or whichever day you choose), create a note here from `Templates/Weekly Review Template.md` (Obsidian: *Insert template*). Set `period_start` (Monday) and `period_end` (today) in its properties. The automatic sections list the concepts you reviewed, the problems you worked and the projects you touched in that period, so the only things you write by hand are the ones that matter: what you can now explain, what surprised you, what is unclear, and three priorities for next week.
 
 **Map:** [[Engineering Dashboard]] · [[Start Here]]
+
+## The loop
+
+```mermaid
+flowchart LR
+    D["Mon–Sat · daily loop<br/>read one note · explain one · set properties"] --> S["Sunday · weekly review<br/>from the template"]
+    S --> P["Three priorities"] --> M["Dashboard: today's three moves"] --> D
+    S --> G["gap/* tags · needs-revision"] --> D
+    S --> MK["Mocks logged this week<br/>(sprint only)"] --> D
+```
 
 ## What a good review contains
 

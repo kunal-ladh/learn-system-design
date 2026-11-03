@@ -54,7 +54,7 @@ curl -s -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     D["Schema change in repo"] --> CI["CI: compatibility check, transitive"]
     CI -- "compatible" --> R[("Registry: subject v1, v2, v3")]
     CI -. "incompatible: fail build" .-> D

@@ -13,7 +13,7 @@ next_review:
 related: ["[[Feature Flags]]", "[[Deployment and Rollback Strategies]]", "[[Testing Strategies]]", "[[Strangler Pattern]]", "[[Backward Compatibility]]", "[[Technical Debt]]"]
 summary: "Deliver a system as a sequence of thin, end-to-end slices — a walking skeleton first, then one user-visible increment at a time, each merged to trunk in small PRs and shipped dark or to a slice of users — because big-bang releases concentrate every risk into one unrecoverable moment."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Incremental Delivery
@@ -52,6 +52,13 @@ Slice 6  settlement with the PSP; flagged, internal accounts only
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    T["Trunk"] --> CI["CI: unit, contract, integration"] --> ART["Artifact"] --> DARK["Deploy dark"] --> EXP["Progressive exposure:<br/>flag or canary"] --> GATE{"Metrics gate"}
+    GATE -- pass --> NEXT["Next slice"] --> T
+    GATE -- fail --> ROLL["Roll back the exposure"] --> T
+```
 
 The structural shape is the delivery pipeline rather than a runtime component: trunk → CI (unit, contract, integration) → artifact → deploy dark → progressive exposure by flag or canary → metrics gate → next slice. Every slice travels the same path, which is why the path is built first, as the skeleton.
 

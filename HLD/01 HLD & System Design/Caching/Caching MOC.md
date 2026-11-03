@@ -4,7 +4,7 @@ type: moc
 tags: [moc, caching]
 summary: "The highest-leverage performance tool and the fastest way to serve wrong data."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Caching
@@ -20,17 +20,22 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
-    A[Cache-Aside] --> B[Write-Through and Write-Back]
-    A --> C[TTL and Eviction Policies]
-    C --> D[Cache Invalidation]
+    A[Cache-Aside] --> B1[Write-Through Caching]
+    B1 --> B2[Write-Back Caching]
+    A --> C1[TTL]
+    C1 --> C2[Eviction Policies]
+    C1 --> D[Cache Invalidation]
     D --> E[Cache Consistency]
     A --> F[Cache Stampedes]
     F --> G[Hot Keys]
     A --> H[Redis]
     H --> I[Distributed Caching]
     I --> J[Multi-Level Caching]
+    class A,B1,B2,C1,C2,D,E,F,G,H,I,J internal-link;
 ```
 
 ## Concepts

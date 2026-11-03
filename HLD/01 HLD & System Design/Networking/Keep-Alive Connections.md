@@ -57,7 +57,7 @@ const agent = new undici.Agent({ keepAliveTimeout: 30_000, connections: 50 });
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     C["Client pool: idle timeout 30 s"] -- "reused TCP+TLS connection" --> LB["ALB: idle timeout 60 s"]
     LB -- "upstream keep-alive" --> S["Server: keepAliveTimeout 65 s, max age 10 min"]
     S -. "GOAWAY or Connection: close at max age" .-> C

@@ -13,7 +13,7 @@ next_review:
 related: ["[[Designing APIs and Contracts]]", "[[Idempotency]]", "[[Hexagonal Architecture]]", "[[Deployment and Rollback Strategies]]", "[[Designing for Maintainability]]", "[[Backward Compatibility]]"]
 summary: "A testing strategy decides what to test at which level — unit for logic, integration for real dependencies, contract for service boundaries, a few end-to-end for the journeys — and adds the tests distributed systems need most: idempotency, retries, failure injection and schema compatibility."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Testing Strategies
@@ -53,6 +53,12 @@ Without a strategy, teams either test everything through the UI (slow, flaky, ha
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    PM["Pre-merge: unit and contract<br/>(under a minute)"] --> MG["Merge: integration in containers<br/>(a few minutes)"] --> ST["Staging: end-to-end journeys"] --> PR["Production: synthetic checks, continuously"]
+    PR -. "bug found late → add a test at an earlier gate" .-> PM
+```
 
 Structurally the strategy is a pipeline of gates: pre-merge runs unit and contract tests (under a minute), merge runs integration tests in containers (a few minutes), staging runs the end-to-end journeys, production runs synthetic checks continuously. A bug found at a later gate prompts a test at an earlier one.
 

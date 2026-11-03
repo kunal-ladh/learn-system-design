@@ -4,6 +4,7 @@ type: problem
 category: consumer-realtime
 tags: [problem, consumer-realtime]
 priority: medium
+interview_tier: core
 status: not-started
 confidence: 1
 last_worked: 

@@ -61,7 +61,7 @@ COMMIT;
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     S[Order service] -- "1 local tx: orders + outbox" --> DB[(PostgreSQL)]
     DB -- "2a poll SKIP LOCKED" --> R[Relay worker]
     DB -- "2b WAL via Debezium" --> R

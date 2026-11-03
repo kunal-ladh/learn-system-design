@@ -4,6 +4,7 @@ type: problem
 category: core
 tags: [problem, core]
 priority: medium
+interview_tier: likely
 status: not-started
 confidence: 1
 last_worked: 
@@ -101,6 +102,7 @@ flowchart LR
     CFG[("Route config store")] -. "push versions" .-> G
     IAM["IAM (JWKS, API keys)"] -. "keys refreshed periodically" .-> G
     G -. "access logs, traces" .-> OBS["Observability pipeline"]
+    class balancer internal-link;
 ```
 
 ## Component responsibilities

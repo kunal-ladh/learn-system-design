@@ -4,6 +4,7 @@ type: problem
 category: additional
 tags: [problem, additional]
 priority: high
+interview_tier: stretch
 status: not-started
 confidence: 1
 last_worked: 
@@ -94,6 +95,7 @@ flowchart LR
     IAM --> KMS["KMS (signing keys)"]
     IAM -- "JWKS, revocations, policy versions" --> R[("Redis")]
     SVC --> R
+    class R internal-link;
 ```
 
 ## Component responsibilities

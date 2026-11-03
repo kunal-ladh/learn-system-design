@@ -59,7 +59,7 @@ Decision:           not earned; adopt the modular monolith, revisit when pricing
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     R["Stated requirements with numbers"] --> S["Simplest design that meets them"]
     S --> P["Proposed design"]
     P --> C["Count parts, edges, failure modes"]

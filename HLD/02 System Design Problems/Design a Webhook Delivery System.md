@@ -4,6 +4,7 @@ type: problem
 category: additional
 tags: [problem, additional]
 priority: high
+interview_tier: stretch
 status: not-started
 confidence: 1
 last_worked: 

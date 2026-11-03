@@ -4,6 +4,7 @@ type: problem
 category: core
 tags: [problem, core]
 priority: high
+interview_tier: core
 status: not-started
 confidence: 1
 last_worked: 

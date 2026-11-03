@@ -61,7 +61,7 @@ ALTER TABLE payments DROP COLUMN amount;
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     E["Expand: add nullable column, table or concurrent index"] --> D["Deploy code that dual-writes"]
     D --> B["Backfill in throttled batches, verify counts"]
     B --> S["Switch reads behind a flag, observe"]

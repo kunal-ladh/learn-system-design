@@ -4,7 +4,7 @@ type: moc
 tags: [moc, distributed-systems]
 summary: "The rules of the game once there is more than one machine."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Distributed Systems
@@ -20,18 +20,24 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Network Partitions] --> B[Failure Detection]
+    B --> M[Gossip Protocols]
     B --> C[Leader Election]
     C --> D[Consensus]
     C --> E[Split-Brain]
     A --> F[Quorums]
     F --> G[Eventual Consistency]
+    G --> N[Coordination vs Availability]
     C --> H[Distributed Locks]
     A --> I[Clocks and Time]
     I --> J[Distributed ID Generation]
     A --> K[Retry Storms]
+    K --> L[Duplicate Message Processing]
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N internal-link;
 ```
 
 ## Concepts

@@ -1,0 +1,111 @@
+filters:
+  and:
+    - file.hasTag("mock")
+formulas:
+  avg: '(score_requirements + score_estimation + score_architecture + score_deep_dive + score_tradeoffs + score_communication) / 6'
+properties:
+  file.name:
+    displayName: Mock
+  formula.avg:
+    displayName: Rubric avg
+  score_requirements:
+    displayName: Req
+  score_estimation:
+    displayName: Est
+  score_architecture:
+    displayName: Arch
+  score_deep_dive:
+    displayName: Deep
+  score_tradeoffs:
+    displayName: Trade-offs
+  score_communication:
+    displayName: Comms
+views:
+  - type: table
+    name: All
+    order:
+      - file.name
+      - problem
+      - date
+      - format
+      - overall
+      - score_requirements
+      - score_estimation
+      - score_architecture
+      - score_deep_dive
+      - score_tradeoffs
+      - score_communication
+    sort:
+      - property: date
+        direction: DESC
+    summaries:
+      overall: Average
+      score_tradeoffs: Average
+      score_communication: Average
+      file.name: Filled
+  - type: table
+    name: Latest
+    order:
+      - file.name
+      - problem
+      - date
+      - format
+      - overall
+      - score_tradeoffs
+      - score_communication
+    sort:
+      - property: date
+        direction: DESC
+    limit: 5
+  - type: table
+    name: By problem
+    groupBy:
+      property: problem
+      direction: ASC
+    order:
+      - file.name
+      - date
+      - format
+      - overall
+      - score_tradeoffs
+    sort:
+      - property: date
+        direction: DESC
+    summaries:
+      overall: Average
+  - type: table
+    name: Weak rounds
+    filters:
+      and:
+        - 'overall <= 3'
+    order:
+      - file.name
+      - problem
+      - date
+      - overall
+      - score_requirements
+      - score_estimation
+      - score_architecture
+      - score_deep_dive
+      - score_tradeoffs
+      - score_communication
+    sort:
+      - property: date
+        direction: DESC
+  - type: table
+    name: This month
+    filters:
+      and:
+        - 'date >= today() - "30 days"'
+    order:
+      - file.name
+      - problem
+      - date
+      - format
+      - overall
+    sort:
+      - property: date
+        direction: DESC
+    summaries:
+      overall: Average
+      file.name: Filled

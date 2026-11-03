@@ -4,7 +4,7 @@ type: moc
 tags: [moc, networking]
 summary: "The layer under every request, and where most mysterious failures live."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Networking
@@ -20,17 +20,24 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[DNS] --> B[TCP and UDP]
     B --> C[TLS]
     C --> D[HTTP and HTTPS]
-    D --> E[REST and gRPC]
-    D --> F[Load Balancers and Reverse Proxies]
-    F --> G[CDNs]
-    E --> H[Connection Pooling]
+    D --> E1[REST]
+    D --> E2[gRPC]
+    D --> F1[Load Balancers]
+    F1 --> F2[Reverse Proxies]
+    F2 --> G[CDNs]
+    E1 --> H[Connection Pooling]
+    H --> H2[Keep-Alive Connections]
     H --> I[Timeouts and Retries]
     D --> J[WebSockets]
+    J --> K[Client State and Reconnection]
+    class A,B,C,D,E1,E2,F1,F2,G,H,H2,I,J,K internal-link;
 ```
 
 ## Concepts

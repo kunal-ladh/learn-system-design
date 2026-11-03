@@ -63,7 +63,7 @@ retry_policy:
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     U["Users, 1x load"] --> G["API gateway, retries 2x"]
     G --> S["Service, app retry 3x"]
     S --> M["Mesh sidecar, retry 2x"]

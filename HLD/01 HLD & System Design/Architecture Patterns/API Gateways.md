@@ -66,6 +66,7 @@ flowchart LR
     GW -- "/v1/legacy" --> L[Legacy monolith]
     GW -. "verify keys" .-> IAM[IAM service]
     GW -. "counters" .-> R[("Redis")]
+    class R internal-link;
 ```
 
 ## Use cases

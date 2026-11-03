@@ -7,20 +7,125 @@
   "showOrphans": true,
   "collapse-color": false,
   "colorGroups": [
-    { "query": "path:\"01 HLD & System Design/Fundamentals\"", "color": { "a": 1, "rgb": 16088064 } },
-    { "query": "path:\"01 HLD & System Design/Networking\"", "color": { "a": 1, "rgb": 2201331 } },
-    { "query": "path:\"01 HLD & System Design/Databases\"", "color": { "a": 1, "rgb": 3066993 } },
-    { "query": "path:\"01 HLD & System Design/Caching\"", "color": { "a": 1, "rgb": 15844367 } },
-    { "query": "path:\"01 HLD & System Design/Messaging & Event-Driven Systems\"", "color": { "a": 1, "rgb": 10181046 } },
-    { "query": "path:\"01 HLD & System Design/Distributed Systems\"", "color": { "a": 1, "rgb": 15277667 } },
-    { "query": "path:\"01 HLD & System Design/Architecture Patterns\"", "color": { "a": 1, "rgb": 3447003 } },
-    { "query": "path:\"01 HLD & System Design/Storage & Search\"", "color": { "a": 1, "rgb": 9807270 } },
-    { "query": "path:\"01 HLD & System Design/Observability & Reliability\"", "color": { "a": 1, "rgb": 1752220 } },
-    { "query": "path:\"01 HLD & System Design/Security\"", "color": { "a": 1, "rgb": 15158332 } },
-    { "query": "path:\"01 HLD & System Design/Product Engineering\"", "color": { "a": 1, "rgb": 11342935 } },
-    { "query": "path:\"02 System Design Problems\"", "color": { "a": 1, "rgb": 16777215 } },
-    { "query": "path:\"04 Projects\"", "color": { "a": 1, "rgb": 16745472 } },
-    { "query": "path:\"03 Resources\"", "color": { "a": 1, "rgb": 6323595 } }
+    {
+      "query": "path:\"01 HLD & System Design/Fundamentals\"",
+      "color": {
+        "a": 1,
+        "rgb": 16088064
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Networking\"",
+      "color": {
+        "a": 1,
+        "rgb": 2201331
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Databases\"",
+      "color": {
+        "a": 1,
+        "rgb": 3066993
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Caching\"",
+      "color": {
+        "a": 1,
+        "rgb": 15844367
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Messaging & Event-Driven Systems\"",
+      "color": {
+        "a": 1,
+        "rgb": 10181046
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Distributed Systems\"",
+      "color": {
+        "a": 1,
+        "rgb": 15277667
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Architecture Patterns\"",
+      "color": {
+        "a": 1,
+        "rgb": 3447003
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Storage & Search\"",
+      "color": {
+        "a": 1,
+        "rgb": 9807270
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Observability & Reliability\"",
+      "color": {
+        "a": 1,
+        "rgb": 1752220
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Security\"",
+      "color": {
+        "a": 1,
+        "rgb": 15158332
+      }
+    },
+    {
+      "query": "path:\"01 HLD & System Design/Product Engineering\"",
+      "color": {
+        "a": 1,
+        "rgb": 11342935
+      }
+    },
+    {
+      "query": "path:\"02 System Design Problems\"",
+      "color": {
+        "a": 1,
+        "rgb": 16777215
+      }
+    },
+    {
+      "query": "path:\"04 Projects\"",
+      "color": {
+        "a": 1,
+        "rgb": 16745472
+      }
+    },
+    {
+      "query": "path:\"03 Resources\"",
+      "color": {
+        "a": 1,
+        "rgb": 6323595
+      }
+    },
+    {
+      "query": "path:\"06 Interview Prep\"",
+      "color": {
+        "a": 1,
+        "rgb": 16738740
+      }
+    },
+    {
+      "query": "path:\"00 Dashboard\"",
+      "color": {
+        "a": 1,
+        "rgb": 12632256
+      }
+    },
+    {
+      "query": "path:\"05 Reviews\"",
+      "color": {
+        "a": 1,
+        "rgb": 12632256
+      }
+    }
   ],
   "collapse-display": true,
   "showArrow": false,

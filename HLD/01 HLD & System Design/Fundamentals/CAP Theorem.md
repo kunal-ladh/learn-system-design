@@ -49,7 +49,7 @@ Before CAP was stated, systems were sold as if replication could be transparent:
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     C1["Client, left side"] --> A["Node A, has latest write"]
     C2["Client, right side"] --> B["Node B, stale copy"]
     A -. "partition: replication blocked" .- B

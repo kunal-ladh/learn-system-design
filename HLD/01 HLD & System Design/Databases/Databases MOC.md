@@ -4,7 +4,7 @@ type: moc
 tags: [moc, databases]
 summary: "Where the state lives, what the database promises, and how it outgrows one machine."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Databases
@@ -20,6 +20,8 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Relational Database Internals] --> B[Indexing]
@@ -27,11 +29,17 @@ flowchart LR
     A --> D[Transactions]
     D --> E[Isolation Levels]
     E --> F[Optimistic and Pessimistic Locking]
+    D --> P[Distributed Transactions]
     A --> G[Replication]
     G --> H[Read Replicas]
     H --> I[Database Scaling]
-    I --> J[Partitioning and Sharding]
-    J --> K[Consistent Hashing]
+    I --> J1[Partitioning]
+    J1 --> J2[Sharding]
+    J2 --> K[Consistent Hashing]
+    A --> M[Data Modeling]
+    M --> N[Schema Evolution]
+    M --> O[SQL vs NoSQL]
+    class A,B,C,D,E,F,G,H,I,J1,J2,K,M,N,O,P internal-link;
 ```
 
 ## Concepts

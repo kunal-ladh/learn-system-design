@@ -13,7 +13,7 @@ next_review:
 related: ["[[Evaluating Architectural Complexity]]", "[[Performance vs Cost Trade-offs]]", "[[Designing for Maintainability]]", "[[Build vs Buy Decisions]]", "[[Technical Debt]]", "[[Monitoring]]"]
 summary: "Operational simplicity treats on-call load and the number of moving parts as design inputs: choose boring, well-understood technology, prefer managed services for anything that is not your core, and charge every new component its full operational cost before admitting it."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Operational Simplicity
@@ -55,6 +55,16 @@ Decision:          not yet -- use MSK (managed) and revisit self-hosting at 10x 
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    REQ["Request for a new component"] --> J{"Named justification and<br/>the scale at which it is needed?"}
+    J -- no --> REUSE["Reuse the standard blocks:<br/>one relational DB, one cache, one queue, one deploy path"]
+    J -- yes --> ADD["Admit it: owner, cost line, runbook"]
+    ADD --> INV[("Component inventory<br/>with cost sheet")]
+    REUSE --> INV
+    INV --> REV["Quarterly review: remove what nothing needs"]
+```
 
 No runtime diagram; the structural artifact is the component inventory with a cost sheet and an owner per entry. Architecturally the goal is a small set of well-known building blocks (one relational database, one cache, one queue, one deploy path) reused across services, with specialised components admitted only with a named justification and a named scale at which they become necessary.
 

@@ -13,7 +13,7 @@ next_review:
 related: ["[[Operational Simplicity]]", "[[Prioritizing Reliability Performance Cost and Time to Market]]", "[[Evaluating Architectural Complexity]]", "[[Technical Debt]]", "[[Designing Systems for Changing Requirements]]", "[[Performance vs Cost Trade-offs]]"]
 summary: "Build what differentiates your product and buy or adopt everything else; decide with total cost of ownership over several years, the operational burden and the exit path in view, and settle genuine uncertainty with a time-boxed evaluation against your real workload rather than a feature matrix."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Build vs Buy Decisions
@@ -51,6 +51,18 @@ Decision:   adopt behind an internal flag interface; revisit if fees-equivalent 
 ```
 
 ## Architecture
+
+```mermaid
+flowchart TD
+    C{"Is this capability a differentiator<br/>for the product?"}
+    C -- no --> B["Buy or adopt: managed service or open source"]
+    C -- yes --> T{"Can a bought option meet the NFRs<br/>with a cheap exit?"}
+    T -- yes --> B
+    T -- no --> BUILD["Build — with an owner, a budget and a TCO line"]
+    B --> AD["Behind a thin adapter so the exit stays cheap"]
+    BUILD --> AD
+    AD --> REV["Revisit trigger: scale, cost or vendor change"]
+```
 
 No runtime shape; the structural artifact is the decision record with its TCO table, plus one architectural rule: put bought or adopted components behind a thin internal interface (an adapter in [[Hexagonal Architecture]] terms) so the exit stays cheap and an evaluation can swap candidates.
 

@@ -13,7 +13,7 @@ next_review:
 related: ["[[Separation of Concerns]]", "[[Evaluating Architectural Complexity]]", "[[Technical Debt]]", "[[Testing Strategies]]", "[[Operational Simplicity]]", "[[Hexagonal Architecture]]"]
 summary: "Maintainability is designing for the next engineer: small modules with clear boundaries, code that reads like the domain, documentation that lives beside the code, operability built in, and a bias against cleverness because every clever line is paid for on every future read."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Designing for Maintainability
@@ -50,6 +50,23 @@ Maintainability review questions for a PR
 ```
 
 ## Architecture
+
+```mermaid
+flowchart TB
+    subgraph adapters ["Adapters — replaceable"]
+        direction LR
+        HTTP["HTTP / gRPC controllers"]
+        DB[("Database adapter")]
+        MQ["Queue adapter"]
+    end
+    subgraph domain ["Domain — stable, no framework imports"]
+        UC["Use cases"] --> ENT["Entities and rules"]
+    end
+    HTTP --> UC
+    UC -. "ports" .-> DB
+    UC -. "ports" .-> MQ
+    DOCS["Docs with the code: overview, ADRs, runbooks, API from the contract"] -.- domain
+```
 
 No single diagram captures maintainability; structurally it shows up as a shallow, acyclic dependency graph (adapters depend on the domain, never the reverse), a module map that fits on one page, and documentation versioned with the code: architecture overview, decision records, runbooks and API docs generated from the contract.
 

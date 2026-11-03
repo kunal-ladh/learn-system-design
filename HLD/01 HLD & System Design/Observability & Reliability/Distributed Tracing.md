@@ -54,7 +54,7 @@ Kafka record headers: traceparent=<same format>, tracestate=<vendor data>
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     G["API gateway, root span"] -- "traceparent" --> P["Payments service"]
     P -- "traceparent" --> I["IAM service"]
     P -- "outbox relay, header in record" --> K[/"Kafka topic"/]

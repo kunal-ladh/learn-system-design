@@ -3,9 +3,10 @@ title: Projects MOC
 aliases: [Project Backlog, Projects]
 type: moc
 tags: [moc, project]
+cssclasses: [wide]
 summary: "Backlog of 16 practical projects across eight categories, each linked to the concepts it exercises and the design problems it implements."
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Practical Projects
@@ -17,6 +18,41 @@ updated: 2026-10-30
 
 > [!tip] If you are studying for SDE-2
 > Pick **one** project after week 8 of [[Start Here]] — [[Webhook Relay]] or [[Rate Limiter Library]] are the best first picks: small, real, and they exercise idempotency, retries, Redis and rate limiting, which come up in every interview.
+
+## Projects and the problems they implement
+
+*Left: what you build; right: the design problem it answers. Every box is a link.*
+
+```mermaid
+flowchart LR
+    WR[Webhook Relay] --> p1[Design a Webhook Delivery System]
+    WR --> p2[Design a Notification System]
+    PN[Personal Notification Hub] --> p2
+    RL[Rate Limiter Library] --> p3[Design a Rate Limiter]
+    RL --> p4[Design an API Gateway]
+    LG[LLM Gateway] --> p4
+    LG --> p3
+    LG --> p14[Design a RAG Knowledge Assistant]
+    VR[Vault RAG Assistant] --> p14
+    KV[Mini-KV Store] --> p5[Design a Distributed Key-Value Store]
+    KV --> p6[Design a Distributed Cache]
+    CL[Chaos Lab] --> p5
+    CL --> p17[Design a Message Queue]
+    LK[Lock Service with Fencing Tokens] --> p7[Design a Distributed Job Scheduler]
+    DJ[Durable Job Scheduler] --> p7
+    DJ --> p16[Design a Workflow Orchestrator]
+    LO[Live Ops Dashboard] --> p8[Design a Metrics and Monitoring System]
+    LO --> p9[Design a Chat System]
+    PC[Presence and Chat Service] --> p9
+    DL[Double-Entry Ledger Service] --> p10[Design a Payment System]
+    DL --> p11[Design a Digital Wallet and Ledger]
+    DL --> p12[Design a Ticket Booking System]
+    LT[Load Test and Latency Lab] --> p12
+    LT --> p18[Design a URL Shortener]
+    SF[Streaming Fraud Rules Engine] --> p13[Design a Real-Time Fraud Detection Pipeline]
+    FF[Feature Flag Service and SDK] --> p15[Design a Feature Flag Service]
+    class CL,DJ,DL,FF,KV,LG,LK,LO,LT,PC,PN,SF,VR,WR,p1,p10,p11,p12,p13,p14,p15,p16,p17,p18,p2,p3,p4,p5,p6,p7,p8,p9 internal-link;
+```
 
 ## Backend engineering
 

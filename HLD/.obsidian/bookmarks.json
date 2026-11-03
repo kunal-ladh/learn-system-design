@@ -1,0 +1,134 @@
+{
+  "items": [
+    {
+      "type": "file",
+      "ctime": 1793721950267,
+      "path": "00 Dashboard/Engineering Dashboard.md",
+      "title": "Dashboard"
+    },
+    {
+      "type": "file",
+      "ctime": 1793721950267,
+      "path": "Start Here.md",
+      "title": "Start Here"
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Learn",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "01 HLD & System Design/HLD MOC.md",
+          "title": "HLD MOC"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "01 HLD & System Design/Knowledge Graph.md",
+          "title": "Knowledge Graph"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "00 Dashboard/Revision Queue.base",
+          "title": "Revision Queue"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Design and build",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "02 System Design Problems/Problem Bank MOC.md",
+          "title": "Problem Bank"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Projects/Projects MOC.md",
+          "title": "Projects"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "03 Resources/Resources MOC.md",
+          "title": "Resources"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Interview",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/Interview Prep MOC.md",
+          "title": "Interview Prep"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/SDE-2 Interview Framework.md",
+          "title": "Framework"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/Interview Probe Questions.md",
+          "title": "Probe questions"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/Estimation Cheat Sheet.md",
+          "title": "Estimation"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/Component Choice Cheat Sheet.md",
+          "title": "Component choice"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/SDE-2 Readiness Checklist.md",
+          "title": "Readiness"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "06 Interview Prep/Interview Sprint Plan.md",
+          "title": "Sprint plan"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Review",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "05 Reviews/Reviews MOC.md",
+          "title": "Weekly reviews"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Workspace Guide.md",
+          "title": "Workspace Guide"
+        }
+      ]
+    }
+  ]
+}

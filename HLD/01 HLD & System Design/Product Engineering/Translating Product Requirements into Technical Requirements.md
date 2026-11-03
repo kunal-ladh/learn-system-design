@@ -13,7 +13,7 @@ next_review:
 related: ["[[Functional vs Non-Functional Requirements]]", "[[Back-of-the-Envelope Estimation]]", "[[Designing APIs and Contracts]]", "[[Data Ownership and Lifecycle]]", "[[Prioritizing Reliability Performance Cost and Time to Market]]", "[[Testing Strategies]]"]
 summary: "Turn a product ask into a buildable, testable spec by asking the clarifying questions, walking the user journey into data flows, surfacing the implicit scale, latency and compliance requirements, and writing each requirement so that a test can prove it."
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-03
 ---
 
 # Translating Product Requirements into Technical Requirements
@@ -58,6 +58,14 @@ Acceptance:     replaying the same webhook 5x credits once; killing the service
 ```
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    PI["Product intent"] --> CJ["Clarified user journey"] --> DF["Data flow with owners"] --> REQ["Numbered functional and<br/>non-functional requirements"] --> AC["Acceptance criteria<br/>and open questions"]
+    REV["Reviewed by the people who will build and run it"] -.-> CJ
+    REV -.-> DF
+    REV -.-> REQ
+```
 
 The shape is a pipeline of documents rather than a system: product intent → clarified journey → data flow with owners → numbered functional and non-functional requirements → acceptance criteria and open questions. Each stage narrows ambiguity and is reviewed by the people who will build and run the system, not only the author.
 

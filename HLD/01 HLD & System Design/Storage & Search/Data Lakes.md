@@ -78,6 +78,7 @@ flowchart LR
         SIL
         GOLD
     end
+    class K internal-link;
 ```
 
 ## Use cases

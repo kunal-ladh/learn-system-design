@@ -4,7 +4,7 @@ type: moc
 tags: [moc, messaging]
 summary: "Your deepest area at work: queues, logs, delivery guarantees and the patterns that make async safe."
 created: 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-03
 ---
 
 # Messaging & Event-Driven Systems
@@ -20,18 +20,30 @@ updated: 2026-10-29
 
 ## How the ideas connect
 
+*Every node is a link — click to open the note. Arrows mean "read this first".*
+
 ```mermaid
 flowchart LR
     A[Synchronous vs Asynchronous Communication] --> B[Message Queues]
+    B --> P[Pub-Sub]
     B --> C[Kafka]
     C --> D[Topic Partitions]
     D --> E[Consumer Groups]
     D --> F[Ordering Guarantees]
+    C --> BP[Backpressure]
+    C --> FO[Fan-Out]
+    C --> ES[Event Schemas]
+    ES --> ESE[Event Schema Evolution]
     B --> G[Delivery Semantics]
-    G --> H[Idempotency]
-    G --> I[Retry Strategies and Dead-Letter Queues]
+    G --> G1[At-Most-Once Delivery]
+    G --> G2[At-Least-Once Delivery]
+    G --> G3[Exactly-Once Semantics]
+    G2 --> H[Idempotency]
+    G --> I1[Retry Strategies]
+    I1 --> I2[Dead-Letter Queues]
     H --> J[Outbox Pattern]
     J --> K[Change Data Capture]
+    class A,B,BP,C,D,E,ES,ESE,F,FO,G,G1,G2,G3,H,I1,I2,J,K,P internal-link;
 ```
 
 ## Concepts

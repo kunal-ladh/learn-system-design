@@ -57,7 +57,7 @@ COMMIT;                                              -- offset/ack only after co
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     P["Producer, id assigned at creation"] -- "send, timeout, resend" --> B[/"Broker, at-least-once"/]
     B -- "deliver (maybe twice)" --> C["Consumer"]
     C --> T{{"INSERT id into processed_messages"}}
