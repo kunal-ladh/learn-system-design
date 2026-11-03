@@ -93,6 +93,11 @@ flowchart LR
     W --> EP["Customer endpoints"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Webhook Delivery System.excalidraw]]
+> [[Design a Webhook Delivery System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

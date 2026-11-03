@@ -70,6 +70,11 @@ flowchart LR
     C -- "read: may be behind" --> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[BASE.excalidraw]]
+> [[BASE.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Data partitioned across nodes or services where cross-partition atomicity would need distributed transactions and the business can tolerate a short lag on derived data.

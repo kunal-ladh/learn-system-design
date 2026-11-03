@@ -89,6 +89,11 @@ flowchart LR
     S -. "monitor" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Redis.excalidraw]]
+> [[Redis.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A shared read cache for hot entities with a TTL ([[Cache-Aside]]); the classic role and still the biggest.

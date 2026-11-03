@@ -70,6 +70,11 @@ flowchart TD
     L2 -- "locator" --> H[("Heap page or clustered row")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Indexing.excalidraw]]
+> [[Indexing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Fetch by id / by foreign key / by customer" — every lookup predicate in a hot path needs an index whose leftmost columns match it.

@@ -94,6 +94,11 @@ sequenceDiagram
     I->>K: remove old key after all its tokens expired
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[JWT.excalidraw]]
+> [[JWT.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Many services must authenticate requests without calling IAM each time" — the canonical case; access tokens verified locally, refresh traffic to IAM only.

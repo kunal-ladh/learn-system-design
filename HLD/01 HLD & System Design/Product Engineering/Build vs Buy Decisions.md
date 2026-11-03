@@ -64,6 +64,11 @@ flowchart TD
     AD --> REV["Revisit trigger: scale, cost or vendor change"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Build vs Buy Decisions.excalidraw]]
+> [[Build vs Buy Decisions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 No runtime shape; the structural artifact is the decision record with its TCO table, plus one architectural rule: put bought or adopted components behind a thin internal interface (an adapter in [[Hexagonal Architecture]] terms) so the exit stays cheap and an evaluation can swap candidates.
 
 ## Use cases

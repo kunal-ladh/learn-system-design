@@ -74,6 +74,11 @@ flowchart LR
     DEL["Live-docs bitmap: deletes"] -. "filter" .-> SR
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Inverted Indexes.excalidraw]]
+> [[Inverted Indexes.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Search by words inside text fields" — the base case; any [[Full-Text Search]] need.

@@ -70,6 +70,11 @@ flowchart LR
     RR --> R["Ranked results"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Full-Text Search.excalidraw]]
+> [[Full-Text Search.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users search by words, phrases or partial names and expect relevance and typo tolerance" — product, merchant, document, help-centre and customer search.

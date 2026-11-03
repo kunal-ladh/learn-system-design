@@ -70,6 +70,11 @@ flowchart LR
     A -. "same key, different body: reject" .-> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Idempotency.excalidraw]]
+> [[Idempotency.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "The client may retry" — every money-moving or resource-creating endpoint: transfers, orders, provisioning ([[Design a Payment System]], [[Design a Digital Wallet and Ledger]]).

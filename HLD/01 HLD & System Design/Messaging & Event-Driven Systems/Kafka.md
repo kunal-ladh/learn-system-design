@@ -77,6 +77,11 @@ flowchart LR
     B1 --> G2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Kafka.excalidraw]]
+> [[Kafka.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Every service must be able to react to order/payment events, and new consumers will keep appearing" — the log's independent offsets give zero-copy [[Fan-Out]] to any number of groups.

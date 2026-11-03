@@ -57,6 +57,11 @@ flowchart LR
     E -.-> DR["Referenced from every design review"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Prioritizing Reliability Performance Cost and Time to Market.excalidraw]]
+> [[Prioritizing Reliability Performance Cost and Time to Market.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 No runtime shape; the structure is a decision table keyed by component and stage, kept with the architecture docs and referenced from design reviews. Each row carries the order, the SLO or budget that encodes it, and the revisit trigger. More than a dozen rows means the components are too fine-grained.
 
 ## Use cases

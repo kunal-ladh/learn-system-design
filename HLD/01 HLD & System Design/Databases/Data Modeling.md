@@ -81,6 +81,11 @@ flowchart LR
     E -. "CDC or events" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Data Modeling.excalidraw]]
+> [[Data Modeling.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Every movement of money must be reconstructible and reconcilable" → append-only double-entry ledger, derived or versioned balances, no updates ([[Design a Digital Wallet and Ledger]]).

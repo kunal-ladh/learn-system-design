@@ -65,6 +65,11 @@ flowchart LR
     LIM{{"Limits: volume IOPS and MB/s, instance EBS bandwidth"}} -. "throttle" .-> BL
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Block Storage.excalidraw]]
+> [[Block Storage.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Run a database on this node" (PostgreSQL, MySQL, MongoDB, Elasticsearch, Kafka brokers) — random small I/O with durability requirements; block storage is the only fit.

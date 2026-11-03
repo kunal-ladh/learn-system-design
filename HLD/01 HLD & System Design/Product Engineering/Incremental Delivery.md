@@ -60,6 +60,11 @@ flowchart LR
     GATE -- fail --> ROLL["Roll back the exposure"] --> T
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Incremental Delivery.excalidraw]]
+> [[Incremental Delivery.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 The structural shape is the delivery pipeline rather than a runtime component: trunk → CI (unit, contract, integration) → artifact → deploy dark → progressive exposure by flag or canary → metrics gate → next slice. Every slice travels the same path, which is why the path is built first, as the skeleton.
 
 ## Use cases

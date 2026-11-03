@@ -62,6 +62,11 @@ flowchart LR
     D -- "discard with audit reason" --> L[("Audit log")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Dead-Letter Queues.excalidraw]]
+> [[Dead-Letter Queues.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "A single bad message must never stall the stream" — every at-least-once consumer on a partitioned log or a FIFO queue.

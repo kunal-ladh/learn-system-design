@@ -69,6 +69,11 @@ flowchart LR
     EV --> LOG
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Vault RAG Assistant.excalidraw]]
+> [[Vault RAG Assistant.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage retrieval adds keyword search (PostgreSQL `tsvector`) fused with vector results by reciprocal rank fusion, a cross-encoder or LLM re-ranker, query rewriting for follow-up questions, and a response cache keyed by normalised question plus index version.
 
 ## Tech stack

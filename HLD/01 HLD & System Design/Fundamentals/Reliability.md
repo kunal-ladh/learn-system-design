@@ -61,6 +61,11 @@ flowchart LR
     L -. "shrinks the next blast radius" .-> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Reliability.excalidraw]]
+> [[Reliability.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement talks about correctness under stress: "no double charge even if the pod restarts mid-request", "no lost events during a broker failover".

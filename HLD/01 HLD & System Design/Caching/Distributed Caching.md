@@ -77,6 +77,11 @@ flowchart LR
     N2 -- "miss" --> DB
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Distributed Caching.excalidraw]]
+> [[Distributed Caching.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The hot set no longer fits in one node's memory, or the read rate exceeds one node's throughput ([[Bottleneck Analysis]]).

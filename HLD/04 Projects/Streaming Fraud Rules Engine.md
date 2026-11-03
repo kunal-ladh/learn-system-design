@@ -69,6 +69,11 @@ flowchart LR
     R --> SR[("scores-replay-v2")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Streaming Fraud Rules Engine.excalidraw]]
+> [[Streaming Fraud Rules Engine.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage state goes to a changelog topic with periodic snapshots (Kafka Streams-style), scoring and offset commit become transactional for exactly-once output, and hot cards (a card-testing attack hammers one key) are measured and mitigated.
 
 ## Tech stack

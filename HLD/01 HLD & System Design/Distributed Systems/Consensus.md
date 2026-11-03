@@ -70,6 +70,11 @@ flowchart LR
     L -- "commitIndex=42 in next heartbeat" --> F1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Consensus.excalidraw]]
+> [[Consensus.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Exactly one of these must be true/chosen/active cluster-wide" — unique names, lock ownership, leader identity, the current configuration version ([[Distributed Locks]], [[Service Discovery]]).

@@ -67,6 +67,11 @@ flowchart LR
     P0 -. "followers on B2, B3" .-> F0[Replicas]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Topic Partitions.excalidraw]]
+> [[Topic Partitions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Events for one account must be processed in order, but we have millions of accounts" — key by account id, partitions by throughput.

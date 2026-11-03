@@ -78,6 +78,11 @@ flowchart LR
     C1 -- "commit offsets" --> OF[("__consumer_offsets")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Consumer Groups.excalidraw]]
+> [[Consumer Groups.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "One topic, N worker replicas, and each event must be processed by only one of them" — the default deployment shape for any Kafka consumer service.

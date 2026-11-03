@@ -64,6 +64,11 @@ flowchart LR
     C["Celebrity post: no push"] -. "pull path only" .-> P
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Fan-Out.excalidraw]]
+> [[Fan-Out.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Each user sees a personalised feed assembled from many sources" — social feeds, activity streams ([[Design a Social Feed]]).

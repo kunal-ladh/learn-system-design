@@ -71,6 +71,11 @@ flowchart LR
     A -- "non-idempotent timeout: look up by idempotency key" --> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Timeouts and Retries.excalidraw]]
+> [[Timeouts and Retries.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Every remote call" — there is no network call that should lack a timeout; the only question is the value.

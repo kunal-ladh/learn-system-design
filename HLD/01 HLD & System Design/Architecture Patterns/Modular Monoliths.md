@@ -62,6 +62,11 @@ flowchart LR
     I --> SI[("inventory schema")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Modular Monoliths.excalidraw]]
+> [[Modular Monoliths.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A growing team (roughly 10–50 engineers) that feels ownership pain in a monolith but has no scaling or deployment-isolation reason to distribute.

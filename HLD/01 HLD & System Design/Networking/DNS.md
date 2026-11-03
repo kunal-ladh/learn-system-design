@@ -65,6 +65,11 @@ flowchart LR
     Rec -- "cached answer" --> App
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[DNS.excalidraw]]
+> [[DNS.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Clients must not need reconfiguring when we move or scale the backend" — put a name in front of it, not an address.

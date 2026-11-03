@@ -69,6 +69,11 @@ flowchart LR
     K2 -- "max version v7, repair R3" --> C2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Quorums.excalidraw]]
+> [[Quorums.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "No single replica may be a point of failure for writes or reads" — the requirement for leaderless or multi-leader storage ([[Design a Distributed Key-Value Store]]).

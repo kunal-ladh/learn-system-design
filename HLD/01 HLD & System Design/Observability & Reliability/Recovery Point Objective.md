@@ -67,6 +67,11 @@ flowchart LR
     M["Lag and archive-age metrics vs objective"] -. "alert when exposure exceeds RPO" .-> X
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Recovery Point Objective.excalidraw]]
+> [[Recovery Point Objective.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Ledgers, payments and anything where an acknowledged write is a promise: RPO zero for host and AZ loss via synchronous replication, and an explicit, small RPO for region loss with reconciliation designed in ([[Design a Payment System]], [[Design a Digital Wallet and Ledger]]).

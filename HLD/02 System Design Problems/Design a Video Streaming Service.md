@@ -100,6 +100,11 @@ flowchart LR
     CDN -- "origin pull" --> S3R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Video Streaming Service.excalidraw]]
+> [[Design a Video Streaming Service.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

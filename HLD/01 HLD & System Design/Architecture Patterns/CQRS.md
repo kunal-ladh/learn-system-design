@@ -64,6 +64,11 @@ flowchart LR
     Q --> RS
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[CQRS.excalidraw]]
+> [[CQRS.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Read and write shapes differ sharply: an order is written as header plus lines but read as a customer timeline, a merchant dashboard and a search result.

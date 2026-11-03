@@ -14,7 +14,7 @@ updated: 2026-11-03
 > **What should I learn next? What needs revision? What am I building, and what is blocking it?** Every table below is a live view over note properties (native Bases — no plugin). Update `status`, `confidence`, `last_reviewed` and `next_review` inside a note and the dashboard follows. New here? Read [[Start Here]].
 
 > [!info] Quick navigation
-> **Learn** [[Start Here]] · [[HLD MOC]] · [[Knowledge Graph]] — **Design** [[Problem Bank MOC]] — **Build** [[Projects MOC]] — **Interview** [[Interview Prep MOC]] · [[SDE-2 Interview Framework]] · [[Interview Sprint Plan]] — **Read** [[Resources MOC]] — **Review** [[Reviews MOC]] · [[Workspace Guide]] · [[HLD Vault Status]]
+> **Learn** [[Start Here]] · [[HLD MOC]] · [[Knowledge Graph]] — **Design** [[Problem Bank MOC]] — **Build** [[Projects MOC]] — **Interview** [[Interview Prep MOC]] · [[SDE-2 Interview Framework]] · [[Interview Sprint Plan]] — **Read** [[Resources MOC]] — **Review** [[Reviews MOC]] · [[Workspace Guide]] · [[HLD Vault Status]] — **Setup** [[Plugins to Install]] — **Canvases** [[HLD Category Map.excalidraw|HLD map]]
 
 **On this page:** [[#1. Current learning priorities|Learning priorities]] · [[#2. System design practice|Design practice]] · [[#3. Practical engineering|Projects]] · [[#4. Knowledge gaps|Gaps]] · [[#5. Weekly progress|Weekly]] · [[#6. Progress overview|Progress]] · [[#7. Interview readiness|Interview readiness]]
 
@@ -36,6 +36,11 @@ flowchart LR
     L -.- RC[SDE-2 Readiness Checklist]
     class IP,RC,SH,SP internal-link;
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Engineering Dashboard.excalidraw]]
+> [[Engineering Dashboard.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 ---
 

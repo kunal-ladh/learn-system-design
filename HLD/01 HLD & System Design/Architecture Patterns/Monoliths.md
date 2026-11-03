@@ -66,6 +66,11 @@ flowchart LR
     class R internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Monoliths.excalidraw]]
+> [[Monoliths.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A new product or team under roughly 20–30 engineers where boundaries are still moving; the requirement says "ship v1 in three months".

@@ -73,6 +73,11 @@ flowchart LR
     class R internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Rate Limiting.excalidraw]]
+> [[Rate Limiting.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Multi-tenant APIs where one tenant must not degrade others; the requirement says "fair share" or "per-plan limits".

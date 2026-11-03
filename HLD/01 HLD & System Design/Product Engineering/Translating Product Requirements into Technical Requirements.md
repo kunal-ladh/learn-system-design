@@ -67,6 +67,11 @@ flowchart LR
     REV -.-> REQ
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Translating Product Requirements into Technical Requirements.excalidraw]]
+> [[Translating Product Requirements into Technical Requirements.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 The shape is a pipeline of documents rather than a system: product intent → clarified journey → data flow with owners → numbered functional and non-functional requirements → acceptance criteria and open questions. Each stage narrows ambiguity and is reviewed by the people who will build and run the system, not only the author.
 
 ## Use cases

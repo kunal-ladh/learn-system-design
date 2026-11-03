@@ -72,6 +72,11 @@ flowchart TB
     Scan[Secret scanner in CI and pre-commit] -. "leak found, rotate" .-> SM
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Secrets Management.excalidraw]]
+> [[Secrets Management.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Services need database passwords, third-party API keys and signing keys in production" → a central store, per-service scoping, file-based injection, rotation with overlap.

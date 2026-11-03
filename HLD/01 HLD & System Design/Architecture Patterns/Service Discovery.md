@@ -67,6 +67,11 @@ flowchart LR
     PX --> P2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Service Discovery.excalidraw]]
+> [[Service Discovery.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any environment where instances are scheduled dynamically: Kubernetes, ECS, autoscaling groups.

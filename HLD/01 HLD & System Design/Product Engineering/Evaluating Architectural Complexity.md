@@ -68,6 +68,11 @@ flowchart TB
     J -- "no" --> D["Defer: keep as next step with its trigger"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Evaluating Architectural Complexity.excalidraw]]
+> [[Evaluating Architectural Complexity.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A design proposing microservices, Kafka, CQRS or a second datastore for a system with one team and modest load.

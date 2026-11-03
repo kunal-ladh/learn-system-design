@@ -71,6 +71,11 @@ flowchart TB
     C1 -. "dedup on event id" .-> C1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Outbox Pattern.excalidraw]]
+> [[Outbox Pattern.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any state change that must be observed by another service: order placed, payment captured, KYC approved, balance updated. If the requirement says "when X happens, Y must eventually happen", you need this or [[Change Data Capture]].

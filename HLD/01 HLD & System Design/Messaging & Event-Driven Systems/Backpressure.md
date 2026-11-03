@@ -66,6 +66,11 @@ flowchart LR
     C -. "shed: drop low-priority" .-> X[Discard]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Backpressure.excalidraw]]
+> [[Backpressure.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Traffic is bursty and the consumer has a fixed-rate dependency" — buffer in the broker, pull at the dependency's pace ([[Design a Payment System]] with a rate-limited processor).

@@ -68,6 +68,11 @@ flowchart TB
     SDK1 -. "service down" .-> LK["Last-known ruleset + defaults"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Feature Flag Service and SDK.excalidraw]]
+> [[Feature Flag Service and SDK.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the service pushes change notifications over server-sent events (SDKs then fetch the new version), a CDN or edge cache fronts the ruleset endpoint for thousands of SDKs, and a TypeScript SDK proves the ruleset contract is language-neutral. Measurement focuses on propagation time and on what happens during a flag service outage.
 
 ## Tech stack

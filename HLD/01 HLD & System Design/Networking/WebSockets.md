@@ -74,6 +74,11 @@ flowchart LR
     G2 -. "lookup" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[WebSockets.excalidraw]]
+> [[WebSockets.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users must see each other's messages instantly" — chat, collaborative editing, multiplayer presence ([[Design a Chat System]], [[Design a Collaborative Document Editor]]).

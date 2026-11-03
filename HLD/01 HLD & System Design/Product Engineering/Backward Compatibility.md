@@ -62,6 +62,11 @@ flowchart LR
     S -- "events with optional new field" --> K["Topic: tolerant consumers"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Backward Compatibility.excalidraw]]
+> [[Backward Compatibility.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any public or partner API, any event consumed outside your team, any mobile client — callers you cannot upgrade on demand.

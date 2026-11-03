@@ -73,6 +73,11 @@ flowchart LR
     PL -. "EXPLAIN shows estimates" .-> OUT
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Query Execution and Optimization.excalidraw]]
+> [[Query Execution and Optimization.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A request's p99 is dominated by one query — the first question is whether the plan is what you think it is, before anything is cached or scaled ([[Bottleneck Analysis]]).

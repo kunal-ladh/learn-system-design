@@ -119,6 +119,11 @@ flowchart LR
     REC --> PG
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Payment System.excalidraw]]
+> [[Design a Payment System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

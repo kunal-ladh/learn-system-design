@@ -81,6 +81,11 @@ flowchart LR
     class K internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Data Lakes.excalidraw]]
+> [[Data Lakes.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Keep all raw events indefinitely, cheaply" — logs, clickstreams, audit trails, model training data.

@@ -76,6 +76,11 @@ flowchart LR
     V -. "reject log with field names, not raw values" .-> L[("Logs")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Input Validation.excalidraw]]
+> [[Input Validation.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Partners post transfer requests to our API" → strict DTOs, bounded sizes, idempotency-key format, currency and amount rules, then authorisation and business checks.

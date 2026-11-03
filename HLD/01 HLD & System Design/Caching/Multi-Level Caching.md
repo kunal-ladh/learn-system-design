@@ -89,6 +89,11 @@ flowchart TD
     L2 -. "invalidation message" .-> L1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Multi-Level Caching.excalidraw]]
+> [[Multi-Level Caching.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Reference data read on every request — configuration, feature flags, fee tables, signing keys — belongs in an in-process cache with a short TTL and broadcast invalidation ([[Feature Flags]]).

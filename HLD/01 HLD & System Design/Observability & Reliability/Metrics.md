@@ -69,6 +69,11 @@ flowchart LR
     X["Exporters (node, Kafka, Postgres)"] -- "scrape" --> P
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Metrics.excalidraw]]
+> [[Metrics.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "We need dashboards and alerts for every service" — RED per endpoint and USE per resource is the baseline for any production service ([[Monitoring]]).

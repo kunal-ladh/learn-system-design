@@ -58,6 +58,11 @@ flowchart TB
     D -- "AP: answer locally" --> F["Stale read, later reconciliation"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[CAP Theorem.excalidraw]]
+> [[CAP Theorem.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any replicated store or multi-region deployment: the requirement must say what happens on the minority side of a partition.

@@ -70,6 +70,11 @@ flowchart LR
     R --> I["Investigate, fix forward"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Deployment and Rollback Strategies.excalidraw]]
+> [[Deployment and Rollback Strategies.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Every service: the question is which strategy, not whether. Rolling for routine changes; canary for anything touching the hot path or a data format.

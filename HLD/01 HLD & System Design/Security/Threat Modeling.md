@@ -78,6 +78,11 @@ flowchart LR
     S <--> PSP
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Threat Modeling.excalidraw]]
+> [[Threat Modeling.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "A new feature moves money, changes limits or exposes a new endpoint" → thirty-minute model in the design review, top threats recorded in the ADR.

@@ -93,6 +93,11 @@ flowchart LR
     API --> LLM["LLM gateway (providers, limits, cache)"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a RAG Knowledge Assistant.excalidraw]]
+> [[Design a RAG Knowledge Assistant.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

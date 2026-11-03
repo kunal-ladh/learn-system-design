@@ -76,6 +76,11 @@ flowchart TD
     ELC -- "yes" --> EC["EC: consistent, plus a round trip"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[PACELC.excalidraw]]
+> [[PACELC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Choosing replication settings for a database: `synchronous_commit`, write concern, `acks` — every one of these is a PACELC decision and should be justified in those terms.

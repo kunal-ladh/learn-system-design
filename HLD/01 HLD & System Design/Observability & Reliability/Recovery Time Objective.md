@@ -70,6 +70,11 @@ flowchart LR
     G -. "revise architecture or objective" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Recovery Time Objective.excalidraw]]
+> [[Recovery Time Objective.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Regulated or contractual systems where an RTO must be stated and evidenced — payments, ledgers, identity ([[Design a Payment System]], [[Design a Digital Wallet and Ledger]]).

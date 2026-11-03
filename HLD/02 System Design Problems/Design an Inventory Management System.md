@@ -92,6 +92,11 @@ flowchart LR
     ERP["ERP / WMS feeds"] --> API
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design an Inventory Management System.excalidraw]]
+> [[Design an Inventory Management System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

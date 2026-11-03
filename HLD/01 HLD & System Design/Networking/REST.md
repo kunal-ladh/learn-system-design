@@ -71,6 +71,11 @@ flowchart TB
     CDN -. "ETag and Cache-Control decide reuse" .-> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[REST.excalidraw]]
+> [[REST.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Public or partner-facing API", "mobile apps and web clients" — the universal reach of HTTP plus JSON is the whole point; nothing else is as easy for third parties to call.

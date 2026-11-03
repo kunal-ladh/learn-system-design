@@ -83,6 +83,11 @@ flowchart LR
     HT["Hot tenant"] --> ISO["Dedicated shard or partition"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Hot Keys.excalidraw]]
+> [[Hot Keys.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Multi-tenant platforms where tenant sizes differ by orders of magnitude: the largest merchant's keys and partitions will be hot.

@@ -75,6 +75,11 @@ flowchart LR
     G -. "revoke effective next request" .-> KS
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[API Keys.excalidraw]]
+> [[API Keys.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Merchants and partners integrate with our API from their servers" — per-key scopes, environments, rate tiers and instant revocation ([[Design an API Gateway]]).

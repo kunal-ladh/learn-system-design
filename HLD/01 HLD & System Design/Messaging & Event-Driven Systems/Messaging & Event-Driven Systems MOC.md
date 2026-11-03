@@ -46,6 +46,11 @@ flowchart LR
     class A,B,BP,C,D,E,ES,ESE,F,FO,G,G1,G2,G3,H,I1,I2,J,K,P internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Messaging & Event-Driven Systems Concept Map.excalidraw]]
+> [[Messaging & Event-Driven Systems Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

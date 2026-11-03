@@ -62,6 +62,11 @@ flowchart LR
     M["Metrics by variant"] -.-> U
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Feature Flags.excalidraw]]
+> [[Feature Flags.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A change too risky to release to everyone at once: new payment path, new ranking model, new storage backend — "can we try it on 1% first?".

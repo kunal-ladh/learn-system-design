@@ -82,6 +82,11 @@ sequenceDiagram
     Note over DB,WAL: crash here: recovery replays WAL, uncommitted versions never become visible
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[ACID.excalidraw]]
+> [[ACID.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any change touching several rows or tables that must stay in step: transfers, order plus order lines, inventory decrement plus reservation.

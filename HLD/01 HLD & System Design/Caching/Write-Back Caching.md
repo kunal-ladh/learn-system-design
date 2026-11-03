@@ -74,6 +74,11 @@ flowchart LR
     A -- "read" --> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Write-Back Caching.excalidraw]]
+> [[Write-Back Caching.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - High-rate counters and aggregates: views, likes, impressions, usage metering, where only the accumulated value matters.

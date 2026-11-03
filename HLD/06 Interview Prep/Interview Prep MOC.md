@@ -48,6 +48,11 @@ flowchart LR
     P3 --> L["Interview loop"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Interview Prep MOC.excalidraw]]
+> [[Interview Prep MOC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Exit criteria for each phase are in [[Interview Sprint Plan]]. The single most important rule: **the sprint is for performance, not learning** — anything you still need to learn gets done in Phase 2 or not at all.
 
 ## Problem tiers

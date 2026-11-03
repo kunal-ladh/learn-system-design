@@ -73,6 +73,11 @@ flowchart TD
     F -. "bottleneck moves" .-> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Bottleneck Analysis.excalidraw]]
+> [[Bottleneck Analysis.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Throughput has plateaued or latency climbs under load and the cause is unknown — the first question is which resource is saturated.

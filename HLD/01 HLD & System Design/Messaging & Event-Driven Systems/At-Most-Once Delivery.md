@@ -61,6 +61,11 @@ flowchart LR
     R["Periodic resync or TTL"] -. "repairs the gap" .-> A
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[At-Most-Once Delivery.excalidraw]]
+> [[At-Most-Once Delivery.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "We sample this every N seconds anyway" — metrics, health gauges, GPS pings, heartbeats ([[Design a Metrics and Monitoring System]], [[Design a Ride-Sharing Service]]).

@@ -36,6 +36,11 @@ flowchart TD
     class OBJ,SE,TSDB internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Component Choice Cheat Sheet — Which data store- (decision tree).excalidraw]]
+> [[Component Choice Cheat Sheet — Which data store- (decision tree).excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Storage
 
 | Pick | When the requirement is | Cost you accept | Defend with |
@@ -80,6 +85,11 @@ flowchart TD
     LOG & OUT & QUEUE --> IDEM["Consumers idempotent: at-least-once is the default"]
     class OUT,PS,QUEUE internal-link;
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Component Choice Cheat Sheet — Which messaging style- (decision tree).excalidraw]]
+> [[Component Choice Cheat Sheet — Which messaging style- (decision tree).excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 ## Messaging and asynchrony
 

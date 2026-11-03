@@ -81,6 +81,11 @@ flowchart TD
     E -. "no coordination, conflicts to resolve" .-> E
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Consistency Models.excalidraw]]
+> [[Consistency Models.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any read served from a replica, cache or secondary region: the requirement must name what the reader may see ([[Read Replicas]], [[Cache Consistency]]).

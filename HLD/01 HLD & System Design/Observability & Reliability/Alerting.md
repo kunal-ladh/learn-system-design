@@ -76,6 +76,11 @@ flowchart LR
     PM -. "tune or delete" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Alerting.excalidraw]]
+> [[Alerting.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any service with an SLO and an on-call rotation: burn-rate pages are the default paging policy, replacing per-threshold alerts ([[SLI SLO and SLA]], [[Error Budgets]]).

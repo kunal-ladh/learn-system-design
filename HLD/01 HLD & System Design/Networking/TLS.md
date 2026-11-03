@@ -65,6 +65,11 @@ sequenceDiagram
     Note over C,S: later reconnect: ticket -> resumption, optional 0-RTT
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[TLS.excalidraw]]
+> [[TLS.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Anything leaving a trusted network boundary: public APIs, mobile and browser clients, webhooks to customers ([[Design a Webhook Delivery System|webhook delivery]]), partner integrations. Non-negotiable; compliance regimes (PCI DSS) require it.

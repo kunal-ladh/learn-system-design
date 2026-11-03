@@ -66,6 +66,11 @@ flowchart LR
     DB --> DLQ[("Dead-lettered runs → replay")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Durable Job Scheduler.excalidraw]]
+> [[Durable Job Scheduler.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the project measures where the single-table design stops: when the claim query becomes the bottleneck, when leases need a dedicated lock service ([[Lock Service with Fencing Tokens]]), and whether a leader-elected ticker beats every-instance-ticks-with-conflicts. Only if the numbers demand it does a queue (Redis Streams or SQS) carry run execution.
 
 ## Tech stack

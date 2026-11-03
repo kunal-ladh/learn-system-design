@@ -125,6 +125,13 @@
         "a": 1,
         "rgb": 12632256
       }
+    },
+    {
+      "query": "path:Excalidraw",
+      "color": {
+        "a": 1,
+        "rgb": 10134706
+      }
     }
   ],
   "collapse-display": true,

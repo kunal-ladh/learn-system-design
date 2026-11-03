@@ -34,6 +34,12 @@
           "ctime": 1793721950267,
           "path": "00 Dashboard/Revision Queue.base",
           "title": "Revision Queue"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Excalidraw/Maps/HLD Category Map.excalidraw.md",
+          "title": "HLD map (Excalidraw)"
         }
       ]
     },
@@ -127,6 +133,12 @@
           "ctime": 1793721950267,
           "path": "Workspace Guide.md",
           "title": "Workspace Guide"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Plugins to Install.md",
+          "title": "Plugins to Install"
         }
       ]
     }

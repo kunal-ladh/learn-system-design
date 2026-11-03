@@ -68,6 +68,11 @@ flowchart TB
     U2 -- "reconnect with last_seq" --> C1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Real-Time Systems.excalidraw]]
+> [[Real-Time Systems.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement says "live", "instantly" or "without refreshing": chat, presence, order tracking, dashboards, collaborative editing.

@@ -67,6 +67,11 @@ flowchart TB
     B["Breaking change"] -- "new type or topic, dual publish" --> T2[/"payments.v2"/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Event Schema Evolution.excalidraw]]
+> [[Event Schema Evolution.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "We need to add a field to an event three teams consume" — the everyday case; pick the mode and follow the order.

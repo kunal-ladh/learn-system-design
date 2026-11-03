@@ -71,6 +71,11 @@ flowchart TB
     E -. "rollback: drop addition" .-> E
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Schema Evolution.excalidraw]]
+> [[Schema Evolution.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Rename a column / change a type / split a column" on any table that takes traffic — always expand–migrate–contract, never a single `ALTER`.

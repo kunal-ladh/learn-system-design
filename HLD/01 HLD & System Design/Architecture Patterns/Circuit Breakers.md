@@ -64,6 +64,11 @@ stateDiagram-v2
     Open --> Open: calls rejected and fallback served
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Circuit Breakers.excalidraw]]
+> [[Circuit Breakers.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any synchronous call to a dependency that can be slow or down: payment providers, partner APIs, another team's service, a database you can live without briefly.

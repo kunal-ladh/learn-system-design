@@ -62,6 +62,11 @@ flowchart LR
     U --> D["Domain: Account, Money, rules"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Hexagonal Architecture.excalidraw]]
+> [[Hexagonal Architecture.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A service whose rules matter and change: payments, ledgers, pricing, eligibility — the requirement includes "the logic must be testable" or "we will swap the provider".

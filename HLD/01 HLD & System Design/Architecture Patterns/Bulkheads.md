@@ -63,6 +63,11 @@ flowchart LR
     B -. "fills and rejects, A and C unaffected" .-> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Bulkheads.excalidraw]]
+> [[Bulkheads.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A service with several dependencies of unequal importance; the requirement says "checkout must not depend on recommendations being up".

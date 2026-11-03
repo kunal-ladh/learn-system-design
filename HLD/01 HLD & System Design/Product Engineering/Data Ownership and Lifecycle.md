@@ -67,6 +67,11 @@ flowchart LR
     W["Wallet API"] -- "writes via owner API only" --> L
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Data Ownership and Lifecycle.excalidraw]]
+> [[Data Ownership and Lifecycle.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A requirement that mentions "single source of truth", reconciliation, or "the numbers don't match between X and Y".

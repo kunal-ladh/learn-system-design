@@ -66,6 +66,11 @@ flowchart LR
     U3["Reader"] -- "may read 5, 7 or the merged value" --> R1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Eventual Consistency.excalidraw]]
+> [[Eventual Consistency.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Requirements with "available in every region", "works offline" or "must accept writes during a partition" — availability is being ranked above consistency ([[CAP Theorem]], [[PACELC]]).

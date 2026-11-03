@@ -70,6 +70,11 @@ flowchart LR
     S2 --> K
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Distributed ID Generation.excalidraw]]
+> [[Distributed ID Generation.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Ids must be generated before the write" — idempotency keys, events written to an outbox in the same transaction as the entity, offline-first clients ([[Outbox Pattern]], [[Idempotency]]).

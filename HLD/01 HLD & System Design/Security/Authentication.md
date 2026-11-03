@@ -85,6 +85,11 @@ sequenceDiagram
     I-->>U: new access and refresh tokens, old refresh revoked
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Authentication.excalidraw]]
+> [[Authentication.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users log in with email and password" → Argon2id hashing, breached-password screening, per-account and per-IP rate limits, MFA enrolment, and a session or token design chosen with revocation in mind.

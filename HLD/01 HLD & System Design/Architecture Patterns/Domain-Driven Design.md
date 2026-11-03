@@ -69,6 +69,11 @@ flowchart LR
     PA -. "anti-corruption layer" .-> EXT[External PSP model]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Domain-Driven Design.excalidraw]]
+> [[Domain-Driven Design.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Complex business domains with many rules and specialised vocabulary: payments, lending, insurance, logistics — where the requirement talks about invariants and who may do what when.

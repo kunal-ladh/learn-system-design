@@ -71,6 +71,11 @@ flowchart LR
     M["Metrics: active, idle, pending, timeouts"] -. "alert when pending wait rises" .-> P
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Connection Pooling.excalidraw]]
+> [[Connection Pooling.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Any service that talks to a relational database" — non-negotiable; the only question is the size.

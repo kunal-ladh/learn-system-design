@@ -66,6 +66,11 @@ flowchart LR
     T["Trace id from traceparent"] -. "correlates with" .-> S
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Logging.excalidraw]]
+> [[Logging.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "We need to explain exactly what happened to this request / payment / job" — the per-event detail that aggregates cannot give ([[Production Incident Analysis]]).

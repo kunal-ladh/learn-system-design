@@ -77,6 +77,11 @@ flowchart TD
     R1 -. "re-measure after each rung" .-> W
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Database Scaling.excalidraw]]
+> [[Database Scaling.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "p99 on the checkout endpoint is rising week on week" — start at rung 1 with the plan of its top queries, not at rung 3.

@@ -64,6 +64,11 @@ flowchart LR
     O -. "commands and replies via outbox and broker" .-> B[/Broker/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Saga Pattern.excalidraw]]
+> [[Saga Pattern.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A business operation that updates two or more services' data and must end consistent: checkout, money transfer between ledgers in different services, trip booking.

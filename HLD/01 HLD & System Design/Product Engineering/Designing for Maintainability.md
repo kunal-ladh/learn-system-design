@@ -68,6 +68,11 @@ flowchart TB
     DOCS["Docs with the code: overview, ADRs, runbooks, API from the contract"] -.- domain
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Designing for Maintainability.excalidraw]]
+> [[Designing for Maintainability.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 No single diagram captures maintainability; structurally it shows up as a shallow, acyclic dependency graph (adapters depend on the domain, never the reverse), a module map that fits on one page, and documentation versioned with the code: architecture overview, decision records, runbooks and API docs generated from the contract.
 
 ## Use cases

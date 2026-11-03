@@ -92,6 +92,11 @@ flowchart LR
     SDK -. "sampled evaluations" .-> API
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Feature Flag Service.excalidraw]]
+> [[Design a Feature Flag Service.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

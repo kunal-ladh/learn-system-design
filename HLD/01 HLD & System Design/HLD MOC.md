@@ -52,6 +52,11 @@ flowchart TB
     class A,B,C,D,E,F,G,H,I,IP,J,K,KG,PB,PJ internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[HLD Category Map.excalidraw]]
+> [[HLD Category Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## The eleven categories
 
 ### A. Fundamentals — [[Fundamentals MOC]]

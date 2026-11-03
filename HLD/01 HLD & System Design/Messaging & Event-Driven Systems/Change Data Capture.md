@@ -67,6 +67,11 @@ flowchart LR
     CDC -- "commit LSN offset" --> OF[("Connect offsets")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Change Data Capture.excalidraw]]
+> [[Change Data Capture.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "The search index / read model / cache must reflect every change, including deletes" — the classic feeds ([[Search Indexing Pipelines]], [[Cache Invalidation]], [[CQRS]]).

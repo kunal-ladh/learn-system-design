@@ -54,6 +54,11 @@ flowchart LR
     class CL,DJ,DL,FF,KV,LG,LK,LO,LT,PC,PN,SF,VR,WR,p1,p10,p11,p12,p13,p14,p15,p16,p17,p18,p2,p3,p4,p5,p6,p7,p8,p9 internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Projects MOC.excalidraw]]
+> [[Projects MOC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Backend engineering
 
 - [[Webhook Relay]] — A reliable outbound webhook delivery service with signing, retries, DLQ and per-endpoint isolation.

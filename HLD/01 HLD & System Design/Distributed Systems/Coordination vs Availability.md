@@ -68,6 +68,11 @@ flowchart LR
     O -. "coordination only to agree on ownership" .-> M["Ownership map"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Coordination vs Availability.excalidraw]]
+> [[Coordination vs Availability.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Multi-region or multi-AZ designs where the requirement is "writes succeed locally with regional latency": find the invariants, home them per region or per key, make the rest mergeable ([[Design a Distributed Key-Value Store]]).

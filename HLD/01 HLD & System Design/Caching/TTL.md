@@ -78,6 +78,11 @@ flowchart LR
     L --> S[("Source of truth")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[TTL.excalidraw]]
+> [[TTL.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any cached value with a stated staleness tolerance: "prices may be up to 60 seconds old" translates directly into a TTL.

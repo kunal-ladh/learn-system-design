@@ -71,6 +71,11 @@ flowchart TB
     S -. "feeds back" .-> I
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Production Incident Analysis.excalidraw]]
+> [[Production Incident Analysis.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Every incident above a severity threshold (user-visible outage, data integrity issue, security event, SLA breach) — the review is mandatory, not optional ([[Design a Payment System]]).

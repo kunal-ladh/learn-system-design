@@ -77,6 +77,11 @@ flowchart TB
     ERQ["Erasure request"] --> DEL
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Data Retention and Archival.excalidraw]]
+> [[Data Retention and Archival.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Regulated records (payments, KYC, ledger) must be kept N years and be producible on request" — minimum retention, WORM, restore drills.

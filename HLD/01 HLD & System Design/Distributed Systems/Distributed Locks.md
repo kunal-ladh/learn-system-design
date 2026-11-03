@@ -67,6 +67,11 @@ flowchart LR
     P1 -. "resumes, write with token 41, rejected" .-> S
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Distributed Locks.excalidraw]]
+> [[Distributed Locks.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Only one worker should rebuild this cache entry / run this report / send this digest at a time" — an efficiency lock, where an occasional duplicate costs CPU, not correctness ([[Cache Stampedes]]).

@@ -67,6 +67,11 @@ flowchart LR
     class R internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Rate Limiter Library.excalidraw]]
+> [[Rate Limiter Library.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the fixed window becomes a sliding-window counter (two buckets, weighted), hot keys are measured and optionally sharded (`key#0..k`) so one client cannot pin a single Redis slot, and the local fallback bucket is sized from the last known distributed state.
 
 ## Tech stack

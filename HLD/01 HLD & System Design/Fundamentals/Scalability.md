@@ -71,6 +71,11 @@ flowchart TD
     SH --> M
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Scalability.excalidraw]]
+> [[Scalability.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement states growth: "10x users in 18 months", "launch in three new countries", "traffic peaks at 20x the daily average during sales".

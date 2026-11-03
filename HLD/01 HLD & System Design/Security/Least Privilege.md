@@ -75,6 +75,11 @@ flowchart TD
     B["Permission boundary and SCP"] -- "caps any role in the account" --> Role
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Least Privilege.excalidraw]]
+> [[Least Privilege.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "A new service is being deployed" → its own IAM role, service account, database user and network policy from day one; the template is the control.

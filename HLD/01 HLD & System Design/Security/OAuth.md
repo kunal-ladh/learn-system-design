@@ -79,6 +79,11 @@ sequenceDiagram
     R-->>A: data
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[OAuth.excalidraw]]
+> [[OAuth.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users sign in to our web and mobile apps through our IAM" → authorization code with PKCE and OIDC; a backend-for-frontend holding tokens for the web app.

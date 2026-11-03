@@ -13,7 +13,10 @@ updated: 2026-11-03
 > [!abstract] The short version
 > You do not need all 166 notes. You need about 70 of them, in the order below, read the right way: **definition → problem it solves → how it works → trade-offs → failure modes**, then three sentences in your own words. Everything else in this vault exists so that those 70 stick and so you can find the rest when a real design needs it.
 
-**Map:** [[HLD MOC]] (the full curriculum) · [[Engineering Dashboard]] (what to do today) · [[Interview Prep MOC]] (the SDE-2 interview layer) · [[Workspace Guide]] (how the machinery works) · [[HLD Vault Status]] (what is in the vault and what changed)
+**Map:** [[HLD MOC]] (the full curriculum) · [[Engineering Dashboard]] (what to do today) · [[Interview Prep MOC]] (the SDE-2 interview layer) · [[Workspace Guide]] (how the machinery works) · [[HLD Vault Status]] (what is in the vault and what changed) · [[Plugins to Install]] (setup, ten minutes)
+
+> [!tip] Visual learner?
+> Every diagram in this vault also exists as an Excalidraw canvas: expand the *Excalidraw version* callout under any diagram, or start from [[HLD Category Map.excalidraw]] and the eleven category maps in `Excalidraw/Maps/` — rooms, a reading order and a concrete example per room, with every box linked to its note. Install the plugin first ([[Plugins to Install]]).
 
 ## What system design is, in one paragraph
 
@@ -46,6 +49,11 @@ flowchart LR
     I --> R["Revisit<br/>needs-revision, lower confidence honestly"]
     R --> L
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Start Here — The learning loop the properties track.excalidraw]]
+> [[Start Here — The learning loop the properties track.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 | Stage | What it looks like | Property |
 |---|---|---|
@@ -86,6 +94,11 @@ flowchart TB
     w12 -.- p7[Design a Payment System]
     class p1,p2,p3,p4,p5,p6,p7 internal-link;
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Start Here — The 12-week SDE-2 order.excalidraw]]
+> [[Start Here — The 12-week SDE-2 order.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 Roughly six notes a week, one design problem a week from week 6. Each line is a reading order, not just a list — the earlier ones are prerequisites for the later ones.
 

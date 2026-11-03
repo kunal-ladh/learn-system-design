@@ -67,6 +67,11 @@ flowchart LR
     WAL -- "stream" --> R[Replica or CDC]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Relational Database Internals.excalidraw]]
+> [[Relational Database Internals.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Why is the database slow?" — almost every performance question routes through these parts: a working set larger than the buffer pool (I/O-bound), fsync latency on commit (write-bound), dead tuples (bloat), or checkpoint storms (latency spikes every N minutes).

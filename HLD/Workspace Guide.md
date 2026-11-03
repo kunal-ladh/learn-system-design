@@ -29,6 +29,11 @@ flowchart LR
     class CLI,D internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Workspace Guide.excalidraw]]
+> [[Workspace Guide.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Folder structure
 
 | Folder | What lives there | Entry point |
@@ -41,8 +46,8 @@ flowchart LR
 | `05 Reviews/` | Weekly reviews | [[Reviews MOC]] |
 | `06 Interview Prep/` | The SDE-2 interview layer: framework, probe bank, cheat sheets, readiness checklist, sprint plan; `Mocks/` holds mock-interview logs | [[Interview Prep MOC]] |
 | `Templates/` | Concept, Design Problem, Project, Resource, Weekly Review, Architecture Decision, Mock Interview | — |
-| `Attachments/` | Excalidraw drawings and images | — |
-| `Start Here.md`, `Workspace Guide.md`, `HLD Vault Status.md` | Reading guide, this page, and [[HLD Vault Status]] (inventory, conventions, changelog) | [[Start Here]] |
+| `Excalidraw/` | 244 Excalidraw drawings: `Maps/` (the eleven category concept maps and the HLD category map, hand-laid-out as rooms with a reading order), `Concepts/`, `Problems/`, `Projects/`, `Guides/` (one canvas per Mermaid diagram, generated from it). Each is embedded in the note it belongs to. | [[HLD Category Map.excalidraw]] |
+| `Start Here.md`, `Workspace Guide.md`, `HLD Vault Status.md`, `Plugins to Install.md` | Reading guide, this page, [[HLD Vault Status]] (inventory, conventions, changelog) and [[Plugins to Install]] (setup checklist) | [[Start Here]] |
 
 The `system-design` vault next to this one stays untouched; concept and problem notes point to its deep-dive notes by path in a tip callout.
 
@@ -70,7 +75,8 @@ Every note has a `type` and a matching tag, which is what the Bases views filter
 |---|---|---|
 | All tables on the dashboard, in the MOCs and in the interview area (`![[Concepts.base#View]]`, `![[Interview Readiness.base#View]]`, `![[Mock Interviews.base#View]]`) | **Bases** — core plugin, Obsidian 1.9+ | Enabled by default; nothing to install. Date filters such as `next_review <= today()` need the date properties to be typed *Date*, which `.obsidian/types.json` already declares. |
 | Templates (`{{title}}`, `{{date:YYYY-MM-DD}}`) | **Templates** — core plugin | Settings → Core plugins → Templates; folder is preset to `Templates` in `.obsidian/templates.json`. Use *Insert template* in a new note. |
-| Diagrams | **Mermaid** — built in | Every concept note's *Architecture* section, every problem's *High-level architecture*, every project's *Architecture*, and the maps on the MOCs, Start Here and the dashboard — with note-titled nodes clickable. Redraw them in **Excalidraw** (community plugin you already use) when you want to test recall; keep drawings in `Attachments/`. |
+| Diagrams | **Mermaid** — built in | Every concept note's *Architecture* section, every problem's *High-level architecture*, every project's *Architecture*, and the maps on the MOCs, Start Here and the dashboard — with note-titled nodes clickable. |
+| Editable canvases | **Excalidraw** — community plugin | Every one of those diagrams also exists as a drawing in `Excalidraw/`, embedded under the Mermaid block in a folded *Excalidraw version* callout; the category MOCs and [[HLD MOC]] embed a richer hand-laid-out map (rooms, reading order, one concrete example per room) with every box linked to its note. Install and enable Excalidraw — see [[Plugins to Install]]; until then the embeds render as text. |
 | Properties panel, tags, graph colours | Core | `.obsidian/graph.json` colours nodes by folder; `types.json` sets property types. |
 | Open tasks across projects, confidence distribution, per-category table, "problems and projects" counts on the dashboard; the automatic sections in weekly reviews | **Dataview** — community plugin | Pre-placed in `.obsidian/plugins/dataview/` (v0.5.70). Turn on community plugins (Settings → Community plugins → *Turn on community plugins*) and enable it; JavaScript queries are enabled in its settings. Without it those panels show as code blocks and everything else still works. |
 | Quick creation of concept/problem/project notes with the right template in the right folder | **QuickAdd** — optional | Not required. If you want it: three *Template* choices (Concept → `01 HLD & System Design/<category>`, Problem → `02 System Design Problems`, Project → `04 Projects`) each pointing at the matching template. |
@@ -85,7 +91,8 @@ Everything that matters works with core plugins only. Dataview is the one commun
 - **Diagram sizing.** Mermaid normally shrinks a wide diagram to the pane width, which makes long chains unreadable in a 700px reading pane. The `hld-workspace` snippet keeps diagrams at natural size and lets them scroll sideways instead; long linear chains were also redrawn top-to-bottom so nothing in the vault is wider than about 900px. Prefer `flowchart TB` for chains of more than five nodes.
 - **Wide pages.** Table-heavy pages carry `cssclasses: [wide]` so tables and Bases views use the full width when the `hld-workspace` CSS snippet is enabled (Settings → Appearance → CSS snippets; it is pre-enabled in `.obsidian/appearance.json`). Remove the property from any page you prefer narrow.
 - **Bookmarks.** `.obsidian/bookmarks.json` pins the dashboard, Start Here, the maps and the interview notes in the Bookmarks pane (core plugin), grouped by activity.
-- **Graph colours.** `.obsidian/graph.json` colours nodes by folder, including `06 Interview Prep`; filter the graph with `tag:#concept` for the curriculum alone or `path:"02 System Design Problems"` to see which concepts a problem pulls in.
+- **Graph colours.** `.obsidian/graph.json` colours nodes by folder, including `06 Interview Prep`, and greys the drawings in `Excalidraw/`; filter the graph with `tag:#concept` for the curriculum alone, `path:"02 System Design Problems"` to see which concepts a problem pulls in, or `-path:Excalidraw` to hide the drawings.
+- **Excalidraw canvases.** Open any drawing from its note's callout, or the maps from `Excalidraw/Maps/`. Boxes whose label is a note title carry a link: Ctrl/Cmd-click opens the note. To test recall, duplicate the drawing, delete the arrows and redraw them from memory, then compare with the original. New drawings you make go in `Excalidraw/` too (set as the plugin's folder).
 - **Jump links.** The dashboard has an *On this page* line; long MOCs rely on the Outline pane (core plugin) — open it with the sidebar's list icon.
 
 ## Adding and maintaining notes
@@ -121,7 +128,7 @@ Everything that matters works with core plugins only. Dataview is the one commun
 
 ## Recommended next improvements
 
-- Add an Excalidraw drawing per category MOC (your redraw-from-memory of the chain) and embed it under *How the ideas connect*.
+- Redraw one category map a week from memory in Excalidraw (duplicate `Excalidraw/Maps/<Category> Concept Map`, delete the arrows, redraw) and keep the attempts in `Excalidraw/Redraws/`.
 - Once ten or more decisions exist, add a `Decisions` section to the dashboard grouped by project.
 - Write a tiny script (or the [[Spaced Repetition Review CLI]] project) that bumps `next_review` based on confidence, so the queue needs no manual dates.
 - After the first interview loop, add an `asked: true` property to the problems you were actually asked and a Bases view for them; adjust `interview_tier` from the evidence.

@@ -76,6 +76,11 @@ flowchart LR
     class c1,c10,c2,c3,c4,c5,c6,c7,c8,c9,l1,l10,l2,l3,l4,l5,l6,l7,l8,l9,s1,s2,s3,s4,s5,s6,s7,s8 internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Problem Bank MOC.excalidraw]]
+> [[Problem Bank MOC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Core systems
 
 *The building blocks every other system is made of — expect one of these in most SDE-2 rounds.*

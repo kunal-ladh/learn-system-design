@@ -68,6 +68,11 @@ flowchart LR
     class R,TP1,TP2,TP3 internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Chaos Lab.excalidraw]]
+> [[Chaos Lab.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Later stages add a second API replica behind nginx (to watch health checks and load balancing under failure), a Kafka link for the messaging experiments, and the [[Mini-KV Store]] cluster as a target for partition experiments.
 
 ## Tech stack

@@ -76,6 +76,11 @@ flowchart LR
     D -. "deploy markers" .- CD["CI/CD events"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Monitoring.excalidraw]]
+> [[Monitoring.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Every production service: golden signals, an SLO, a dashboard and symptom alerts are the entry ticket, not an enhancement ([[Operational Simplicity]]).

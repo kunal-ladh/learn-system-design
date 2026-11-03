@@ -72,6 +72,11 @@ flowchart LR
     class K internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Search Engines.excalidraw]]
+> [[Search Engines.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users search by free text with typos across several fields and expect relevant results" — product, document, customer or merchant search ([[Full-Text Search]]).

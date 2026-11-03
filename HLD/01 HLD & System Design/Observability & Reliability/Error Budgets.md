@@ -68,6 +68,11 @@ flowchart LR
     I["Incidents and deploys"] -- "attributed spend" --> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Error Budgets.excalidraw]]
+> [[Error Budgets.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any service with an SLO: the budget is the operational meaning of the SLO, and the policy is what makes the SLO more than a number ([[SLI SLO and SLA]]).

@@ -68,6 +68,11 @@ flowchart LR
     W[Watcher or Patroni] -- "health, election, fencing" --> L
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Replication.excalidraw]]
+> [[Replication.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "No single node failure may lose committed data" → synchronous or quorum replication to another availability zone; the write latency cost is the price of a zero RPO.

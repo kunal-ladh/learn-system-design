@@ -36,6 +36,11 @@ flowchart LR
     class A,B,C,D,E,F,G,H,I,J,K internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Security Concept Map.excalidraw]]
+> [[Security Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

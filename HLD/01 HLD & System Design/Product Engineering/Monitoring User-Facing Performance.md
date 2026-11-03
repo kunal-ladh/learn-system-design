@@ -67,6 +67,11 @@ flowchart TB
     O --> A["SLO alerts on user impact"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Monitoring User-Facing Performance.excalidraw]]
+> [[Monitoring User-Facing Performance.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A requirement stated in user terms ("the screen must load in under 2 seconds") rather than service terms.

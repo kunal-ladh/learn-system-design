@@ -74,6 +74,11 @@ flowchart TD
     Q2 -- no --> R4
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[SQL vs NoSQL.excalidraw]]
+> [[SQL vs NoSQL.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Balances must never go negative and every movement must be reconcilable" → relational with [[ACID]] transactions, regardless of scale ambitions.

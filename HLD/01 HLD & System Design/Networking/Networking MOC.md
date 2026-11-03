@@ -40,6 +40,11 @@ flowchart LR
     class A,B,C,D,E1,E2,F1,F2,G,H,H2,I,J,K internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Networking Concept Map.excalidraw]]
+> [[Networking Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

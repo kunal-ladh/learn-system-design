@@ -96,6 +96,11 @@ flowchart LR
     W1 -. "exhausted retries" .-> DLQ["Dead-letter + alert"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Distributed Job Scheduler.excalidraw]]
+> [[Design a Distributed Job Scheduler.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

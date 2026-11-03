@@ -68,6 +68,11 @@ flowchart LR
     K["KMS keys, separate lifecycle"] -. "encrypt and decrypt" .-> V
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Backups and Restoration.excalidraw]]
+> [[Backups and Restoration.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any source-of-truth datastore: ledgers, orders, accounts, documents — PITR with isolated, immutable copies ([[Design a Payment System]], [[Design a Digital Wallet and Ledger]]).

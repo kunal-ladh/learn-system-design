@@ -77,6 +77,11 @@ flowchart LR
     P["Policy repository, versioned and tested"] --> PDP
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Authorization.excalidraw]]
+> [[Authorization.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Customers may see only their own accounts" → object-level ownership check in the account service, on every read and write, never derived from the token alone.

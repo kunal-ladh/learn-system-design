@@ -82,6 +82,11 @@ flowchart LR
     C -- "hit or loaded value" --> A
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Write-Through Caching.excalidraw]]
+> [[Write-Through Caching.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Read-after-write flows through a single service: a user edits something and immediately sees it; the cache must not serve the pre-edit value.

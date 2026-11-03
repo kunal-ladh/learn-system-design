@@ -1,0 +1,341 @@
+b28e8788cf5f6a5a72b1f94cbb651532  ./HLD Vault Status.md
+265ccd9a06c705c7a9b8e182c9b22d5b  ./04 Projects/Rate Limiter Library.md
+f287f225fc5c40c393e91d6cfb93eb47  ./04 Projects/Vault RAG Assistant.md
+c951808dab68b75eb3a25fa3005f0c9c  ./04 Projects/Durable Job Scheduler.md
+0f731c1230abb781345b39e9c19a4483  ./04 Projects/Streaming Fraud Rules Engine.md
+7015f1ecacc2fd60b8f070b6ad61da5a  ./04 Projects/LLM Gateway.md
+1819990ef7885009bf8b232b5bc8c990  ./04 Projects/Presence and Chat Service.md
+11416380e1990ec5a9230e9b2299bb53  ./04 Projects/Double-Entry Ledger Service.md
+5366bd58de544f09eca05465a65174ce  ./04 Projects/Personal Notification Hub.md
+ba1ee0e32bba12f7628b29814408ae66  ./04 Projects/Chaos Lab.md
+c57d7fe57f69ae6fe570bc71b27d53c0  ./04 Projects/Lock Service with Fencing Tokens.md
+71867bc2426f0dc592999238ffba8dd0  ./04 Projects/Spaced Repetition Review CLI.md
+7fb895664aa3edd80eb184d731bb26c7  ./04 Projects/Projects MOC.md
+475cf458fde8f7532f928a252e9f4a12  ./04 Projects/Mini-KV Store.md
+0513919186e8a301f0f65e498378f9de  ./04 Projects/Webhook Relay.md
+84c06c0bf6f698e4ac730ed779b79806  ./04 Projects/Feature Flag Service and SDK.md
+7192f56ca182fbb4de386bce0c3d4fbf  ./04 Projects/Load Test and Latency Lab.md
+dd41b6643929f7d467fc79df227af920  ./04 Projects/Live Ops Dashboard.md
+3f83ee2dd65207f963e697a05ff935f8  ./01 HLD & System Design/Fundamentals/ACID.md
+262959d4a5bcfd1e6aa484cda9f8fd98  ./01 HLD & System Design/Fundamentals/Scalability.md
+3a1e60c3d46e2f544a5c224fe19556cd  ./01 HLD & System Design/Fundamentals/BASE.md
+d013076e130df0360b7697a079392439  ./01 HLD & System Design/Fundamentals/Bottleneck Analysis.md
+489fc3f28bce5cb92a5f703bec3d85af  ./01 HLD & System Design/Fundamentals/PACELC.md
+0dc127026252ab02be6c6d75e2f81323  ./01 HLD & System Design/Fundamentals/Availability.md
+8104b1a385e44355a380891d47e580ec  ./01 HLD & System Design/Fundamentals/Horizontal vs Vertical Scaling.md
+8eb7b4d619d1d4ee283b64398855d294  ./01 HLD & System Design/Fundamentals/Back-of-the-Envelope Estimation.md
+24b211413f22267f9e22165314feb402  ./01 HLD & System Design/Fundamentals/Reliability.md
+9c8dd11a57818ea337143364983616bf  ./01 HLD & System Design/Fundamentals/Fundamentals MOC.md
+9fddf96a1b9f4683136030a0fb65afa4  ./01 HLD & System Design/Fundamentals/SLI SLO and SLA.md
+3a30a8744bc55d78ca304f6a27452789  ./01 HLD & System Design/Fundamentals/Throughput.md
+cb42e2aae3565e5733f3c2ead8c74bb8  ./01 HLD & System Design/Fundamentals/Latency.md
+068651cb5209b6f2cc138748710dccac  ./01 HLD & System Design/Fundamentals/CAP Theorem.md
+d5e9fa25ca8fe62bfa7555dd20cc0059  ./01 HLD & System Design/Fundamentals/Performance vs Cost Trade-offs.md
+5bd37dcf7e80f584e1ab864bfedda82d  ./01 HLD & System Design/Fundamentals/Consistency Models.md
+064bc0fd413da5118a131d313ba405f2  ./01 HLD & System Design/Fundamentals/Fault Tolerance.md
+6521a0251ff17bb4f5cf1fd4ea749839  ./01 HLD & System Design/Databases/Data Modeling.md
+ade4b20144a130f8a9e5d3f9a69d687d  ./01 HLD & System Design/Databases/Replication.md
+7fa0e95192b25d56e40ac8389efaf742  ./01 HLD & System Design/Databases/Database Scaling.md
+4463af2e55938496e8945e68e836ca55  ./01 HLD & System Design/Databases/Relational Database Internals.md
+fe905062b14bc4468b138e7f93f44ef7  ./01 HLD & System Design/Databases/Read Replicas.md
+a7a5534878d8e5ad3a5199026d37f496  ./01 HLD & System Design/Databases/Query Execution and Optimization.md
+cac5626fd341f506de8522031768d22f  ./01 HLD & System Design/Databases/Indexing.md
+4eccadb91e2073b446df10872db6c73c  ./01 HLD & System Design/Databases/Isolation Levels.md
+9affa32da345a3021f8aa2a41c33a8fc  ./01 HLD & System Design/Databases/Schema Evolution.md
+b365ebcfc5c78a9c228f1ee4c21d4665  ./01 HLD & System Design/Databases/Optimistic and Pessimistic Locking.md
+eb9b7242eb4bc4f2ca9beee6e0eff232  ./01 HLD & System Design/Databases/Distributed Transactions.md
+5cda21c3e9dbbb37166088f113d1180e  ./01 HLD & System Design/Databases/Sharding.md
+37c5ed3aaaeb35edc77828c1fa419b49  ./01 HLD & System Design/Databases/Databases MOC.md
+0f22c1b960ecf9a97b23632721fa96b9  ./01 HLD & System Design/Databases/Transactions.md
+1c5c30eaf5bf2a35d1dbda5f5954974f  ./01 HLD & System Design/Databases/SQL vs NoSQL.md
+4b54bd8d96a414cb49c899d6a60ec065  ./01 HLD & System Design/Databases/Partitioning.md
+b20faa47e9d300026ee336c0a461901f  ./01 HLD & System Design/Databases/Consistent Hashing.md
+2e334037af29eea2d0831aa21767b880  ./01 HLD & System Design/Messaging & Event-Driven Systems/Kafka.md
+2fe15e2801a5767d7ee298f4bb4dc0e0  ./01 HLD & System Design/Messaging & Event-Driven Systems/Delivery Semantics.md
+8cfbebdfcc5cd744c41d721730554419  ./01 HLD & System Design/Messaging & Event-Driven Systems/Synchronous vs Asynchronous Communication.md
+c2ed3de9679724438066cc041208f9f3  ./01 HLD & System Design/Messaging & Event-Driven Systems/Event Schemas.md
+075555398691b91331883dd5e73bc0ba  ./01 HLD & System Design/Messaging & Event-Driven Systems/Topic Partitions.md
+8560d41b8b7b1b7f85da13efe941a172  ./01 HLD & System Design/Messaging & Event-Driven Systems/Event Schema Evolution.md
+aa5660732ec47df0036a0a446b6defd2  ./01 HLD & System Design/Messaging & Event-Driven Systems/At-Most-Once Delivery.md
+470f4c7c8acab5a5541d5a48dcdfe4ec  ./01 HLD & System Design/Messaging & Event-Driven Systems/Ordering Guarantees.md
+fd61cdab11ec467d18f74b98526721b0  ./01 HLD & System Design/Messaging & Event-Driven Systems/Dead-Letter Queues.md
+28d5921207ff8f27acd7e8b69da8b635  ./01 HLD & System Design/Messaging & Event-Driven Systems/Backpressure.md
+f7c589b69eac51ee3a6d96cd0242f3bb  ./01 HLD & System Design/Messaging & Event-Driven Systems/Retry Strategies.md
+ce9eb935e6ec9301a71bdf6e2b684ac3  ./01 HLD & System Design/Messaging & Event-Driven Systems/Pub-Sub.md
+8e0a6a3a7517493d0c10f2a2d9130e3a  ./01 HLD & System Design/Messaging & Event-Driven Systems/Outbox Pattern.md
+3093792c65fc0e3e6f58d5adc1bf42c1  ./01 HLD & System Design/Messaging & Event-Driven Systems/Message Queues.md
+5eb47209803e4b4bc0d0b440559961e2  ./01 HLD & System Design/Messaging & Event-Driven Systems/Exactly-Once Semantics.md
+7ecc5c3e0d4f683be24fac55a6207349  ./01 HLD & System Design/Messaging & Event-Driven Systems/Idempotency.md
+0e01c0bcd76306320a48ec7931834ed7  ./01 HLD & System Design/Messaging & Event-Driven Systems/At-Least-Once Delivery.md
+50b14f5028cb28eb59072ed2b716e227  ./01 HLD & System Design/Messaging & Event-Driven Systems/Consumer Groups.md
+278c3f96248087e803336a5bdbca7804  ./01 HLD & System Design/Messaging & Event-Driven Systems/Fan-Out.md
+ee3d8cd2de53887e8a68dc1813b11d58  ./01 HLD & System Design/Messaging & Event-Driven Systems/Change Data Capture.md
+b80b8656125f557106f0cbfa160bca42  ./01 HLD & System Design/Messaging & Event-Driven Systems/Messaging & Event-Driven Systems MOC.md
+01f6536e8ae89d18d6c357731b063230  ./01 HLD & System Design/Observability & Reliability/Backups and Restoration.md
+292b91d8f97ec5ccf9ab15d4f572caf4  ./01 HLD & System Design/Observability & Reliability/Alerting.md
+16d39db23e7bdce6bff33539c9cbb77f  ./01 HLD & System Design/Observability & Reliability/Graceful Degradation.md
+b9af61f890f186536849ed65a958abe2  ./01 HLD & System Design/Observability & Reliability/Recovery Time Objective.md
+cd6b5489891fea4e9cd0af5f1951e814  ./01 HLD & System Design/Observability & Reliability/Distributed Tracing.md
+b068bb46ed00b0850591e51d10c491a9  ./01 HLD & System Design/Observability & Reliability/Production Incident Analysis.md
+ac08f819f0aac1ab423a1844e98f40e7  ./01 HLD & System Design/Observability & Reliability/Logging.md
+d98c1d52ad642365c65279f8916fdbea  ./01 HLD & System Design/Observability & Reliability/Capacity Planning.md
+2d45b86a699b8fff7d80a9d2f93602df  ./01 HLD & System Design/Observability & Reliability/Health Checks.md
+16112e57ea988e2d00b1d321ec1c4c1f  ./01 HLD & System Design/Observability & Reliability/Tracing.md
+8f5aca1dcca90b0048064ec9c2aa1c4c  ./01 HLD & System Design/Observability & Reliability/Observability & Reliability MOC.md
+c6044c465f6d932a1e0ae5c0e05699c8  ./01 HLD & System Design/Observability & Reliability/Metrics.md
+37c1d0961c1ab7be140b6b21b43877a2  ./01 HLD & System Design/Observability & Reliability/Disaster Recovery.md
+5742a78a532243ce1bb3cba7c885c487  ./01 HLD & System Design/Observability & Reliability/Error Budgets.md
+38e16b0238c4391535fbaa53efaf653c  ./01 HLD & System Design/Observability & Reliability/Monitoring.md
+eb5ea3f628c2bf24008bc1284a8ded41  ./01 HLD & System Design/Observability & Reliability/Recovery Point Objective.md
+6799a00f0297338f4e543ff9765dfab9  ./01 HLD & System Design/Storage & Search/Data Lakes.md
+1a3e5949139a72b3a66b9d8b6a375e9f  ./01 HLD & System Design/Storage & Search/Data Warehouses.md
+356497b52f48be135000ee89fecae955  ./01 HLD & System Design/Storage & Search/Full-Text Search.md
+195c6df9e37652fab10f5082dbbad7cd  ./01 HLD & System Design/Storage & Search/Search Engines.md
+812c3e7c347503a9ea69fc5871e3555b  ./01 HLD & System Design/Storage & Search/Data Retention and Archival.md
+47c558edb795667a2f145130491ac946  ./01 HLD & System Design/Storage & Search/Time-Series Databases.md
+cdc2ea8a493fd1cb41a05c87a55b72f7  ./01 HLD & System Design/Storage & Search/File Systems.md
+ebfd03f10ea8e6d26c89f8819e3a3db3  ./01 HLD & System Design/Storage & Search/Object Storage.md
+270e41eb36e1cf0a59380f737acea9e4  ./01 HLD & System Design/Storage & Search/Storage & Search MOC.md
+d081d07c37e54d371f77cc532f23f991  ./01 HLD & System Design/Storage & Search/Block Storage.md
+bb37428cca8a693e8d2ab54436a80263  ./01 HLD & System Design/Storage & Search/Search Indexing Pipelines.md
+6ce7e91debfacc4ace0119295fd16632  ./01 HLD & System Design/Storage & Search/Inverted Indexes.md
+1a83cc8f88754e3f3f5ae91d117461d8  ./01 HLD & System Design/Storage & Search/Blob Storage.md
+91d0a5887aca1486206d24cb3a5d45b3  ./01 HLD & System Design/Security/Authentication.md
+3dc57a476dedf82edd840cc6b5bde49f  ./01 HLD & System Design/Security/Threat Modeling.md
+7f8b81c37304878669fb06daa59ee00a  ./01 HLD & System Design/Security/Authorization.md
+c12de30813749839d80e0a485257952b  ./01 HLD & System Design/Security/Security MOC.md
+3d87d7cd05afd1a5853a0c81d862f55a  ./01 HLD & System Design/Security/JWT.md
+77e3a35114d898bb44741b315ee17c7f  ./01 HLD & System Design/Security/OAuth.md
+52835cfa03b31998eab994cea070111a  ./01 HLD & System Design/Security/Secrets Management.md
+1b6b5eb6e296868d34eeacf8d6189968  ./01 HLD & System Design/Security/API Keys.md
+a212736790218a992451955db14d9c17  ./01 HLD & System Design/Security/Input Validation.md
+715bfadc0fdda1c31a628e215f6f5498  ./01 HLD & System Design/Security/Audit Logs.md
+87302471aed6d0ec0a027537a301f6c5  ./01 HLD & System Design/Security/Encryption at Rest and in Transit.md
+56632effd13186ba8adf6ba3a0a615d6  ./01 HLD & System Design/Security/Least Privilege.md
+b16c80880586db4d07e97fc6021cf6b3  ./01 HLD & System Design/HLD MOC.md
+797c92c48d4044ec65dc22d112699e66  ./01 HLD & System Design/Networking/Keep-Alive Connections.md
+9c0fca9e1372c5df0bf5d24bdcc7df5d  ./01 HLD & System Design/Networking/TCP and UDP.md
+7f304ace5128d2f55feddcf34acd7cda  ./01 HLD & System Design/Networking/HTTP and HTTPS.md
+4b7a7e67bc69136c4ef436a2299f7f2b  ./01 HLD & System Design/Networking/TLS.md
+e768499286822dda0cec4875cae2bdf0  ./01 HLD & System Design/Networking/CDNs.md
+d2a5b3d3ea771e63b7d2e7bda0ad4cbd  ./01 HLD & System Design/Networking/Load Balancers.md
+2101021a41b7d86548308fb916ac175a  ./01 HLD & System Design/Networking/Client State and Reconnection.md
+e3862df072dece9f7e1b04b888784820  ./01 HLD & System Design/Networking/Connection Pooling.md
+68c681632b9a73cf06936e4b0f1d96b4  ./01 HLD & System Design/Networking/DNS.md
+2d78d4928b6ce16db258b980ae99d519  ./01 HLD & System Design/Networking/gRPC.md
+165e80b573481ee01e77a2eee898aa26  ./01 HLD & System Design/Networking/Timeouts and Retries.md
+385c9c94ac5328fbf779db5d32fa1a26  ./01 HLD & System Design/Networking/Networking MOC.md
+5053f79d118fc393db5454dd5c711e7c  ./01 HLD & System Design/Networking/Reverse Proxies.md
+5d924a48feb0bd7e73538eeb5318e2ee  ./01 HLD & System Design/Networking/WebSockets.md
+965752f5fd2f9cb9274effab768da372  ./01 HLD & System Design/Networking/REST.md
+6a3fcc978f356e55dd3febf220cd5192  ./01 HLD & System Design/Distributed Systems/Failure Detection.md
+1429b1a646dbd186b5ddbed003853c86  ./01 HLD & System Design/Distributed Systems/Consensus.md
+03cc83d21bdce5f3208f2ce4e8095259  ./01 HLD & System Design/Distributed Systems/Split-Brain.md
+c73b6bd5b57259687c8301e9736240b1  ./01 HLD & System Design/Distributed Systems/Quorums.md
+910f2894affbd4149d57078fbb4712e2  ./01 HLD & System Design/Distributed Systems/Leader Election.md
+ecafd6f81c6ed7e2ef01b7f31e004341  ./01 HLD & System Design/Distributed Systems/Network Partitions.md
+7046ddff16d6591fdc8099bb8646740a  ./01 HLD & System Design/Distributed Systems/Distributed Systems MOC.md
+adc51a9095dba20e9d456efb8e0d53d2  ./01 HLD & System Design/Distributed Systems/Distributed ID Generation.md
+7e4fd96310d36308258bec64c601a6b5  ./01 HLD & System Design/Distributed Systems/Retry Storms.md
+36a5f66496e046bbf24116b63828c767  ./01 HLD & System Design/Distributed Systems/Clocks and Time.md
+484efc4f1e53729d115fc35770c2e9ba  ./01 HLD & System Design/Distributed Systems/Gossip Protocols.md
+305c88a978e3e727cc27cb518cf42e8a  ./01 HLD & System Design/Distributed Systems/Coordination vs Availability.md
+aa024b007af03955d0b64544d6ca997a  ./01 HLD & System Design/Distributed Systems/Distributed Locks.md
+6cc2e60933727685168d4f1cfcdd027b  ./01 HLD & System Design/Distributed Systems/Duplicate Message Processing.md
+c32b965a2192bcfd4a99e1a71c7baca0  ./01 HLD & System Design/Distributed Systems/Eventual Consistency.md
+7fa704f60c10c39aaa753434581af400  ./01 HLD & System Design/Knowledge Graph.md
+fccf1c56d9d547f42217e91a830a7bc6  ./01 HLD & System Design/Product Engineering/Designing APIs and Contracts.md
+d025ab308441806f8087f3c1ab270d2f  ./01 HLD & System Design/Product Engineering/Designing for Maintainability.md
+d82bce8f756c93f50adbcc5ef1cc508d  ./01 HLD & System Design/Product Engineering/Versioning and Migrations.md
+e94d38f9eb09383674275e56c0dde0b5  ./01 HLD & System Design/Product Engineering/Technical Debt.md
+f05aaaddc91c891916336cf84216fe8b  ./01 HLD & System Design/Product Engineering/Operational Simplicity.md
+7d4974616b420cf82ba85ebd95057dbc  ./01 HLD & System Design/Product Engineering/Product Engineering MOC.md
+c2ceb7765074b98b9ed5482b108c47e3  ./01 HLD & System Design/Product Engineering/Data Ownership and Lifecycle.md
+45a21914ca76df369a72d4ee7f70811d  ./01 HLD & System Design/Product Engineering/Translating Product Requirements into Technical Requirements.md
+a848fe7230ac2d84cdc27b78589eed71  ./01 HLD & System Design/Product Engineering/Monitoring User-Facing Performance.md
+138f4c7ee2a1697e522c30e896f39842  ./01 HLD & System Design/Product Engineering/Backward Compatibility.md
+79a6b2f45cf670c9f6f9f2eba42e1591  ./01 HLD & System Design/Product Engineering/Feature Flags.md
+90f9f950b494344d0f4085af429b0f4b  ./01 HLD & System Design/Product Engineering/Deployment and Rollback Strategies.md
+7e74876cc4d75d14946d6df76774dd17  ./01 HLD & System Design/Product Engineering/Incremental Delivery.md
+a83525522583150f3f28a9d493089e80  ./01 HLD & System Design/Product Engineering/Functional vs Non-Functional Requirements.md
+7738dbe87027057d4a6c9667d020421c  ./01 HLD & System Design/Product Engineering/Designing Systems for Changing Requirements.md
+90683852f3a48f548ee637c2ced5f54f  ./01 HLD & System Design/Product Engineering/Evaluating Architectural Complexity.md
+b54fef81bf45ca420daa46fa8f58125c  ./01 HLD & System Design/Product Engineering/Testing Strategies.md
+97f27a2f3821f65613afcf85ce1cbe81  ./01 HLD & System Design/Product Engineering/Build vs Buy Decisions.md
+31fd61becc26bd0ba1eaa711ab1afbb0  ./01 HLD & System Design/Product Engineering/Prioritizing Reliability Performance Cost and Time to Market.md
+a88daad0bf93a5c97fce84e2c0ed1097  ./01 HLD & System Design/Caching/Distributed Caching.md
+f1b91807042479ece9f33d8267d2e2a2  ./01 HLD & System Design/Caching/Cache Consistency.md
+2b1b64900ab297c61e79174fbce55395  ./01 HLD & System Design/Caching/Redis.md
+a3505da61985869f2b64f7b6235430c9  ./01 HLD & System Design/Caching/TTL.md
+ae9c8b29ef53e55a39653264106f381d  ./01 HLD & System Design/Caching/Hot Keys.md
+9e368b4343eac55dc723067aad0c604c  ./01 HLD & System Design/Caching/Cache Invalidation.md
+430d4feea5f8b0467f0a9d6c66509a1b  ./01 HLD & System Design/Caching/Write-Through Caching.md
+bbcbd5df875178acfb0449dd5f5e189d  ./01 HLD & System Design/Caching/Cache-Aside.md
+c5c94b6fea66a89a787871763210e679  ./01 HLD & System Design/Caching/Multi-Level Caching.md
+8c051236fb2d1ec100a3187f152ec8f2  ./01 HLD & System Design/Caching/Cache Stampedes.md
+d1dfc146e4ce684a476eea32d74c3c7c  ./01 HLD & System Design/Caching/Write-Back Caching.md
+cf7fd6d5c240e7e71b4adaa8b3c600b5  ./01 HLD & System Design/Caching/Caching MOC.md
+57572606404c47f6f43e2ca7b550430d  ./01 HLD & System Design/Caching/Eviction Policies.md
+53f7e74d7d19dbf17b4a23f0d0e9284b  ./01 HLD & System Design/Architecture Patterns/Strangler Pattern.md
+727e86bfd158c2b6978cfb1818a5a458  ./01 HLD & System Design/Architecture Patterns/Separation of Concerns.md
+ddc94d48735144ad0557ec40f6e9d576  ./01 HLD & System Design/Architecture Patterns/Service Discovery.md
+97f1e39f622b058f8305ad2ee769b068  ./01 HLD & System Design/Architecture Patterns/Saga Pattern.md
+3a194db1d587e2a173cb906bd3f7e4b3  ./01 HLD & System Design/Architecture Patterns/API Gateways.md
+52a4590323b7febaa6ff2896426196b0  ./01 HLD & System Design/Architecture Patterns/Bulkheads.md
+7274e8d354702a44a3e0f61c0c531f30  ./01 HLD & System Design/Architecture Patterns/Event Sourcing.md
+e4883ec4b21a47255560beb2cddac1b8  ./01 HLD & System Design/Architecture Patterns/Modular Monoliths.md
+df959d3a2b17805802a7ed637b37551a  ./01 HLD & System Design/Architecture Patterns/Designing for Extensibility.md
+29215f19794ff0134be8f0742283be51  ./01 HLD & System Design/Architecture Patterns/Real-Time Systems.md
+9f39668276f71af8c2ba629bd302ee85  ./01 HLD & System Design/Architecture Patterns/Hexagonal Architecture.md
+517fa80770248fa6b7e97c4c2555959e  ./01 HLD & System Design/Architecture Patterns/Rate Limiting.md
+4c71c3a8fb0cbfb4b973645c8450e485  ./01 HLD & System Design/Architecture Patterns/Domain-Driven Design.md
+f1b6c28dab6cf554929916eb21dc14ae  ./01 HLD & System Design/Architecture Patterns/Circuit Breakers.md
+af37e27263f80656f228e12d201cf9a5  ./01 HLD & System Design/Architecture Patterns/Microservices.md
+ad39211fa454c04c1cf2bcc8794d2fbd  ./01 HLD & System Design/Architecture Patterns/Event-Driven Architecture.md
+5a0e06bc849ceef5f57771f074c7b04c  ./01 HLD & System Design/Architecture Patterns/Architecture Patterns MOC.md
+37ae310a5acd438d5b595b59d99cc3c3  ./01 HLD & System Design/Architecture Patterns/Monoliths.md
+676822b87ebe29fa0c56b04411b93a9d  ./01 HLD & System Design/Architecture Patterns/CQRS.md
+172de362719b35976c8b810703b0c1d4  ./Workspace Guide.md
+43a58d856e79b6d70f2df131669d94ef  ./.obsidian/snippets/hld-workspace.css
+1714b723ca0528a0b8d9a5ed7028e977  ./.obsidian/app.json
+cdb01dff3928e222a93dfc78556db7ee  ./.obsidian/types.json
+e4cad63eacfbc596dcbc52a99dd1888e  ./.obsidian/templates.json
+e01d75ecc919cd9ba5769b49820fafe1  ./.obsidian/bookmarks.json
+7a5ed0f7e5774ef9f673a2682d432581  ./.obsidian/community-plugins.json
+06f83afce22d0de0b1899c31ef875898  ./.obsidian/graph.json
+af2260f7b7bcb933d2aa52a28d939066  ./.obsidian/appearance.json
+ee0a5a99e7bd60aecb6c12037ff71f14  ./05 Reviews/Reviews MOC.md
+a52fccc373536f20877a4f22b76ecf3d  ./02 System Design Problems/Design a Feature Flag Service.md
+b93ee526819ef37f9b93bbb739dbbe8c  ./02 System Design Problems/Design a Distributed Cache.md
+1441a9fc3f564caa037b85245d4192bb  ./02 System Design Problems/Design a Metrics and Monitoring System.md
+1866d0d74749b1e5d2ded769c0a12143  ./02 System Design Problems/Design a Social Feed.md
+7f7d090a23c63ae828913c01a6c816ba  ./02 System Design Problems/Design a Collaborative Document Editor.md
+2ead938d92db3dfe5f43b39fb4ab3c00  ./02 System Design Problems/Design an Inventory Management System.md
+641413b94c1140558484e66fa0536215  ./02 System Design Problems/Design a URL Shortener.md
+f0d0570cafdcbb7079ae67a6b5ca10f0  ./02 System Design Problems/Design a Notification System.md
+115161e1466191549df0e64321d247b5  ./02 System Design Problems/Design a Video Streaming Service.md
+20c88153f36b0c4be422087363a137ae  ./02 System Design Problems/Design a Payment System.md
+ca5c6bf07d67db53d17e53f00b9598cd  ./02 System Design Problems/Design a Ticket Booking System.md
+1bb0901a56a90a6091481907438a150c  ./02 System Design Problems/Design a Digital Wallet and Ledger.md
+2b4bccbaf627efb6146c9597ea2a916c  ./02 System Design Problems/Design an API Gateway.md
+23024f415cdbd45b21bcb7b806ab36e5  ./02 System Design Problems/Design a Workflow Orchestrator.md
+e944674e9a8f65bf68080b10da11f86f  ./02 System Design Problems/Design a Chat System.md
+0ce6d632fe357f148cd40290f1811640  ./02 System Design Problems/Design Search Autocomplete.md
+bbe0f26e2ee0d9faaa98589ff29f199f  ./02 System Design Problems/Design a Message Queue.md
+27ee5da329d8c4b5bba908456723f0be  ./02 System Design Problems/Design a Ride-Sharing Service.md
+a91fd0d6dc7b6d0cb2c22085ec0e3b10  ./02 System Design Problems/Design an IAM Service.md
+bc0b7abff403b84b843e2d80c11c3ec8  ./02 System Design Problems/Design a RAG Knowledge Assistant.md
+1e3e9049e7c9d6185270ab02a5478a8e  ./02 System Design Problems/Design File Storage.md
+0cd4b76887c517235be223a0aa5d1bfe  ./02 System Design Problems/Design a Distributed Job Scheduler.md
+2ca427d9a56041636d56b11edb09d106  ./02 System Design Problems/Design a Distributed ID Generator.md
+e2c3daa2a3243370f917b0ac3a51e970  ./02 System Design Problems/Design a Real-Time Fraud Detection Pipeline.md
+1d28a09d4ea54169d6019a362b777775  ./02 System Design Problems/Problem Bank MOC.md
+b48364950e59af1d5002bf74baaf2657  ./02 System Design Problems/Design a Webhook Delivery System.md
+06d74c9b6d5ec4850e6d964552a93b64  ./02 System Design Problems/Design a Rate Limiter.md
+9ffc3539e84bbbe7d389aa10188215b5  ./02 System Design Problems/Design a Logging System.md
+6e2f0aad294674c2a12e7018aa2c6a1e  ./02 System Design Problems/Design a Distributed Key-Value Store.md
+db50afe6a6ca6c367a2d97301b8dd95c  ./Start Here.md
+ee212d248d846deb53701f74c4502b70  ./Templates/Mock Interview Template.md
+cfa89e439f1dbd4a571f55edf49305e7  ./Templates/Resource Template.md
+a01e92bf8e14b74d8dface6651d98d48  ./Templates/Design Problem Template.md
+0561150982866c715748e516bdcc568d  ./Templates/Architecture Decision Template.md
+5f345f53de26377d7a70a5fb3c43309c  ./Templates/Weekly Review Template.md
+004eb5d9bf5666d6bb976a5633289420  ./Templates/Concept Template.md
+459323a73ceb123dad17fa5339e8f620  ./Templates/Project Template.md
+e5ba5da079dcd31240a9e3e361af1f23  ./06 Interview Prep/Component Choice Cheat Sheet.md
+16caef4189cb786d02c5870522daef4e  ./06 Interview Prep/SDE-2 Readiness Checklist.md
+daeba4338e4d535a3942e4da7d18c4e8  ./06 Interview Prep/Interview Sprint Plan.md
+b65a89fb0766385ae8cfada899b03983  ./06 Interview Prep/Interview Probe Questions.md
+3d53af19c5cab728dbaf53068764e4e1  ./06 Interview Prep/Estimation Cheat Sheet.md
+c75a5317c29085c651f4754c6102d977  ./06 Interview Prep/SDE-2 Interview Framework.md
+f7be5445ac371be174817cdd79b0a31e  ./06 Interview Prep/Interview Prep MOC.md
+82cdb0f0b35cd91ac00bf377156d980d  ./03 Resources/Confluent - Exactly-Once Semantics in Kafka.md
+0e9243250dc1d4ad9144cb9fb5a781af  ./03 Resources/Site Reliability Engineering (Google).md
+bb7ce416800ce5ea9078d8da041c1b81  ./03 Resources/Google SRE Workbook - Implementing SLOs.md
+cf3d192e5b0bf4766cadf02dc9c502ae  ./03 Resources/Latency Numbers Every Programmer Should Know.md
+e13b84064c19a3fbb7aa87aa2d0d4316  ./03 Resources/Dynamo Paper.md
+f9099eb9962c8774a225b60a76dde6e5  ./03 Resources/PostgreSQL Transaction Isolation Docs.md
+12554b5dfa6dc1df2135e6900fde1d27  ./03 Resources/Redis Eviction Policies Docs.md
+4739f630743a4c09047e66fdf6ccfa71  ./03 Resources/PostgreSQL Indexes Docs.md
+78940510e64e4ba715c477336dd292df  ./03 Resources/AWS Builders Library - Timeouts Retries and Backoff.md
+5b1b95bd0e07894f41b384ae2da8f00b  ./03 Resources/System Design Primer (GitHub).md
+66b6b32d6d5522806bcd1bb01aca583c  ./03 Resources/Please Stop Calling Databases CP or AP.md
+c42145c6eadc4a7c3d28764b1bc15b90  ./03 Resources/Redis Streams Docs.md
+ad649a104c991d65ca1be535b2345b2f  ./03 Resources/pgvector.md
+642049e973314838d47368d19368affb  ./03 Resources/Stripe - Idempotency.md
+9796d4b62945b1e4f515ff89573f220f  ./03 Resources/Resilience4j.md
+3484f1a75743cd972098cfe5ecc89da8  ./03 Resources/Debezium Outbox Event Router Docs.md
+a5176eb77f69b370deac8b1c724181ff  ./03 Resources/Shopify - Deconstructing the Monolith.md
+c8c0a280d17099d699db49987cdbe24c  ./03 Resources/Fly.io Gossip Glomers Challenges.md
+1a2429c49ce20a8f577e4d394379a943  ./03 Resources/Simple Made Easy.md
+012977b2b3b9ee907fc5d6b2f0cf0b42  ./03 Resources/MIT 6.5840 Distributed Systems Course.md
+45711a7a47b3e5af20aadf0621d3f0d7  ./03 Resources/Caffeine Cache.md
+670f5c4779d012d72e80641f27d6873b  ./03 Resources/Kafka Design Documentation.md
+cb11082b9b5c1247fcc23a331b384464  ./03 Resources/AWS Builders Library - Load Shedding.md
+e8554098019b955885491f3958ac96b3  ./03 Resources/Debezium.md
+26797f6025fe6a26edd772f524ad3488  ./03 Resources/Discord - How Discord Stores Trillions of Messages.md
+f8cf443ee92652a69559e76a00cf4378  ./03 Resources/Brandur - Implementing Idempotency Keys.md
+2ee22eed7f09b8837c3ad27b4125119f  ./03 Resources/Spanner Paper.md
+6e986233d04b25e5114452f532b33e17  ./03 Resources/Martin Fowler - CQRS.md
+76c04f5c12d42ce84cb11fbb075422bf  ./03 Resources/Building Microservices.md
+a3c81ca02d31778b92a2fcd124508559  ./03 Resources/Google SRE Book - Monitoring Distributed Systems.md
+fceb0a58e15c06cbdedf103f7ceca074  ./03 Resources/Database Internals.md
+898777b123ecc8cbc5d8d2d44edd2dc9  ./03 Resources/Martin Fowler - The Practical Test Pyramid.md
+85d140c150b13d1e812ea0127f5d6e29  ./03 Resources/Toxiproxy.md
+b8e1519c1d33a5790aa26bfe0ec7c434  ./03 Resources/Uber - Domain-Oriented Microservice Architecture.md
+4aa4f12eae964880c04a9b0637676aa9  ./03 Resources/OWASP Threat Modeling Cheat Sheet.md
+00b196e488a72b4a7d96662d420afeac  ./03 Resources/Understanding Distributed Systems.md
+f3a1fd71bebaff796f5e21864e1bab53  ./03 Resources/OAuth 2.0 RFC 6749.md
+1d2a85728b9ce3c1bb9d42388112d16c  ./03 Resources/Netflix - Fault Tolerance in a High Volume Distributed System.md
+f7528b85b585cf901bbae848048b4ba0  ./03 Resources/Cloudflare - Rate Limiting at Scale.md
+5ab0ab302130b325d9778f1cdc16a94b  ./03 Resources/Martin Fowler - Microservices.md
+c3d301bd344a2ff2756ea5d51731e631  ./03 Resources/OWASP Secrets Management Cheat Sheet.md
+d23b1999109744fe67a471e06e950edf  ./03 Resources/Fundamentals of Software Architecture.md
+8c9a51b7d0f11002b6f39abde2d233b4  ./03 Resources/AWS Builders Library - Shuffle Sharding.md
+2eb0ba6007bc35180a7245da1f41898d  ./03 Resources/Unleash Feature Flags.md
+399fb5416d76f6c07ee663ca89fafca2  ./03 Resources/A Philosophy of Software Design (Talk).md
+95d70cebc5a4ab0fdf1c1954aa5dc000  ./03 Resources/The Twelve-Factor App.md
+e2f995df402dc86942d57b474736470f  ./03 Resources/Gorilla Time-Series Paper.md
+0cb5efdb3c908073e8b2c0c84b9d8ae4  ./03 Resources/Martin Fowler - Strangler Fig Application.md
+6f5c8abc35a893c3dbc63eb3bde3ffb8  ./03 Resources/Temporal.md
+e8e60982532929592635399fe58262d7  ./03 Resources/AWS Architecture Blog - Exponential Backoff and Jitter.md
+ff2255a514a236a9d420b4a07128bbbe  ./03 Resources/Release It!.md
+ff53ee055dd5e43e413e44badc7c88e0  ./03 Resources/Turning the Database Inside Out.md
+f28868c618301b63059e8c3e261c2e80  ./03 Resources/BullMQ.md
+23395867661afd11ed8706fd35dd4a81  ./03 Resources/Stripe - Online Migrations at Scale.md
+77d4c657653a6420e90ecda55cb9cfa1  ./03 Resources/Martin Fowler - Feature Toggles.md
+e3ae1d0786b3df7c708f50eb2962efaf  ./03 Resources/Martin Fowler - Technical Debt Quadrant.md
+d4316129c7430eccc5f5edf3088aeaed  ./03 Resources/AWS Builders Library - Caching Challenges.md
+db1ef6b697fef4b687d6c6d18d727a62  ./03 Resources/etcd Raft Library.md
+cb6c38527446282fe72a867e72006644  ./03 Resources/Martin Fowler - Event Sourcing.md
+9b7244ad27b0dfb5836aa195210cfc53  ./03 Resources/JWT Best Current Practices RFC 8725.md
+7948048e871b3604ba7a31e27b9cb06c  ./03 Resources/AWS Builders Library - Idempotent APIs.md
+e268a23dbd8f7ab31e2b9027544c971e  ./03 Resources/Jepsen Consistency Models.md
+5d9dd4f72e510f0d3b595c5e91f6bd21  ./03 Resources/AWS Builders Library - Avoiding Fallback.md
+f53fefcef560b742be8ccc8969772c47  ./03 Resources/microservices.io - Transactional Outbox.md
+8111142f232ec29b3149fc4547a06dee  ./03 Resources/PACELC Paper.md
+0e06af70cbc989fb602b434a78d56407  ./03 Resources/Scaling Memcache at Facebook.md
+3e64171f5b749dcba3a397a11775d616  ./03 Resources/Hexagonal Architecture (Cockburn).md
+2149941d0cc5bb88b4871b0b49299268  ./03 Resources/OpenTelemetry Observability Primer.md
+c9ee439e9c0453d877779c9ad43cfd07  ./03 Resources/Raft Paper.md
+c2374416bb0cf86b7ead01ea69ccfd6e  ./03 Resources/Temporal Docs on Durable Execution.md
+cd46d466fd417c26f43b61ebcefde63f  ./03 Resources/The Tail at Scale.md
+7aa40c4f1b9051c959c27defc1297e2d  ./03 Resources/microservices.io - Saga Pattern.md
+0c51ef257d1f0f6b5f0a9ce2d00d49ae  ./03 Resources/Designing Data-Intensive Applications.md
+7cc353331059917793a133edae81f204  ./03 Resources/Resources MOC.md
+141826539c74f0b57d42d2b10f2cae06  ./03 Resources/System Design Interview (Alex Xu).md
+80835f5119f20bdb48c4bfa30ec0ba2a  ./03 Resources/Stripe - API Versioning.md
+1ac03f6a7a51cf60cba785b6fd7b4617  ./03 Resources/gRPC Core Concepts.md
+3c757edeec5f873c2fb8461e8ff8b905  ./03 Resources/Kleppmann Distributed Systems Lecture Notes.md
+b6edcf6a75d15ad8f5998973de8e7706  ./03 Resources/Jepsen.md
+38efcdc2e30a46b82f937a1016eb8f72  ./03 Resources/Bucket4j.md
+7fb385a7b401586e0e75a686d63a4596  ./00 Dashboard/Concepts.base
+8f07741432ad4f24636d0f9de6a9fb31  ./00 Dashboard/Decisions.base
+799bfcc3d4c5b72c7c17f9cfe75b4752  ./00 Dashboard/Problems.base
+575b50ab1e17a81dbfc8714b74afbc0a  ./00 Dashboard/Resources.base
+9a506be4ff11990bf77fb6454e4f37a7  ./00 Dashboard/Reviews.base
+fb9a6f13cf8b25813d787a2de0698e45  ./00 Dashboard/Revision Queue.base
+9fafe0c2376823843a024ae4d0c2a7f6  ./00 Dashboard/Engineering Dashboard.md
+8176a6e1221ce9bf2ca897143cdb75c2  ./00 Dashboard/Mock Interviews.base
+3dcd8f28c198834d23e7f5cddf0ef6e9  ./00 Dashboard/Projects.base
+d65f48f22cd35eb51c0dd1f7b3efc8ee  ./00 Dashboard/Interview Readiness.base

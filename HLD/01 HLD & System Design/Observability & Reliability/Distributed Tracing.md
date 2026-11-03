@@ -67,6 +67,11 @@ flowchart TB
     C --> B["Trace backend (Tempo, Jaeger, X-Ray)"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Distributed Tracing.excalidraw]]
+> [[Distributed Tracing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Find which service in the chain is slow or failing for a given request" — the core use, for any system with more than two hops ([[Microservices]], [[API Gateways]]).

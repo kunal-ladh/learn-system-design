@@ -67,6 +67,11 @@ flowchart TB
     A -. "lease self-expiry on A's monotonic clock" .-> A
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Failure Detection.excalidraw]]
+> [[Failure Detection.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any requirement with "automatic failover", "self-healing", "rebalance when a worker dies" or "detect unavailable instances" — the first design question is the detector and its timeout ([[Replication]], [[Consumer Groups]]).

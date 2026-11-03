@@ -80,6 +80,11 @@ flowchart TB
     Q[Compliance, support, security queries] -- "access itself audited" --> H
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Audit Logs.excalidraw]]
+> [[Audit Logs.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Every change to limits, beneficiaries, roles and payout approvals must be attributable" → audited in-transaction with before/after state and the approver's principal ([[Authorization]] maker-checker evidence).

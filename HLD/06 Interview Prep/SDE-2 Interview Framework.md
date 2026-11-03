@@ -74,6 +74,11 @@ flowchart LR
     X["I'm choosing X over Y"] --> R["because of requirement R"] --> C["the cost is C"] --> V["if condition changes, I'd revisit"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[SDE-2 Interview Framework — The decision sentence.excalidraw]]
+> [[SDE-2 Interview Framework — The decision sentence.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Every component and every setting you choose should be said in this shape, out loud, even when the interviewer did not ask:
 
 > "I'm choosing **X** over **Y** because of **requirement R**. The cost is **C**. If **condition** changed, I'd revisit it."

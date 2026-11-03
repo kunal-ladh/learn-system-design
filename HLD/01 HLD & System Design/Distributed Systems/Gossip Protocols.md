@@ -66,6 +66,11 @@ flowchart LR
     S["Seed node"] -. "bootstrap view for joiners" .-> A
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Gossip Protocols.excalidraw]]
+> [[Gossip Protocols.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Cluster membership and liveness for a peer-to-peer data store or cache with hundreds of nodes and no central coordinator ([[Design a Distributed Key-Value Store]], [[Design a Distributed Cache]]).

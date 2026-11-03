@@ -83,6 +83,11 @@ flowchart LR
     P -- "noeviction" --> E["Fail the write"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Eviction Policies.excalidraw]]
+> [[Eviction Policies.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any bounded cache: Redis with `maxmemory`, an in-process cache with `maximumSize`, a CDN edge, a database buffer pool — the policy must be chosen, not inherited.

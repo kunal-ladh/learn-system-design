@@ -83,6 +83,11 @@ flowchart LR
     D -- "no" --> STOP["Hold the target, invest elsewhere"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Performance vs Cost Trade-offs.excalidraw]]
+> [[Performance vs Cost Trade-offs.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A design review for a service with a measurable unit of work: the question "what does this cost per transaction, and how does the proposed change move it?" should have an answer.

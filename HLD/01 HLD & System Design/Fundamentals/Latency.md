@@ -78,6 +78,11 @@ flowchart LR
     S -- "response" --> U
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Latency.excalidraw]]
+> [[Latency.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A requirement states a percentile: "p99 under 200 ms", "search results in under 100 ms" — the design must account for every hop on the path.

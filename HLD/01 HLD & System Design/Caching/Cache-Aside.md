@@ -92,6 +92,11 @@ sequenceDiagram
     Note over C: next read misses and reloads
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Cache-Aside.excalidraw]]
+> [[Cache-Aside.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Read-heavy entities with a clear key: user profiles, merchant configuration, product details, permissions — anything with a read/write ratio of ten or more.

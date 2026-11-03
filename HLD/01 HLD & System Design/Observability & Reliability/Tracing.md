@@ -77,6 +77,11 @@ flowchart TD
     R --> D["INSERT outbox, 6 ms"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Tracing.excalidraw]]
+> [[Tracing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Find where the time goes in a slow endpoint" — the waterfall shows the dominant span, sequential-versus-parallel structure and idle gaps ([[Bottleneck Analysis]]).

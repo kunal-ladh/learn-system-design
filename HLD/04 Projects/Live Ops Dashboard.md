@@ -69,6 +69,11 @@ flowchart LR
     GW2 --> RB[("Replay buffer per stream")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Live Ops Dashboard.excalidraw]]
+> [[Live Ops Dashboard.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the in-process bus becomes Redis Streams or [[Kafka]] so two gateway instances see the same events, the replay buffer moves to Redis so a client can reconnect to any gateway, and the aggregator becomes a consumer group of its own.
 
 ## Tech stack

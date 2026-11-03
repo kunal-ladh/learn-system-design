@@ -104,6 +104,11 @@ flowchart LR
     W2 -. "exhausted retries" .-> DLQ["Dead-letter queue"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Notification System.excalidraw]]
+> [[Design a Notification System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

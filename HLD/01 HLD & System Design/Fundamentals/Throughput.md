@@ -71,6 +71,11 @@ flowchart LR
     POOL -. "bottleneck at this load" .-> POOL
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Throughput.excalidraw]]
+> [[Throughput.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement is a rate: "ingest 50,000 events per second", "settle 2 million transactions per night in a 4-hour window".

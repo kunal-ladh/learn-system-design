@@ -86,6 +86,11 @@ sequenceDiagram
     DB-->>B: 1 row updated, commit
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Optimistic and Pessimistic Locking.excalidraw]]
+> [[Optimistic and Pessimistic Locking.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Read, decide, write on the same row" anywhere: balances, stock, job claims, state machines ([[Design an Inventory Management System]] and [[Design a Ticket Booking System]] are this problem at scale).

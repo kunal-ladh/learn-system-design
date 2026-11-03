@@ -25,6 +25,11 @@ flowchart LR
     S --> MK["Mocks logged this week<br/>(sprint only)"] --> D
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Reviews MOC.excalidraw]]
+> [[Reviews MOC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## What a good review contains
 
 - **What I learned** — notes that moved from `not-started` to `reading`/`understood`.

@@ -41,6 +41,11 @@ flowchart LR
     class A,B,C,D,E,F,G,H,I,J,K1,K2,L,M,N internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Observability & Reliability Concept Map.excalidraw]]
+> [[Observability & Reliability Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

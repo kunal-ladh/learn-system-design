@@ -66,6 +66,11 @@ flowchart LR
     T["Consumer-driven contract tests"] -. "verify in CI" .-> S
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Designing APIs and Contracts.excalidraw]]
+> [[Designing APIs and Contracts.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any endpoint called by a team you do not sit next to, a mobile app you cannot force-update, or an external partner.

@@ -71,6 +71,11 @@ flowchart LR
     HB["Heartbeat row"] -. "measures commit-to-searchable lag" .-> IX
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Search Indexing Pipelines.excalidraw]]
+> [[Search Indexing Pipelines.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "We are adding search over data that lives in our database" — any search feature, from day one; dual writes are the alternative you want to avoid.

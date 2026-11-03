@@ -64,6 +64,11 @@ flowchart LR
     ES -- "publish" --> K[/Other services/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Event Sourcing.excalidraw]]
+> [[Event Sourcing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement includes "complete audit trail", "explain this balance" or "replay under new rules": ledgers, wallets, trading, compliance.

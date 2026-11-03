@@ -32,6 +32,11 @@ flowchart TD
     Q3 -- yes --> R["Ready — run the taper week<br/>and the night-before checklist"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[SDE-2 Readiness Checklist.excalidraw]]
+> [[SDE-2 Readiness Checklist.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Readiness signals
 
 Tick these honestly; each one is observable, not a feeling.

@@ -71,6 +71,11 @@ flowchart LR
     K["Kill switches and brownout flags"] -. "turn off optional work" .-> S
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Graceful Degradation.excalidraw]]
+> [[Graceful Degradation.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any user-facing service with a hard capacity and bursty traffic (flash sales, marketing pushes, incident-driven retries): shedding is what keeps the site up for most users ([[Design a Ticket Booking System]]).

@@ -98,6 +98,11 @@ flowchart LR
     C["Compactor: merge, downsample, retention"] --> OS
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Metrics and Monitoring System.excalidraw]]
+> [[Design a Metrics and Monitoring System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

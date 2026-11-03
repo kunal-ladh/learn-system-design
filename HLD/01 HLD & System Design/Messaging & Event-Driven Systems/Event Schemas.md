@@ -65,6 +65,11 @@ flowchart LR
     CI["CI compatibility check"] -. "blocks breaking change" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Event Schemas.excalidraw]]
+> [[Event Schemas.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Several teams will consume this" — the moment the first external consumer appears, the event is an API and needs a written schema.

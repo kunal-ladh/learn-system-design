@@ -63,6 +63,11 @@ flowchart LR
     W2 -->|write + token 34| R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Lock Service with Fencing Tokens.excalidraw]]
+> [[Lock Service with Fencing Tokens.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the lock state moves to a replicated store (three-node etcd, or Raft via [[etcd Raft Library]]) so the service itself has no single point of failure, and the measurements compare lease latency and failover time against the PostgreSQL version.
 
 ## Tech stack

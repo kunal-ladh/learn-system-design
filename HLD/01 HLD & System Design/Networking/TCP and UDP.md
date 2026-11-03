@@ -75,6 +75,11 @@ sequenceDiagram
     Note over C: TIME_WAIT for 2 x MSL
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[TCP and UDP.excalidraw]]
+> [[TCP and UDP.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - **TCP** whenever the requirement says "every byte must arrive, in order": APIs, database wire protocols, message brokers ([[Kafka]] is TCP), file transfer, anything behind [[TLS]] 1.2/1.3.

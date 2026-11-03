@@ -44,6 +44,11 @@ flowchart LR
     class A,B,C,D1,D2,E1,E2,E3,F,G,H1,H2,I,I2,J,R,S,X internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Architecture Patterns Concept Map.excalidraw]]
+> [[Architecture Patterns Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

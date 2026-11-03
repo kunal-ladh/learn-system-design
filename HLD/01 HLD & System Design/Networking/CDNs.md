@@ -68,6 +68,11 @@ flowchart LR
     P -. "invalidate" .-> E2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[CDNs.excalidraw]]
+> [[CDNs.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users on several continents", "page load time matters", "mobile users on poor networks" — latency and TCP warm-up are the dominant cost and the edge removes them.

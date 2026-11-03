@@ -37,6 +37,11 @@ flowchart LR
     class RC,SH internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Interview Sprint Plan.excalidraw]]
+> [[Interview Sprint Plan.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Phase 1 — Foundations (weeks 1–12)
 
 Follow the twelve-week table in [[Start Here]] exactly: about six concept notes a week, first-pass only, three sentences under *Personal understanding* each, and from week 6 one timed design problem a week in the order given there (URL shortener, rate limiter, notification system, distributed cache, chat, social feed, payment system).

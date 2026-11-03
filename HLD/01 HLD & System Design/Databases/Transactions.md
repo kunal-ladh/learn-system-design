@@ -74,6 +74,11 @@ stateDiagram-v2
     RolledBack --> [*]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Transactions.excalidraw]]
+> [[Transactions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Both of these must happen or neither" inside one database — transfers, order plus order lines, state change plus outbox row.

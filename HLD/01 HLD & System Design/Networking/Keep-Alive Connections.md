@@ -65,6 +65,11 @@ flowchart TB
     N["NAT or firewall: drops state after idle"] -. "needs TCP keepalive or HTTP/2 PING" .-> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Keep-Alive Connections.excalidraw]]
+> [[Keep-Alive Connections.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Service-to-service calls at high rate" — connection reuse is where most of the per-call overhead goes; without it, handshakes dominate.

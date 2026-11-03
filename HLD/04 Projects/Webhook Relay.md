@@ -66,6 +66,11 @@ flowchart LR
     OPS[Operator CLI] -- "inspect, replay" --> API
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Webhook Relay.excalidraw]]
+> [[Webhook Relay.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the single-table queue is what gets measured: if polling and lock contention cap throughput, claiming moves to [[Redis]] Streams or [[Kafka]] while PostgreSQL stays the system of record. Per-endpoint worker pools and [[Circuit Breakers]] replace the one shared pool, and producers can adopt a true outbox in their own database read by a poller or [[Change Data Capture]].
 
 ## Tech stack

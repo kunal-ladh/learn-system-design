@@ -84,6 +84,11 @@ flowchart LR
     end
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Reverse Proxies.excalidraw]]
+> [[Reverse Proxies.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Several services behind one domain", "route `/v2` to the new service" — routing and rewrites without touching clients ([[Strangler Pattern]]).

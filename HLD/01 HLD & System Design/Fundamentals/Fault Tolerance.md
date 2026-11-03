@@ -77,6 +77,11 @@ flowchart LR
     S -. "promote with fencing" .-> P
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Fault Tolerance.excalidraw]]
+> [[Fault Tolerance.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement names a failure domain to survive: "no single pod, node or AZ failure may cause downtime".

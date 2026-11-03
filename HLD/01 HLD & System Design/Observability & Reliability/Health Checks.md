@@ -76,6 +76,11 @@ flowchart LR
     T["SIGTERM"] -- "fail readiness, drain in-flight" --> P2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Health Checks.excalidraw]]
+> [[Health Checks.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Every service on Kubernetes or behind a load balancer: probes are how the platform knows what to do with an instance ([[Load Balancers]]).

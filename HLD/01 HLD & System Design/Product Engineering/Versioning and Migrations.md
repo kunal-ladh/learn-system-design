@@ -71,6 +71,11 @@ flowchart TB
     C -- "rollback: flip flag" --> D
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Versioning and Migrations.excalidraw]]
+> [[Versioning and Migrations.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A change that fails the compatibility test: type change, semantic change, entity split or merge, datastore move.

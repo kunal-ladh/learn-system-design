@@ -66,6 +66,11 @@ flowchart LR
     RECON --> ST[("External statement")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Double-Entry Ledger Service.excalidraw]]
+> [[Double-Entry Ledger Service.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the outbox feeds downstream consumers (notifications, analytics), hot accounts (the fee account, a merchant with thousands of payments a minute) are measured and handled with balance shards or deferred aggregation, and read scaling moves balance reads to a replica with explicit staleness.
 
 ## Tech stack

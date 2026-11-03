@@ -91,6 +91,11 @@ flowchart TB
     D -- "no" --> SH["Partition or tiered storage"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Back-of-the-Envelope Estimation.excalidraw]]
+> [[Back-of-the-Envelope Estimation.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The opening of any system design, in a review or an interview: requirements become load parameters before the architecture is chosen.

@@ -72,6 +72,11 @@ flowchart LR
     CARD{{"Cardinality: distinct series"}} -. "bounds memory and index" .-> ING
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Time-Series Databases.excalidraw]]
+> [[Time-Series Databases.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Metrics from hundreds of services and thousands of pods" — the defining case; nothing else stores them affordably ([[Metrics]], [[Monitoring]]).

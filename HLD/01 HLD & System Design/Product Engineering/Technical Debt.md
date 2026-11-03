@@ -68,6 +68,11 @@ quadrantChart
     Right model learned late: [0.28, 0.80]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Technical Debt.excalidraw]]
+> [[Technical Debt.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Debt has no runtime shape; structurally it is the register above, linked from the architecture docs and reviewed monthly, plus the metrics that show its interest: per-module lead time, change failure rate and incident attribution. Architectural debt also appears on the system diagram as the annotated edge or component that "should not be there".
 
 ## Use cases

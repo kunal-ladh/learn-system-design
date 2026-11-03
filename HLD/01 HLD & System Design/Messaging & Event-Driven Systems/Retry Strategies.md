@@ -66,6 +66,11 @@ flowchart LR
     C -- "dependency down: open breaker, pause" --> B["Circuit breaker"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Retry Strategies.excalidraw]]
+> [[Retry Strategies.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "The downstream is occasionally slow or rate-limited" — partner APIs, payment processors, email providers ([[Design a Webhook Delivery System]], [[Design a Notification System]]).

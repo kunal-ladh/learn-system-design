@@ -70,6 +70,11 @@ sequenceDiagram
     S-->>A: rejected, token 41 is older than 42
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Split-Brain.excalidraw]]
+> [[Split-Brain.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any active-passive or primary-replica design where the requirement says "automatic failover" — the design is incomplete until it states how the old primary is fenced ([[Replication]], [[Disaster Recovery]]).

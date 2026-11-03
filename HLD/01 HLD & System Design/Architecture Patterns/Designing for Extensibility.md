@@ -62,6 +62,11 @@ flowchart LR
     CFG[("config / flags")] --> REG
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Designing for Extensibility.excalidraw]]
+> [[Designing for Extensibility.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Integration surfaces with a known axis of growth: payment providers, notification channels, KYC vendors, storage backends, LLM providers.

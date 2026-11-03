@@ -80,6 +80,11 @@ sequenceDiagram
     C->>G: GET snapshot via REST, subscribe from its seq
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Client State and Reconnection.excalidraw]]
+> [[Client State and Reconnection.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Real-time updates that must not be missed" (balances, order status, fraud alerts, live ops dashboards) — any time a stale screen is a correctness problem ([[Live Ops Dashboard]]).

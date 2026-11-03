@@ -70,6 +70,11 @@ flowchart LR
     end
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[File Systems.excalidraw]]
+> [[File Systems.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "This software expects a directory" (databases, legacy apps, build tools, ML frameworks loading datasets by path) — local or block-backed file system on one host.

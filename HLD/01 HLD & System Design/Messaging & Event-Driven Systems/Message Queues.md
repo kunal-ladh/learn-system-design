@@ -71,6 +71,11 @@ flowchart LR
     Q -- "receive count exceeds max" --> D[/Dead-letter queue/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Message Queues.excalidraw]]
+> [[Message Queues.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "This request kicks off work the user does not need to wait for" — emails, webhooks, PDF generation, image transcoding.

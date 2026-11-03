@@ -75,6 +75,11 @@ sequenceDiagram
     Note over A,B: if the coordinator dies after the votes, A and B are in doubt and keep their locks
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Distributed Transactions.excalidraw]]
+> [[Distributed Transactions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Cross-shard write inside one database system" — Spanner, CockroachDB, Vitess, Citus: the coordinator is replicated and participants are uniform, so 2PC is the honest tool.

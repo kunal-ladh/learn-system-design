@@ -69,6 +69,11 @@ flowchart LR
     S3 --> G
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Sharding.excalidraw]]
+> [[Sharding.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Writes per second exceed what one primary can fsync, or data exceeds what one instance can hold with the hot set in memory" — and the earlier rungs are exhausted, measured, not assumed.

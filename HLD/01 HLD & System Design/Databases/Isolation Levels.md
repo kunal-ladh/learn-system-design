@@ -85,6 +85,11 @@ sequenceDiagram
     end
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Isolation Levels.excalidraw]]
+> [[Isolation Levels.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "The balance / stock / seat count must never go below zero" and the check involves reading other rows — serializable, or a lock on the account row that every writer takes.

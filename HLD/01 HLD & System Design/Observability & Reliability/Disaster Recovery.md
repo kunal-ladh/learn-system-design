@@ -73,6 +73,11 @@ flowchart LR
     R -. "failover: fence, promote, scale, switch" .-> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Disaster Recovery.excalidraw]]
+> [[Disaster Recovery.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Regulatory or contractual requirements that state RTO and RPO (financial services, healthcare, SLAs with recovery clauses) — the tier is chosen to satisfy them demonstrably ([[Design a Payment System]], [[Design a Digital Wallet and Ledger]]).

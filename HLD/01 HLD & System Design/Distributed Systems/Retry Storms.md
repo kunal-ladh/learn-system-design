@@ -74,6 +74,11 @@ flowchart TB
     B -. "caps the loop" .-> S
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Retry Storms.excalidraw]]
+> [[Retry Storms.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any synchronous call chain of three or more hops with retries configured independently at each — the requirement "resilient to transient failures" must be read as "resilient *without* amplifying".

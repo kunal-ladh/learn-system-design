@@ -60,6 +60,11 @@ flowchart LR
     PR -. "bug found late → add a test at an earlier gate" .-> PM
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Testing Strategies.excalidraw]]
+> [[Testing Strategies.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Structurally the strategy is a pipeline of gates: pre-merge runs unit and contract tests (under a minute), merge runs integration tests in containers (a few minutes), staging runs the end-to-end journeys, production runs synthetic checks continuously. A bug found at a later gate prompts a test at an earlier one.
 
 ## Use cases

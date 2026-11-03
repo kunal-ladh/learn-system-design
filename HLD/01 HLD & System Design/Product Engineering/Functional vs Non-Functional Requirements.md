@@ -63,6 +63,11 @@ flowchart LR
     D --> C3["Component C — traces to nothing → candidate for removal"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Functional vs Non-Functional Requirements.excalidraw]]
+> [[Functional vs Non-Functional Requirements.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 No runtime component; the structure is a requirements matrix with one row per attribute and columns for target, condition, measurement and owner. The matrix is the input to every later decision: each component in the design should trace to the NFR that justified it, and a component that traces to nothing is a candidate for removal.
 
 ## Use cases

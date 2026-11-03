@@ -73,6 +73,11 @@ flowchart LR
     Z["Zombie instance, old epoch"] -. "fenced" .-> TC
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Exactly-Once Semantics.excalidraw]]
+> [[Exactly-Once Semantics.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Read from Kafka, aggregate or enrich, write to Kafka, and counts must be exact" — fraud features, windowed aggregates, Kafka Streams and Flink jobs ([[Design a Real-Time Fraud Detection Pipeline]]).

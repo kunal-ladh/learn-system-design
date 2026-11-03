@@ -98,6 +98,11 @@ flowchart LR
     EXP --> DB
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Ticket Booking System.excalidraw]]
+> [[Design a Ticket Booking System.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

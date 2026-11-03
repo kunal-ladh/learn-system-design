@@ -67,6 +67,11 @@ flowchart TB
     E -. "crash before ack, redeliver" .-> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Duplicate Message Processing.excalidraw]]
+> [[Duplicate Message Processing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any consumer of an at-least-once source: Kafka, SQS standard, RabbitMQ with acks, Redis Streams consumer groups, webhooks received from partners ([[Message Queues]], [[Design a Webhook Delivery System]]).

@@ -69,6 +69,11 @@ flowchart LR
     K --> A[("Audit trail of key use")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Encryption at Rest and in Transit.excalidraw]]
+> [[Encryption at Rest and in Transit.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Card numbers, identity documents or account numbers are stored" → field-level envelope encryption or tokenisation, separate keys per data class, decrypt permission limited to one service ([[Design a Payment System]]).

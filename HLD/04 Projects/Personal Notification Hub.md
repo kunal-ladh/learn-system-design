@@ -69,6 +69,11 @@ flowchart TB
     SND -->|failed, retry, dead| DL[("dead-letter view")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Personal Notification Hub.excalidraw]]
+> [[Personal Notification Hub.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage a queue (Redis Streams via BullMQ) separates intake from delivery so a slow email provider cannot stall polling, grouping becomes smarter (thread-aware), and a tiny web UI lists in-app items with the "why" explanation and one-click mutes.
 
 ## Tech stack

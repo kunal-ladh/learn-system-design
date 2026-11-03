@@ -71,6 +71,11 @@ flowchart LR
     CDN["CDN"] -- "GET" --> FE
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Object Storage.excalidraw]]
+> [[Object Storage.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users upload files, images, documents, videos" — the canonical case: bytes in the store, a key and metadata in your database ([[Design File Storage]]).

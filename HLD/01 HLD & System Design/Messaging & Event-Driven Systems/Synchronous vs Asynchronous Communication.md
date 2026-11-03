@@ -68,6 +68,11 @@ flowchart LR
     end
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Synchronous vs Asynchronous Communication.excalidraw]]
+> [[Synchronous vs Asynchronous Communication.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "The user needs the answer on this screen" — synchronous read, with caching and timeouts.

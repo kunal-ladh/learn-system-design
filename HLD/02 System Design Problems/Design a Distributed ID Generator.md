@@ -99,6 +99,11 @@ flowchart LR
     NTP -. "time" .-> S2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Distributed ID Generator.excalidraw]]
+> [[Design a Distributed ID Generator.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

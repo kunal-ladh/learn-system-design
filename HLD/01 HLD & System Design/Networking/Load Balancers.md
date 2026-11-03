@@ -81,6 +81,11 @@ flowchart LR
     SD["Service discovery: Endpoints"] -. "target list" .-> L7a
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Load Balancers.excalidraw]]
+> [[Load Balancers.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Run more than one instance of anything" — the baseline; every stateless service needs one in front.

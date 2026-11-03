@@ -70,6 +70,11 @@ flowchart TB
     O -. "looser, external" .-> L["SLA: 99.5% with credits"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[SLI SLO and SLA.excalidraw]]
+> [[SLI SLO and SLA.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any service with a customer or a dependent team: define at least an availability SLI and a latency SLI before launch, and the SLO before the first incident.

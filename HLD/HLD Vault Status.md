@@ -21,7 +21,7 @@ updated: 2026-11-03
 
 ## What exists
 
-323 notes · 9 Bases files · 7 templates · 248 Mermaid diagrams (all render on Mermaid 11) · 0 broken wikilinks.
+325 notes · 9 Bases files · 7 templates · 248 Mermaid diagrams (all render on Mermaid 11) · 244 Excalidraw drawings · 0 broken wikilinks.
 
 | Folder | Contents | Entry point |
 |---|---|---|
@@ -33,7 +33,8 @@ updated: 2026-11-03
 | `05 Reviews/` | Weekly reviews created from the template | [[Reviews MOC]] |
 | `06 Interview Prep/` | [[Interview Prep MOC]], [[SDE-2 Interview Framework]], [[Interview Probe Questions]], [[Estimation Cheat Sheet]], [[Component Choice Cheat Sheet]], [[SDE-2 Readiness Checklist]], [[Interview Sprint Plan]]; `Mocks/` for mock logs | [[Interview Prep MOC]] |
 | `Templates/` | Concept, Design Problem, Project, Resource, Weekly Review, Architecture Decision, Mock Interview | — |
-| root | [[Start Here]], [[Workspace Guide]], this page | [[Start Here]] |
+| `Excalidraw/` | 244 drawings in the Obsidian Excalidraw format: `Maps/` — 11 category concept maps + the HLD category map, hand-laid-out (rooms, reading order, one concrete example per room, every box linked to its note); `Concepts/` 172, `Problems/` 29, `Projects/` 17, `Guides/` 14 — one canvas per Mermaid diagram, generated from it and embedded under it in a folded callout | [[HLD Category Map.excalidraw]] |
+| root | [[Start Here]], [[Workspace Guide]], [[Plugins to Install]], this page | [[Start Here]] |
 
 ## Conventions every note follows
 
@@ -50,7 +51,8 @@ updated: 2026-11-03
 - **Clickable diagrams** — any flowchart node whose label is exactly a note title carries `class <id> internal-link` (343 nodes across 32 notes). Keep node labels identical to note titles in new diagrams.
 - **Diagram sizing** — the `hld-workspace` CSS snippet (pre-enabled in `.obsidian/appearance.json`) renders Mermaid at natural size with sideways scrolling instead of shrinking; long chains are drawn top-to-bottom, so nothing is wider than about 900px. Use `flowchart TB` for chains longer than five nodes.
 - **Wide pages** — `cssclasses: [wide]` on the dashboard, the MOCs and the interview cheat sheets gives tables and Bases the full pane width.
-- **Bookmarks and graph** — `.obsidian/bookmarks.json` groups the entry points (Learn · Design and build · Interview · Review); `.obsidian/graph.json` colours nodes by folder, including `06 Interview Prep`.
+- **Bookmarks and graph** — `.obsidian/bookmarks.json` groups the entry points (Learn · Design and build · Interview · Review); `.obsidian/graph.json` colours nodes by folder, including `06 Interview Prep`, and greys `Excalidraw/`.
+- **Excalidraw drawings** — generated from the Mermaid sources with the excalidraw-diagram skill's conventions (semantic colours: orange start, blue concept, darker blue hub or store, amber decision, red failure mode, green destination; clean strokes; Cascadia text). Boxes link to notes through the drawing's `link` property and the `## Element Links` section, so backlinks and the graph see them. Regenerate a drawing by deleting it and re-running the generator, or just edit it in Excalidraw — the Mermaid block stays the reference. The one diagram without a canvas is the Gantt chart in [[SDE-2 Interview Framework]].
 
 ## The plan the vault is organised around
 
@@ -62,7 +64,8 @@ updated: 2026-11-03
 
 - [ ] Commit the vault after this session (`git add HLD && git commit`).
 - [ ] Confirm the CSS snippet shows as enabled (Settings → Appearance → CSS snippets); if Obsidian is older than 1.9, update it so the Bases embeds resolve.
-- [ ] Optional: QuickAdd and Templater setup as described in [[Workspace Guide]]; Excalidraw redraw per category MOC; an `asked: true` property on problems after the first real loop.
+- [ ] Install and enable the Excalidraw plugin, then run the three checks in [[Plugins to Install]].
+- [ ] Optional: QuickAdd and Templater setup as described in [[Workspace Guide]]; an `asked: true` property on problems after the first real loop.
 - [ ] Build [[Spaced Repetition Review CLI]] once setting `next_review` by hand becomes a chore.
 
 ## Changelog
@@ -70,3 +73,4 @@ updated: 2026-11-03
 - **2026-10-19 → 2026-10-30** — Curriculum built: 166 concept notes, 11 category MOCs, HLD MOC, Knowledge Graph, 28 problem decision sheets, dashboard with seven Bases, templates, Start Here and Workspace Guide; Webhook Relay project.
 - **2026-11-03** — Gaps closed and interview layer added: 79 resource notes with verified links; 15 project notes; `06 Interview Prep/` (framework, probe bank, estimation and component cheat sheets, readiness checklist, sprint plan, mock template, two Bases); `interview_tier` on every problem; dashboard section 7; guides updated.
 - **2026-11-03 (UX pass)** — Diagrams added to the nine Product Engineering concepts, every MOC, Start Here, the dashboard and the interview notes; category maps rewritten with one note per clickable node; 30 over-wide chains redrawn top-to-bottom; CSS snippet, bookmarks and graph colours added; this page created.
+- **2026-11-03 (Excalidraw pass)** — `Excalidraw/` added: 12 hand-laid-out maps (eleven categories + HLD) and 232 generated canvases, one per Mermaid diagram, each embedded in its note; [[Plugins to Install]] written; guides, bookmarks and graph colours updated.

@@ -93,6 +93,11 @@ flowchart LR
     GC["Chunk GC / dedup"] --> OS
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design File Storage.excalidraw]]
+> [[Design File Storage.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

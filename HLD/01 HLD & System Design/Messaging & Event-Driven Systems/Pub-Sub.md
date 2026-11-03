@@ -62,6 +62,11 @@ flowchart LR
     Q2 -- "retries exhausted" --> D[/"DLQ: notifications"/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Pub-Sub.excalidraw]]
+> [[Pub-Sub.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Several teams need to react to the same business event, and the list will grow" — the defining signal.

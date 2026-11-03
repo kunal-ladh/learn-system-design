@@ -65,6 +65,11 @@ stateDiagram-v2
     Leader --> Leader : "heartbeat renews lease"
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Leader Election.excalidraw]]
+> [[Leader Election.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Exactly one instance must run this job / own this partition / write to this store" in a service that has more than one replica — schedulers, outbox relays, compaction, cache warmers.

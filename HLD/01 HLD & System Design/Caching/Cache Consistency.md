@@ -93,6 +93,11 @@ sequenceDiagram
     Note over R,D: next reader gets a new lease and loads the new value
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Cache Consistency.excalidraw]]
+> [[Cache Consistency.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any user-facing flow where someone writes and then reads: profile edits, settings, order placement — needs read-your-writes for that session.

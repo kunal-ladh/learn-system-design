@@ -64,6 +64,11 @@ flowchart LR
     T["Thread pool inside consumer"] -. "reorders within partition" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Ordering Guarantees.excalidraw]]
+> [[Ordering Guarantees.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Balance, status or inventory must never go backwards" — key by the entity, carry versions, gate on version.

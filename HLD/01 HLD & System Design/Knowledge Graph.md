@@ -29,6 +29,11 @@ flowchart TB
     class CG,D,F,I,K,O,P,R internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Chain 1 — Kafka- from partitions to safe consumers.excalidraw]]
+> [[Knowledge Graph — Chain 1 — Kafka- from partitions to safe consumers.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 [[Kafka]] → [[Topic Partitions]] → [[Consumer Groups]] (parallelism is capped by partition count) → [[Ordering Guarantees]] (only within a partition) → [[Delivery Semantics]] (at-least-once in practice) → [[Idempotency]] (the consumer owns correctness) → [[Retry Strategies]] → [[Dead-Letter Queues]] for failure recovery. Apply it in [[Design a Message Queue]] and [[Design a Notification System]]; build it in [[Streaming Fraud Rules Engine]].
 
 ## Chain 2 — Database scaling: from one box to many
@@ -47,6 +52,11 @@ flowchart TB
     class C,CAP,CH,H,P,PA,R,RR,S,SH internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Chain 2 — Database scaling- from one box to many.excalidraw]]
+> [[Knowledge Graph — Chain 2 — Database scaling- from one box to many.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 [[Database Scaling]] → [[Replication]] → [[Read Replicas]] (read scaling, replica lag) → [[Consistency Models]] (what lag costs you) → [[CAP Theorem]] (and [[PACELC]]) → [[Partitioning]] → [[Sharding]] → [[Hot Keys]] (the hotspot problem) → [[Consistent Hashing]]. Apply it in [[Design a URL Shortener]], [[Design a Social Feed]] and [[Design a Distributed Key-Value Store]]; build it in [[Mini-KV Store]].
 
 ## Chain 3 — Caching: from a quick win to a correctness problem
@@ -63,6 +73,11 @@ flowchart LR
     DC --> ML[Multi-Level Caching]
     class CA,CON,DC,EV,HK,INV,ML,ST,TTL internal-link;
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Chain 3 — Caching- from a quick win to a correctness problem.excalidraw]]
+> [[Knowledge Graph — Chain 3 — Caching- from a quick win to a correctness problem.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 [[Cache-Aside]] → [[Cache Invalidation]] → [[Cache Consistency]] (what a cache can and cannot promise) → [[TTL]] → [[Eviction Policies]] → [[Cache Stampedes]] → [[Distributed Caching]] → [[Hot Keys]] → [[Multi-Level Caching]]. Apply it in [[Design a Distributed Cache]] and [[Design a Rate Limiter]]; build it in [[Rate Limiter Library]] and [[LLM Gateway]].
 
@@ -81,6 +96,11 @@ flowchart TB
     class BP,CS,DUP,FO,ORD,PS,RT,WS internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Chain 4 — Real-time systems- from a socket to a client that survives disconnects.excalidraw]]
+> [[Knowledge Graph — Chain 4 — Real-time systems- from a socket to a client that survives disconnects.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 [[Real-Time Systems]] is the hub: [[WebSockets]] → event streaming ([[Pub-Sub]], [[Kafka]]) → [[Fan-Out]] → [[Backpressure]] → [[Client State and Reconnection]] → [[Ordering Guarantees]] → [[Duplicate Message Processing]] → recovery after disconnect (replay from a sequence number). Apply it in [[Design a Chat System]] and [[Design a Metrics and Monitoring System]]; build it in [[Live Ops Dashboard]] and [[Presence and Chat Service]].
 
 ## Two chains you will meet at work
@@ -96,6 +116,11 @@ flowchart TB
     class A,I,IL,L,O,S,T internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Two chains you will meet at work.excalidraw]]
+> [[Knowledge Graph — Two chains you will meet at work.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 **Money moves safely:** [[Idempotency]] → [[Transactions]] → [[Isolation Levels]] → [[Optimistic and Pessimistic Locking]] → [[Outbox Pattern]] → [[Saga Pattern]] → [[Audit Logs]]. Apply in [[Design a Payment System]] and [[Design a Digital Wallet and Ledger]]; build in [[Double-Entry Ledger Service]].
 
 ```mermaid
@@ -109,6 +134,11 @@ flowchart TB
     H --> A[Alerting]
     class A,B,CB,G,H,RS,T internal-link;
 ```
+
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Knowledge Graph — Two chains you will meet at work (2).excalidraw]]
+> [[Knowledge Graph — Two chains you will meet at work (2).excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
 
 **Nothing falls over at once:** [[Timeouts and Retries]] → [[Retry Storms]] → [[Circuit Breakers]] → [[Bulkheads]] → [[Rate Limiting]] → [[Graceful Degradation]] → [[Health Checks]] → [[Alerting]]. Apply in [[Design an API Gateway]]; build in [[Chaos Lab]].
 

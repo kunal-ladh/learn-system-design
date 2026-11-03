@@ -64,6 +64,11 @@ flowchart LR
     N --> NDB
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Strangler Pattern.excalidraw]]
+> [[Strangler Pattern.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A legacy system that must be replaced but cannot be frozen or turned off: "we need to move off the monolith without a cut-over".

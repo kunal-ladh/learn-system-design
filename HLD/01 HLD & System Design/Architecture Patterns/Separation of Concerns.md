@@ -61,6 +61,11 @@ flowchart TD
     D -. "depends on nothing outward" .-> D
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Separation of Concerns.excalidraw]]
+> [[Separation of Concerns.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any codebase expected to live more than a few months; the requirement says "maintainable", "we will add channels/providers later" or "multiple teams will work on this".

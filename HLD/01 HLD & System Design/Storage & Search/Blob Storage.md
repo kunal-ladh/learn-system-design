@@ -72,6 +72,11 @@ flowchart LR
     SW -. "reconcile" .-> DB
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Blob Storage.excalidraw]]
+> [[Blob Storage.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Users upload documents, images or attachments" — pointer in the database, bytes in object storage, by default.

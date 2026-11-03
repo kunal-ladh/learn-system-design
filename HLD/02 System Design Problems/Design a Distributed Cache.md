@@ -99,6 +99,11 @@ flowchart LR
     P2 -. "gossip" .- P3
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Distributed Cache.excalidraw]]
+> [[Design a Distributed Cache.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

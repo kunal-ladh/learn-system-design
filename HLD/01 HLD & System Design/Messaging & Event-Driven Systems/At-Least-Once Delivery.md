@@ -69,6 +69,11 @@ flowchart LR
     B -- "receive count exceeds max" --> D[/Dead-letter queue/]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[At-Least-Once Delivery.excalidraw]]
+> [[At-Least-Once Delivery.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "This must happen" — payments, ledger postings, order state transitions, audit events, outbound webhooks ([[Design a Payment System]], [[Design a Webhook Delivery System]]).

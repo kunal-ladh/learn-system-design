@@ -101,6 +101,11 @@ flowchart LR
     G1 -- "429 + Retry-After" --> C
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Rate Limiter.excalidraw]]
+> [[Design a Rate Limiter.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

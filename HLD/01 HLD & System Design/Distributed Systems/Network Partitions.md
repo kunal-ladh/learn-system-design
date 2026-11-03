@@ -77,6 +77,11 @@ flowchart LR
     C2 -. "cannot reach" .- L
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Network Partitions.excalidraw]]
+> [[Network Partitions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any requirement that says "across availability zones", "across regions", or "survives loss of a data centre" — the links between those places *will* fail, and the design must state the behaviour on each side.

@@ -63,6 +63,11 @@ flowchart LR
     C -. "crash after effect, before ack: redelivery" .-> B
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Delivery Semantics.excalidraw]]
+> [[Delivery Semantics.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any design review of a message path: walk the three hops and name the guarantee at each — if you cannot, the design is not finished.

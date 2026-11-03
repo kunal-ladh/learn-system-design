@@ -68,6 +68,11 @@ flowchart LR
     GW2 -.-> D3[Recipient on another gateway]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Presence and Chat Service.excalidraw]]
+> [[Presence and Chat Service.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage the connection registry moves to Redis (user → gateway), cross-gateway delivery goes through Redis pub/sub or Streams, group fan-out becomes asynchronous, and the messages table is partitioned by conversation and time — the [[Discord - How Discord Stores Trillions of Messages]] case study is the reference for what that looks like at scale.
 
 ## Tech stack

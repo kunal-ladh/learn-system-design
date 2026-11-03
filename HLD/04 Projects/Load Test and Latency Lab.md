@@ -67,6 +67,11 @@ flowchart LR
     KN --> REP[("Markdown report, charts, capacity statement")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Load Test and Latency Lab.excalidraw]]
+> [[Load Test and Latency Lab.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 Later: Gatling as a second generator to compare results and remove tool bias, a distributed k6 run (several generators) once one laptop cannot saturate a target, and a write-up series applying the method to each project.
 
 ## Tech stack

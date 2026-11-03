@@ -68,6 +68,11 @@ flowchart LR
     P --> S["Pre-scaling for known events"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Capacity Planning.excalidraw]]
+> [[Capacity Planning.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Before any launch, campaign or seasonal peak: measure, forecast and pre-scale ([[Design a Ticket Booking System]]).

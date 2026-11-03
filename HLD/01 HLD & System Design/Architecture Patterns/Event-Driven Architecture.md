@@ -64,6 +64,11 @@ flowchart LR
     T2 --> O
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Event-Driven Architecture.excalidraw]]
+> [[Event-Driven Architecture.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - The requirement reads "when X happens, Y and Z must eventually happen" and Y and Z are owned by other teams.

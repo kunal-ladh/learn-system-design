@@ -92,6 +92,11 @@ sequenceDiagram
     C-->>R2: fresh value on retry
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Cache Stampedes.excalidraw]]
+> [[Cache Stampedes.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any cached value that is both popular and expensive to compute: dashboards, aggregates, search result pages, rendered templates, remote API lookups.

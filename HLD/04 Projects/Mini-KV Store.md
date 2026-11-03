@@ -66,6 +66,11 @@ flowchart LR
     N3 <-.->|gossip| N4
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Mini-KV Store.excalidraw]]
+> [[Mini-KV Store.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 The improved stage adds gossip-based membership and failure detection, hinted handoff with replay when a node returns, read repair on divergent responses, and Merkle-tree anti-entropy between replicas as a scheduled job.
 
 ## Tech stack

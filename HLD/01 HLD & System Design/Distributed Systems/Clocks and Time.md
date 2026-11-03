@@ -72,6 +72,11 @@ sequenceDiagram
     Note over A,C: A's events 1 and 7 are ordered. B's 2 and C's 5 are concurrent
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Clocks and Time.excalidraw]]
+> [[Clocks and Time.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any merge rule phrased as "the newest value wins" across replicas or services — the requirement is really "define newest without trusting wall clocks" ([[Eventual Consistency]]).

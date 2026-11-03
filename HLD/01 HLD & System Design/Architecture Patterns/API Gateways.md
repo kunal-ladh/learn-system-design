@@ -69,6 +69,11 @@ flowchart LR
     class R internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[API Gateways.excalidraw]]
+> [[API Gateways.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - More than a handful of services exposed to external or mobile clients that need one stable hostname and one auth story.

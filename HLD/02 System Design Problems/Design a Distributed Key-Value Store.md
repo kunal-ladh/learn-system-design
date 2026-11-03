@@ -93,6 +93,11 @@ flowchart LR
     N1 -. "hinted handoff, read repair, Merkle sync" .- N2
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Design a Distributed Key-Value Store.excalidraw]]
+> [[Design a Distributed Key-Value Store.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Component responsibilities
 
 | Component | Owns | Does not own |

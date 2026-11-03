@@ -69,6 +69,11 @@ flowchart TB
     WH -. "never" .-> OLTP
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Data Warehouses.excalidraw]]
+> [[Data Warehouses.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Reports and dashboards over months or years of data", "finance wants daily settlement and reconciliation views" — scanning history by aggregate is the warehouse's native query.

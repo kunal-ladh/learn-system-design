@@ -74,6 +74,11 @@ flowchart TD
     R[Retention job] -- "detach and drop" --> E1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Partitioning.excalidraw]]
+> [[Partitioning.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Keep 13 months of events and delete older ones nightly" — range partitioning by time turns deletion into `DROP TABLE` ([[Data Retention and Archival]]).

@@ -101,6 +101,11 @@ flowchart LR
     QPS -- "× latency (Little's law)" --> INF["Requests in flight → pool sizes"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Estimation Cheat Sheet.excalidraw]]
+> [[Estimation Cheat Sheet.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 1. **QPS** — `DAU × actions per user per day ÷ 86,400`, then `× peak factor`. Split reads and writes.
 2. **Storage** — `writes per day × record size × retention days`; add indexes (+30–100%) and replication (× replication factor).
 3. **Bandwidth** — `QPS × payload size`, in and out separately; the out side is usually what costs money.

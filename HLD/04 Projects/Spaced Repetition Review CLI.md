@@ -64,6 +64,11 @@ flowchart TB
     R --> J[("journal.jsonl → undo")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Spaced Repetition Review CLI.excalidraw]]
+> [[Spaced Repetition Review CLI.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 The improved stage replaces the fixed doubling with an SM-2-style interval that uses an ease factor per note, adds a `--category` filter, and exports a small CSV the weekly review template can embed.
 
 ## Tech stack

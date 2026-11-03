@@ -44,6 +44,11 @@ flowchart LR
     class A,B,C,CR,D,DM,DO,E,F,G,H,I,ID,J,K1,K2,OS,TS internal-link;
 ```
 
+> [!example]+ Excalidraw canvas — the same map as rooms, with a reading order and one concrete example per room
+> ![[Product Engineering Concept Map.excalidraw]]
+> [[Product Engineering Concept Map.excalidraw|Open in Excalidraw]] — every box links to its note (Ctrl/Cmd-click). Needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Concepts
 
 ### Core — know these cold for SDE-2

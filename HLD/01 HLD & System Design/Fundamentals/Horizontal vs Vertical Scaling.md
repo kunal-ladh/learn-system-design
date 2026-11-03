@@ -71,6 +71,11 @@ flowchart LR
     P -- "when scale-up runs out" --> S[("Shards: scale out writes")]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Horizontal vs Vertical Scaling.excalidraw]]
+> [[Horizontal vs Vertical Scaling.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A stateless API or worker tier under growing request load: scale out, with the pool sizes and database capacity rechecked ([[Connection Pooling]]).

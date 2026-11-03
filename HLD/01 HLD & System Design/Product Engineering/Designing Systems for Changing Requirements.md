@@ -68,6 +68,11 @@ flowchart LR
     M -- "new requirement" --> D
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Designing Systems for Changing Requirements.excalidraw]]
+> [[Designing Systems for Changing Requirements.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A product whose roadmap is uncertain beyond a quarter — most of them.

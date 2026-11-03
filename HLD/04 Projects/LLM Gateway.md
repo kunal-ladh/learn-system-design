@@ -69,6 +69,11 @@ flowchart LR
     class G,cache,min internal-link;
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[LLM Gateway.excalidraw]]
+> [[LLM Gateway.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 At the improved stage routing becomes policy-driven (cheapest provider meeting a latency SLO, measured live), the cache gains semantic matching for near-duplicate prompts as an experiment, budgets become enforced in near real time with an alert at 80%, and a circuit breaker per provider stops sending traffic to one that is failing.
 
 ## Tech stack

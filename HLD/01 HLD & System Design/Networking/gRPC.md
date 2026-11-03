@@ -75,6 +75,11 @@ flowchart TB
     Res["Resolver: DNS, xDS, Kubernetes headless service"] -. "endpoint list" .-> Ch
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[gRPC.excalidraw]]
+> [[gRPC.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Many internal services call each other at high rate with structured data" — the classic signal; contracts and compact encoding pay off in CPU and integration safety ([[Microservices]]).

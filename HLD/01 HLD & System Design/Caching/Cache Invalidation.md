@@ -86,6 +86,11 @@ flowchart LR
     C -. "races: read-miss, replica lag, lost delete" .-> R
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Cache Invalidation.excalidraw]]
+> [[Cache Invalidation.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any cache in front of mutable data where readers must see changes within a bound — which is nearly every cache except ones over immutable content.

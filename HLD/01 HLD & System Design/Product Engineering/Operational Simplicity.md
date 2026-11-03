@@ -66,6 +66,11 @@ flowchart LR
     INV --> REV["Quarterly review: remove what nothing needs"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Operational Simplicity.excalidraw]]
+> [[Operational Simplicity.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 No runtime diagram; the structural artifact is the component inventory with a cost sheet and an owner per entry. Architecturally the goal is a small set of well-known building blocks (one relational database, one cache, one queue, one deploy path) reused across services, with specialised components admitted only with a named justification and a named scale at which they become necessary.
 
 ## Use cases

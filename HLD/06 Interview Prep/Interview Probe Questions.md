@@ -22,6 +22,11 @@ flowchart LR
     A["Restate the concern<br/>(10 s)"] --> B["Mechanism<br/>what you would do"] --> C["Cost<br/>what it gives up"] --> D["Signal<br/>the metric you would watch"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Interview Probe Questions.excalidraw]]
+> [[Interview Probe Questions.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Probes by area
 
 ### Requirements and scope

@@ -69,6 +69,11 @@ flowchart LR
     N["new node D at 0.28"] -. "takes only 0.21 to 0.28 from C" .-> C1
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Consistent Hashing.excalidraw]]
+> [[Consistent Hashing.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Add or remove cache nodes without a miss storm" — client-side sharding of Memcached (ketama) and any [[Distributed Caching]] layer without a server-side router.

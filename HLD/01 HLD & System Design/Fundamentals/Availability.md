@@ -80,6 +80,11 @@ flowchart LR
     A2 --> X
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Availability.excalidraw]]
+> [[Availability.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - A requirement or contract names a number: "99.95% monthly", "no more than 20 minutes of downtime per quarter" — now every dependency must be budgeted.

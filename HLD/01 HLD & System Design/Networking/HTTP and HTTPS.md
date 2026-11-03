@@ -75,6 +75,11 @@ flowchart TD
     Q --> UDP["UDP datagrams"]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[HTTP and HTTPS.excalidraw]]
+> [[HTTP and HTTPS.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Any public or partner-facing API: the moment a requirement says "third parties integrate with us", HTTP semantics (not a custom RPC) are the lingua franca ([[REST]]).

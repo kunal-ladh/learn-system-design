@@ -69,6 +69,11 @@ flowchart LR
     M[Lag metrics] -- "remove from rotation when behind" --> A
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Read Replicas.excalidraw]]
+> [[Read Replicas.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - "Reads are 10x writes and the primary's CPU is the ceiling" — the textbook case; move list, search and detail reads for other users' data to replicas.

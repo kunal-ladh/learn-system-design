@@ -57,6 +57,11 @@ flowchart LR
     K --> N[Notifications service]
 ```
 
+> [!example]- Excalidraw version — the same diagram as an editable canvas
+> ![[Microservices.excalidraw]]
+> [[Microservices.excalidraw|Open in Excalidraw]] — needs the Excalidraw plugin (see [[Plugins to Install]]).
+
+
 ## Use cases
 
 - Several teams need to deploy on their own schedule, and release coordination is a measured bottleneck.
