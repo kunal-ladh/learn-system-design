@@ -1,0 +1,32 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "tags": "tags",
+    "cssclasses": "multitext",
+    "type": "text",
+    "category": "text",
+    "priority": "text",
+    "status": "text",
+    "confidence": "number",
+    "last_reviewed": "date",
+    "next_review": "date",
+    "created": "date",
+    "updated": "date",
+    "period_start": "date",
+    "period_end": "date",
+    "week": "number",
+    "related": "multitext",
+    "summary": "text",
+    "title": "text",
+    "lc": "number",
+    "difficulty": "text",
+    "nc_order": "number",
+    "patterns": "multitext",
+    "attempts": "number",
+    "last_solved": "date",
+    "time_minutes": "number",
+    "leetcode": "text",
+    "neetcode": "text",
+    "scared": "checkbox"
+  }
+}

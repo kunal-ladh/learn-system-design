@@ -1,0 +1,103 @@
+filters:
+  and:
+    - file.hasTag("topic")
+formulas:
+  due: 'if(next_review, if(next_review <= today(), "due", "scheduled"), "unscheduled")'
+properties:
+  file.name:
+    displayName: Topic
+  formula.due:
+    displayName: Review
+  last_reviewed:
+    displayName: Last reviewed
+  next_review:
+    displayName: Next review
+views:
+  - type: table
+    name: All
+    order:
+      - file.name
+      - week
+      - category
+      - scared
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: week
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Scared six
+    filters:
+      and:
+        - 'scared == true'
+    order:
+      - file.name
+      - week
+      - status
+      - confidence
+      - last_reviewed
+      - next_review
+    sort:
+      - property: week
+        direction: ASC
+  - type: table
+    name: Studying
+    filters:
+      and:
+        - 'status == "reading" || status == "understood"'
+    order:
+      - file.name
+      - category
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: last_reviewed
+        direction: DESC
+  - type: table
+    name: Not started
+    filters:
+      and:
+        - 'status == "not-started"'
+    order:
+      - file.name
+      - week
+      - scared
+    sort:
+      - property: week
+        direction: ASC
+  - type: table
+    name: Low confidence
+    filters:
+      and:
+        - 'status != "not-started"'
+        - 'confidence <= 2'
+    order:
+      - file.name
+      - status
+      - confidence
+      - last_reviewed
+    sort:
+      - property: confidence
+        direction: ASC
+  - type: table
+    name: Needs revision
+    filters:
+      and:
+        - or:
+            - 'status == "needs-revision"'
+            - 'next_review <= today()'
+    order:
+      - file.name
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC

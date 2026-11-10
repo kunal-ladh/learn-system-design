@@ -3,6 +3,14 @@
 A system design curriculum written as an Obsidian vault — 181 topic notes across 18 modules, from
 foundations through planet-scale case studies and interview problems.
 
+## Vaults in this repo
+
+Each folder below is its own Obsidian vault (open the folder, not the repo root, in Obsidian):
+
+- **`HLD/`** — high-level design for SDE-2 interviews: 166 concept notes, 28 design problems, resources, projects, Bases dashboard, Excalidraw canvases. Start at `HLD/Start Here.md`.
+- **`DSA/`** — data structures & algorithms: 29 reading-style topic deep dives (DP, graphs, tries, Fenwick, segment trees, union-find and the rest), one note per NeetCode 150 problem with a Java solution, a Java collections refresher, an 8-week plan, Bases dashboard and 455 Excalidraw canvases (topic map, problem map, every diagram and data-structure trace). Start at `DSA/Start Here.md`; the plugins to enable are listed in `DSA/Plugins to Install.md`.
+- **`system-design/`** — the original system design curriculum described below.
+
 ## Start here
 
 Open the `system-design/` folder as an Obsidian vault, then open:

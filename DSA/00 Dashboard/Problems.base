@@ -1,0 +1,168 @@
+filters:
+  and:
+    - file.hasTag("problem")
+formulas:
+  rank: 'if(difficulty == "Easy", 1, if(difficulty == "Medium", 2, 3))'
+  due: 'if(next_review, if(next_review <= today(), "due", "scheduled"), "unscheduled")'
+properties:
+  file.name:
+    displayName: Problem
+  formula.rank:
+    displayName: "#"
+  formula.due:
+    displayName: Review
+  nc_order:
+    displayName: "NC #"
+  last_solved:
+    displayName: Last solved
+  next_review:
+    displayName: Next review
+  time_minutes:
+    displayName: Minutes
+views:
+  - type: table
+    name: All
+    groupBy:
+      property: category
+      direction: ASC
+    order:
+      - file.name
+      - nc_order
+      - difficulty
+      - status
+      - confidence
+      - attempts
+      - last_solved
+      - next_review
+    sort:
+      - property: nc_order
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: Not started
+    filters:
+      and:
+        - 'status == "not-started"'
+    order:
+      - file.name
+      - week
+      - category
+      - difficulty
+      - nc_order
+    sort:
+      - property: week
+        direction: ASC
+      - property: nc_order
+        direction: ASC
+  - type: table
+    name: By week
+    groupBy:
+      property: week
+      direction: ASC
+    order:
+      - file.name
+      - category
+      - difficulty
+      - status
+      - confidence
+      - nc_order
+    sort:
+      - property: nc_order
+        direction: ASC
+    summaries:
+      confidence: Average
+      file.name: Filled
+  - type: table
+    name: In progress
+    filters:
+      and:
+        - 'status == "attempted" || status == "needs-revision"'
+    order:
+      - file.name
+      - category
+      - difficulty
+      - status
+      - attempts
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC
+  - type: table
+    name: Solved
+    filters:
+      and:
+        - 'status == "solved" || status == "mastered"'
+    order:
+      - file.name
+      - category
+      - difficulty
+      - status
+      - confidence
+      - last_solved
+      - next_review
+    sort:
+      - property: last_solved
+        direction: DESC
+  - type: table
+    name: Solved this week
+    filters:
+      and:
+        - 'last_solved >= today() - "7 days"'
+    order:
+      - file.name
+      - category
+      - difficulty
+      - confidence
+      - time_minutes
+      - last_solved
+    sort:
+      - property: last_solved
+        direction: DESC
+  - type: table
+    name: Needs revision
+    filters:
+      and:
+        - or:
+            - 'status == "needs-revision"'
+            - 'next_review <= today()'
+    order:
+      - file.name
+      - category
+      - difficulty
+      - status
+      - confidence
+      - next_review
+    sort:
+      - property: next_review
+        direction: ASC
+  - type: table
+    name: Hard
+    filters:
+      and:
+        - 'difficulty == "Hard"'
+    order:
+      - file.name
+      - category
+      - week
+      - status
+      - confidence
+      - attempts
+    sort:
+      - property: week
+        direction: ASC
+  - type: table
+    name: Mastered
+    filters:
+      and:
+        - 'status == "mastered"'
+    order:
+      - file.name
+      - category
+      - difficulty
+      - last_solved
+    sort:
+      - property: category
+        direction: ASC

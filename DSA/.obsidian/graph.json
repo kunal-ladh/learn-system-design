@@ -1,0 +1,170 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color": false,
+  "colorGroups": [
+    {
+      "query": "path:\"01 Topics\"",
+      "color": {
+        "a": 1,
+        "rgb": 3447003
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Arrays & Hashing\"",
+      "color": {
+        "a": 1,
+        "rgb": 16088064
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Two Pointers\"",
+      "color": {
+        "a": 1,
+        "rgb": 2201331
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Sliding Window\"",
+      "color": {
+        "a": 1,
+        "rgb": 3066993
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Stack\"",
+      "color": {
+        "a": 1,
+        "rgb": 15844367
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Binary Search\"",
+      "color": {
+        "a": 1,
+        "rgb": 10181046
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Linked List\"",
+      "color": {
+        "a": 1,
+        "rgb": 15277667
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Trees\"",
+      "color": {
+        "a": 1,
+        "rgb": 9807270
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Tries\"",
+      "color": {
+        "a": 1,
+        "rgb": 1752220
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Heap & Priority Queue\"",
+      "color": {
+        "a": 1,
+        "rgb": 15158332
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Backtracking\"",
+      "color": {
+        "a": 1,
+        "rgb": 11342935
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Graphs\"",
+      "color": {
+        "a": 1,
+        "rgb": 16745472
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Advanced Graphs\"",
+      "color": {
+        "a": 1,
+        "rgb": 6323595
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/1-D DP\"",
+      "color": {
+        "a": 1,
+        "rgb": 16777215
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/2-D DP\"",
+      "color": {
+        "a": 1,
+        "rgb": 12370112
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Greedy\"",
+      "color": {
+        "a": 1,
+        "rgb": 7419530
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Intervals\"",
+      "color": {
+        "a": 1,
+        "rgb": 3426654
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Math & Geometry\"",
+      "color": {
+        "a": 1,
+        "rgb": 9055202
+      }
+    },
+    {
+      "query": "path:\"02 NeetCode 150/Bit Manipulation\"",
+      "color": {
+        "a": 1,
+        "rgb": 5793266
+      }
+    },
+    {
+      "query": "path:\"03 Java Refresher\"",
+      "color": {
+        "a": 1,
+        "rgb": 16744272
+      }
+    },
+    {
+      "query": "path:\"04 Plans\"",
+      "color": {
+        "a": 1,
+        "rgb": 10070709
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.5,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 1,
+  "close": true
+}

@@ -1,0 +1,18 @@
+filters:
+  and:
+    - file.hasTag("guide")
+properties:
+  file.name:
+    displayName: Guide
+views:
+  - type: table
+    name: All
+    groupBy:
+      property: category
+      direction: ASC
+    order:
+      - file.name
+      - summary
+    sort:
+      - property: file.name
+        direction: ASC

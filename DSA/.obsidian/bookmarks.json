@@ -1,0 +1,147 @@
+{
+  "items": [
+    {
+      "type": "file",
+      "ctime": 1793721950267,
+      "path": "00 Dashboard/DSA Dashboard.md",
+      "title": "Dashboard"
+    },
+    {
+      "type": "file",
+      "ctime": 1793721950267,
+      "path": "Start Here.md",
+      "title": "Start Here"
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Learn",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "01 Topics/Topics MOC.md",
+          "title": "Topics MOC"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "00 Dashboard/Revision Queue.base",
+          "title": "Revision Queue"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Excalidraw/Maps/DSA Topic Map.excalidraw.md",
+          "title": "Topic map (Excalidraw)"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Solve",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "02 NeetCode 150/NeetCode 150 MOC.md",
+          "title": "NeetCode 150"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "00 Dashboard/Problems.base",
+          "title": "Problems"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Java",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "03 Java Refresher/Java Collections Cheat Sheet.md",
+          "title": "Collections cheat sheet"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "03 Java Refresher/DSA Patterns in Java.md",
+          "title": "Patterns in Java"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "03 Java Refresher/Java Pitfalls in Interviews.md",
+          "title": "Pitfalls"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Plan",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Plans/8-Week DSA Plan.md",
+          "title": "8-week plan"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Plans/Spaced Repetition Protocol.md",
+          "title": "Spaced repetition"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Plans/Interview Day Protocol.md",
+          "title": "Interview day"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Plans/Mistakes Log.md",
+          "title": "Mistakes log"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "04 Plans/Pattern Recognition Table.md",
+          "title": "Pattern table"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "ctime": 1793721950267,
+      "title": "Review",
+      "items": [
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "05 Reviews/Reviews MOC.md",
+          "title": "Weekly reviews"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Workspace Guide.md",
+          "title": "Workspace Guide"
+        },
+        {
+          "type": "file",
+          "ctime": 1793721950267,
+          "path": "Plugins to Install.md",
+          "title": "Plugins to Install"
+        }
+      ]
+    }
+  ]
+}

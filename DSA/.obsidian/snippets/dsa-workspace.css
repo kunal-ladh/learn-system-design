@@ -1,0 +1,30 @@
+/* DSA workspace — readability tweaks (same snippet as the HLD vault).
+   Pre-enabled through .obsidian/appearance.json; toggle in Settings → Appearance → CSS snippets. */
+
+/* 1. Pages that declare `cssclasses: [wide]` use the full pane width (dashboard, MOCs, cheat sheets). */
+.markdown-preview-view.wide,
+.markdown-source-view.mod-cm6.wide { --file-line-width: 100%; }
+
+/* 2. Mermaid diagrams keep their natural size and scroll sideways instead of shrinking to the pane. */
+.markdown-rendered .mermaid,
+.markdown-rendered div:has(> svg[aria-roledescription]) { overflow-x: auto; max-width: 100%; }
+.markdown-rendered .mermaid svg,
+.markdown-rendered svg[aria-roledescription] { width: 100vw; height: auto; }
+
+/* 3. Clickable diagram nodes (class X internal-link) look clickable. */
+.markdown-rendered .mermaid .internal-link,
+.markdown-rendered svg[aria-roledescription] .internal-link { cursor: pointer; }
+.markdown-rendered .mermaid .internal-link .nodeLabel,
+.markdown-rendered svg[aria-roledescription] .internal-link .nodeLabel { text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* 4. Tables: full width, readable rows. */
+.markdown-rendered table { width: 100%; border-collapse: collapse; }
+.markdown-rendered th { text-align: left; }
+.markdown-rendered td, .markdown-rendered th { padding: 0.35em 0.6em; vertical-align: top; }
+
+/* 5. Section rhythm on long pages (dashboard, MOCs). */
+.markdown-rendered h2 { margin-top: 1.5em; padding-bottom: 0.15em; border-bottom: 1px solid var(--background-modifier-border); }
+
+/* 6. Callouts slightly tighter. */
+.callout { padding: 0.55em 0.9em; }
+.callout .callout-content > p:first-child { margin-top: 0.2em; }

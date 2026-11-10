@@ -1,0 +1,28 @@
+filters:
+  and:
+    - file.hasTag("review")
+properties:
+  file.name:
+    displayName: Review
+views:
+  - type: table
+    name: Latest
+    order:
+      - file.name
+      - week
+      - period_start
+      - period_end
+    sort:
+      - property: period_end
+        direction: DESC
+    limit: 5
+  - type: table
+    name: All
+    order:
+      - file.name
+      - week
+      - period_start
+      - period_end
+    sort:
+      - property: period_end
+        direction: DESC
